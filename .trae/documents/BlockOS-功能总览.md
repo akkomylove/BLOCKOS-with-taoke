@@ -1,7 +1,7 @@
 # BlockOS 功能总览
 
-> **最后更新**: 2026-05-14  
-> **目的**: 本文档记录 BlockOS 当前所有功能，后续修改时请参考此文档，避免误删或破坏已有功能。
+> 本文档记录了 BlockOS 当前的所有功能，用于后续开发参考。修改代码时请勿破坏或移除已有功能。
+> 最后更新：2026-05-14
 
 ---
 
@@ -9,131 +9,384 @@
 
 | 层级 | 技术 |
 |------|------|
-| 框架 | Next.js 15 (App Router) + Turbopack |
-| 语言 | TypeScript |
-| UI | React 19 + Tailwind CSS |
-| 状态管理 | Zustand + immer + persist (localStorage) |
-| AI SDK | `@ai-sdk/openai-compatible` → SiliconFlow API |
+| 框架 | Next.js 15 (App Router + Turbopack) |
+| 前端 | React 19 + TypeScript + Tailwind CSS |
+| 状态管理 | Zustand + immer |
+| 拖拽 | @dnd-kit/core + sortable |
+| AI SDK | @ai-sdk/openai-compatible |
+| 认证 | next-auth v5 |
+| PDF 导出 | Playwright |
+| 公式渲染 | KaTeX |
 | 图标 | lucide-react |
-| ID 生成 | nanoid |
-| 数据库 | SQLite (better-sqlite3) 服务端持久化 |
 
 ---
 
-## 二、Block 类型（8种）
+## 二、Block 类型（11种）
 
-**类型定义文件**: [src/types/block.ts](file:///c:/Users/86135/Desktop/blockOS/src/types/block.ts)
+### 2.1 文本块 (text)
+- **编辑**：contenteditable 富文本编辑
+- **格式化工具栏**（悬浮显示）：
+  - 加粗 / 斜体 / 下划线 / 删除线
+  - 无序列表 / 有序列表
+  - 字体大小：12-48px（下拉选择）
+  - 字体：默认、宋体、黑体、楷体、微软雅黑、Arial、Georgia、Monaco
+  - 颜色：10 色网格选择器
+- **元数据**：fontSize, fontFamily, fontColor, fontWeight, fontStyle, textDecoration
+- **AI 动作**：总结、改写（正式）、改写（随意）、扩展
 
-| 类型 | 组件 | 说明 |
-|------|------|------|
-| `text` | TextBlock | 富文本，支持加粗/斜体/下划线/删除线、列表、字体(8种)/字号(12-48px)/颜色(10色) |
-| `todo` | TodoBlock | 可勾选待办事项，勾选时自动记录日志 |
-| `code` | CodeBlock | 代码块，支持语法高亮、语言切换、`@ref` 引用语法链接其他 Block |
-| `table` | TableBlock | 数据表格，支持列类型(文本/数字/日期/选择/复选框/链接)、增删行列 |
-| `media` | MediaBlock | 图片/视频/音频，自动检测类型，支持 URL 和上传 |
-| `quote` | QuoteBlock | 引用块 |
-| `toggle` | ToggleBlock | 可折叠/展开内容，支持子 Block |
-| `divider` | DividerBlock | 水平分割线 |
+### 2.2 待办块 (todo)
+- 复选框勾选/取消
+- 内容编辑
+- 删除键自动删除空项
+- **AI 动作**：拆解子任务、总结
 
-**已删除的类型**: `list`（已废弃，功能合并到 TextBlock 的列表格式化）、`image`（已合并为 `media`）
+### 2.3 代码块 (code)
+- 多语言选择（TypeScript/JavaScript/Python 等）
+- 代码高亮
+- `@ref` 语法引用其他 Block 内容
+- **AI 动作**：解释代码、优化建议
 
-### Block 数据结构
+### 2.4 表格块 (table)
+- 添加/删除行列
+- **列类型设置**：text / number / date / select / checkbox / link
+- select 类型支持 options 配置
+- 单元格编辑
+- **AI 动作**：数据洞察、总结
 
+### 2.5 媒体块 (media)
+- 支持类型：图片、视频、音频、外部链接
+- URL 输入 + 本地上传
+- 类型自动检测
+- 卡片式 UI，带渐变遮罩和类型标签
+- **AI 动作**：生成描述
+
+### 2.6 引用块 (quote)
+- 内容编辑
+- 引用样式
+- **AI 动作**：总结
+
+### 2.7 折叠块 (toggle)
+- 标题编辑
+- 展开/折叠状态切换
+- **AI 动作**：总结
+
+### 2.8 分隔线 (divider)
+- 纯展示，无编辑功能
+
+### 2.9 白板块 (whiteboard)
+- 自由绘图、涂鸦
+- 画笔/橡皮擦模式
+- 颜色选择、画笔大小调整
+- 下载画布为图片
+- **AI 动作**：生成描述
+
+### 2.10 思维导图 (mindmap)
+- 创建节点、添加子节点
+- 折叠/展开节点
+- 删除节点
+- 编辑节点名称
+- **AI 动作**：扩展节点、总结
+
+### 2.11 数学公式 (math)
+- LaTeX 输入
+- KaTeX 实时渲染
+- 常用公式模板快速插入
+- **AI 动作**：解释公式
+
+---
+
+## 三、核心 UI 组件
+
+### 3.1 工具栏 (Toolbar)
+- 撤销 / 重做
+- AI 助手按钮
+- 关系视图按钮
+- Agent 模式开关 + 日志
+- 搜索按钮
+- 导入 / 导出按钮
+- 帮助按钮
+- **选中 Block 时显示**：删除、复制按钮
+
+### 3.2 命令面板 / AI 助手 (CommandPalette)
+- 自然语言指令输入
+- **Agent 级别操作**（JSON 解析执行）：
+  - `deleteAllBlocks` — 删除所有 Block
+  - `deleteBlock` — 删除指定 Block
+  - `updateBlock` — 更新 Block 内容
+  - `createBlock` — 创建新 Block（可带内容）
+  - `highlightBlocks` — 高亮指定 Block
+  - `clearAllContent` — 清空所有 Block 内容
+- 执行结果以绿色卡片展示
+- 流式响应显示
+- 历史记录
+
+### 3.3 AI 结果卡片 (AIResultCard)
+- 替换当前 Block 内容
+- 保存到指定现有 Block
+- 创建为新 Block
+
+### 3.4 导入面板 (ImportPanel)
+- **Tab 切换**：Markdown / CSV / 图片
+- **文件上传**（支持拖拽）：
+  - .md 文件 → readAsText
+  - .csv 文件 → readAsText
+  - 图片文件 → readAsDataURL
+- **粘贴输入**（文本框）
+- 上传状态反馈（加载中 / 成功）
+
+### 3.5 导出面板 (ExportPanel)
+- Markdown 导出
+- HTML 导出
+- PDF 导出（调用 /api/export/pdf，Playwright 渲染）
+- Word 导出
+
+### 3.6 搜索面板 (SearchPanel)
+- 搜索 Block **标题 + 内容**
+- 实时高亮匹配项
+- 点击跳转定位
+
+### 3.7 关系抽屉 (RelationDrawer)
+- **链接关系**：显示 Block 间的 links 关联
+- **层级结构**：显示 parentId 嵌套层级
+- **数据概览**：统计各类型 Block 数量
+
+### 3.8 帮助面板 (HelpPanel)
+- **4 个 Tab**：
+  1. 使用指南 — Block 类型网格（带彩色图标）
+  2. 快捷键 — kbd 样式快捷键列表
+  3. AI 功能 — Agent 说明 + 操作示例
+  4. 设置 — 自定义 API Key / Base URL / Model
+- 设置保存到 localStorage
+
+### 3.9 侧边栏 (Sidebar)
+- 页面列表
+- 文件夹管理（创建/删除/重命名/折叠）
+- 页面拖入文件夹
+- 新建页面
+
+### 3.10 Block 渲染器 (BlockRenderer)
+- 根据 block.type 分发到对应组件
+- 统一包裹 SortableBlock（拖拽排序）
+
+### 3.11 可排序 Block (SortableBlock)
+- dnd-kit 拖拽排序
+- 选中状态高亮
+- 右键菜单（AI 操作、删除、复制）
+
+---
+
+## 四、Store 方法（Zustand）
+
+### 4.1 页面管理
+- `addPage(title?, folderId?)` — 创建页面
+- `deletePage(id)` — 删除页面
+- `updatePageTitle(id, title)` — 更新页面标题
+- `setCurrentPage(id)` — 切换当前页面
+- `saveCurrentPageBlocks()` / `loadPageBlocks(pageId)` — 页面 Block 存取
+
+### 4.2 文件夹管理
+- `addFolder(name)` — 创建文件夹
+- `deleteFolder(id)` — 删除文件夹
+- `renameFolder(id, name)` — 重命名
+- `toggleFolderCollapse(id)` — 折叠/展开
+- `movePageToFolder(pageId, folderId)` — 移动页面到文件夹
+
+### 4.3 Block CRUD
+- `addBlock(type, afterId?, position?)` — 创建 Block（自动定位）
+- `duplicateBlock(id)` — 复制 Block
+- `updateBlock(id, updates)` — 更新 Block
+- `deleteBlock(id)` — 删除 Block
+- `moveBlock(activeId, overId)` — 拖拽排序
+- `moveBlockTo(id, x, y)` — 自由画布定位
+- `resizeBlock(id, width)` — 调整宽度
+
+### 4.4 选择管理
+- `setSelection(ids)` — 设置选中
+- `toggleSelection(id)` — 切换选中
+- `clearSelection()` — 清空选中
+
+### 4.5 层级管理
+- `indentBlock(id)` — 缩进（最大深度 5）
+- `outdentBlock(id)` — 取消缩进
+- `getBlockDepth(id)` — 获取深度
+
+### 4.6 组合管理
+- `groupBlocks(ids)` — 组合多个 Block
+- `ungroupBlocks(groupId)` — 取消组合
+- `updateGroupName(groupId, name)` — 重命名组合
+
+### 4.7 链接
+- `createLink(fromId, toId)` — 创建 Block 间链接
+
+### 4.8 历史记录
+- `saveHistory()` — 保存历史（最多 50 条）
+- `undo()` / `redo()` — 撤销/重做
+- `canUndo()` / `canRedo()` — 状态检查
+
+### 4.9 导入导出
+- `exportToMarkdown()` — 导出 Markdown
+- `exportToHtml()` — 导出 HTML
+- `importFromMarkdown(markdown)` — 导入 Markdown
+- `importFromCsv(csv)` — 导入 CSV（自动解析引号/逗号）
+- `importImage(base64, caption?)` — 导入图片
+
+### 4.10 服务器同步
+- `syncToServer()` — 同步当前页面 Block 到服务器
+- `loadFromServer(pageId)` — 从服务器加载
+- `syncPages()` — 同步页面列表
+
+### 4.11 Agent
+- `toggleAgent()` — 开关 Agent
+- `addAgentLog(log)` — 添加 Agent 日志
+
+---
+
+## 五、API 路由
+
+### 5.1 AI 路由
+
+| 路由 | 功能 |
+|------|------|
+| `POST /api/ai/generate` | 通用 AI 生成，流式响应 |
+| `POST /api/ai/command` | Agent 命令解析，返回 JSON 操作数组 |
+| `POST /api/ai/block-action` | Block 专属 AI 动作（总结/改写/扩展等） |
+| `POST /api/ai/summary` | 多 Block 综合总结 |
+| `POST /api/ai/format-document` | 文本转格式化 HTML |
+
+### 5.2 页面路由
+
+| 路由 | 功能 |
+|------|------|
+| `GET /api/pages` | 获取页面列表 |
+| `POST /api/pages` | 创建页面 |
+| `GET /api/pages/[id]` | 获取页面详情 |
+| `PUT /api/pages/[id]` | 更新页面 |
+| `DELETE /api/pages/[id]` | 删除页面 |
+| `GET /api/pages/[id]/blocks` | 获取页面 Block |
+| `POST /api/pages/[id]/blocks` | 批量更新 Block |
+
+### 5.3 导出路由
+
+| 路由 | 功能 |
+|------|------|
+| `POST /api/export/pdf` | HTML → PDF（Playwright） |
+
+### 5.4 认证路由
+
+| 路由 | 功能 |
+|------|------|
+| `GET/POST /api/auth/[...nextauth]` | NextAuth 认证 |
+
+---
+
+## 六、AI 配置
+
+### 6.1 模型配置 (src/lib/ai-provider.ts)
+- **默认模型**：`Qwen/Qwen3-8B`
+- **备用模型**：`THUDM/glm-4-9b-chat`
+- **API 提供商**：SiliconFlow (`https://api.siliconflow.cn/v1`)
+- **SDK**：`@ai-sdk/openai-compatible`（非 `@ai-sdk/openai`，因 SiliconFlow 不支持 `/v1/responses`）
+
+### 6.2 自定义 API 设置
+- 用户可在 HelpPanel → 设置 Tab 中填写：
+  - API Key
+  - Base URL
+  - Model 名称
+- 保存到 localStorage，优先于环境变量
+
+### 6.3 Agent 系统提示词
+- 接收完整 Block 列表作为上下文
+- 强制 JSON-only 输出（无 Markdown、无确认提问）
+- 支持 6 种操作类型，每种有精确 JSON 格式
+
+---
+
+## 七、快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Ctrl+Z` | 撤销 |
+| `Ctrl+Shift+Z` / `Ctrl+Y` | 重做 |
+| `Ctrl+Shift+P` | 打开 AI 助手 |
+| `Ctrl+F` | 搜索 |
+| `Ctrl+Shift+E` | 导出 |
+| `Ctrl+Shift+I` | 导入 |
+| `Ctrl+Shift+H` | 帮助 |
+| `Delete` | 删除选中 Block |
+| `Ctrl+D` | 复制选中 Block |
+| `Tab` | 缩进 Block |
+| `Shift+Tab` | 取消缩进 |
+| `Ctrl+Shift+G` | 组合选中 Block |
+| `Ctrl+Shift+U` | 取消组合 |
+| `Ctrl+Shift+L` | 创建链接 |
+| `Ctrl+Shift+A` | 切换 Agent |
+
+---
+
+## 八、数据结构
+
+### 8.1 Block 核心字段
 ```typescript
 interface Block {
   id: string;
-  type: BlockType;
-  title: string;          // 小标题
-  content: string;         // 主体内容
-  meta: BlockMeta;
-  parentId: string | null; // 父 Block ID（层级结构）
-  order: number;
-  x: number;               // 画布 X 坐标
-  y: number;               // 画布 Y 坐标
-  width: number;           // 宽度
-  collapsed: boolean;
+  type: BlockType;        // 11 种类型
+  title: string;
+  content: string;
+  meta: BlockMeta;        // 样式、状态、链接等
+  parentId: string | null; // 层级嵌套
+  groupId?: string;       // 组合
+  order: number;          // 排序
+  x: number;              // 画布 X 坐标
+  y: number;              // 画布 Y 坐标
+  width: number;          // 宽度（最小 200）
+  collapsed: boolean;     // 折叠状态
   createdAt: number;
   updatedAt: number;
 }
+```
 
+### 8.2 BlockMeta 字段
+```typescript
 interface BlockMeta {
-  aiContext?: string;
-  tags?: string[];
-  links?: string[];        // 链接到其他 Block 的 ID 列表
-  highlight?: string;
-  checked?: boolean;       // todo 专用
-  language?: string;       // code 专用
-  expanded?: boolean;      // toggle 专用
-  caption?: string;        // media 专用
-  fontSize?: number;       // text 专用
-  fontFamily?: string;     // text 专用
-  fontColor?: string;      // text 专用
+  aiContext?: string;     // AI 上下文提示
+  tags?: string[];        // 标签
+  links?: string[];       // 链接到的 Block ID
+  highlight?: string;     // 高亮颜色
+  checked?: boolean;      // todo 勾选状态
+  language?: string;      // code 语言
+  expanded?: boolean;     // toggle 展开状态
+  caption?: string;       // media 描述
+  fontSize?: number;      // 文本字体大小
+  fontFamily?: string;    // 文本字体
+  fontColor?: string;     // 文本颜色
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
   textDecoration?: 'none' | 'underline' | 'line-through';
 }
 ```
 
----
+### 8.3 表格数据结构
+```typescript
+interface TableColumn {
+  name: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'link';
+  options?: string[];     // select 类型的选项
+}
 
-## 三、导航栏 Toolbar
-
-**文件**: [src/components/Toolbar.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/Toolbar.tsx)
-
-导航栏位于页面顶部，包含以下按钮（从左到右）：
-
-| 按钮 | 功能 |
-|------|------|
-| Logo + BlockOS | 品牌标识 |
-| 页面标题输入框 | 实时编辑当前页面名称 |
-| 撤销/重做 | 基于历史栈（最多50步） |
-| 选中计数 + 复制/删除 | 当有 Block 被选中时显示 |
-| **AI 助手** | 打开 CommandPalette，Agent 级别操作 |
-| 关系 | 打开右侧 RelationDrawer |
-| Agent | 开关 Agent 自动规则 |
-| 日志 | 显示/隐藏 Agent 运行日志 |
-| 搜索 | 打开 SearchPanel |
-| 导出 | 打开 ExportPanel |
-| 导入 | 打开 ImportPanel |
-| AI 格式化 | 仅选中单个 text 类型 Block 时显示 |
-| 帮助 | 打开 HelpPanel |
+interface TableData {
+  columns: string[];
+  columnTypes?: TableColumn[];
+  rows: string[][];
+}
+```
 
 ---
 
-## 四、AI 功能（核心）
+## 九、AI 动作配置
 
-### 4.1 AI 助手 / CommandPalette（Agent 级别）
+每种 Block 类型对应一组专属 AI 动作：
 
-**文件**: [src/components/CommandPalette.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/CommandPalette.tsx)  
-**API**: [src/app/api/ai/command/route.ts](file:///c:/Users/86135/Desktop/blockOS/src/app/api/ai/command/route.ts)
-
-- 快捷键: `Ctrl+K`
-- 自动判断用户意图：包含操作关键词（删除/创建/高亮等）→ 走 `/api/ai/command`（Agent操作）；否则 → 走 `/api/ai/generate`（内容生成）
-- **Agent 操作类型**:
-  - `deleteAllBlocks` — 删除所有 Block
-  - `deleteBlock` — 删除指定 Block
-  - `createBlock` — 创建新 Block（含内容）
-  - `updateBlock` — 更新 Block 内容
-  - `highlightBlocks` — 高亮包含关键词的 Block
-  - `clearAllContent` — 清空所有 Block 内容
-- 执行结果以绿色卡片展示
-- 内容生成结果可选择"创建为 Block"
-
-### 4.2 AI 生成（自由对话）
-
-**API**: [src/app/api/ai/generate/route.ts](file:///c:/Users/86135/Desktop/blockOS/src/app/api/ai/generate/route.ts)
-
-- 流式输出文本内容
-- 用于非操作类请求（写作、问答等）
-
-### 4.3 Block 专属 AI 操作
-
-**文件**: [src/components/AIActionMenu.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/AIActionMenu.tsx)  
-**API**: [src/app/api/ai/block-action/route.ts](file:///c:/Users/86135/Desktop/blockOS/src/app/api/ai/block-action/route.ts)
-
-每个 Block 右侧 Sparkles 按钮，根据 Block 类型提供不同 AI 操作：
-
-| Block 类型 | 可用操作 |
+| Block 类型 | AI 动作 |
 |-----------|---------|
 | text | 总结、改写（正式）、改写（随意）、扩展 |
 | todo | 拆解子任务、总结 |
@@ -142,327 +395,111 @@ interface BlockMeta {
 | media | 生成描述 |
 | quote | 总结 |
 | toggle | 总结 |
-| divider | 无 |
-
-### 4.4 AI 结果处理
-
-**文件**: [src/components/AIResultCard.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/AIResultCard.tsx)
-
-AI 处理完成后展示结果卡片，三个操作按钮：
-- **替换原内容** — 直接替换当前 Block
-- **保存到...** — 选择目标 Block 保存
-- **创建新 Block** — 创建新的 Block 保存结果
-
-### 4.5 AI 总结
-
-**API**: [src/app/api/ai/summary/route.ts](file:///c:/Users/86135/Desktop/blockOS/src/app/api/ai/summary/route.ts)
-
-- 对文本内容进行总结
-
-### 4.6 AI 文档格式化
-
-**API**: [src/app/api/ai/format-document/route.ts](file:///c:/Users/86135/Desktop/blockOS/src/app/api/ai/format-document/route.ts)
-
-- 导航栏「AI 格式化」按钮（选中单个 text Block 时显示）
-- 将纯文本格式化为结构化 Markdown/HTML
-
-### 4.7 AI Provider 配置
-
-**文件**: [src/lib/ai-provider.ts](file:///c:/Users/86135/Desktop/blockOS/src/lib/ai-provider.ts)
-
-- 主模型: `Qwen/Qwen3-8B`
-- 备用模型: `THUDM/glm-4-9b-chat`
-- API: SiliconFlow (`https://api.siliconflow.cn/v1`)
-- 用户在帮助中心 → 设置 可配置自定义 API Key/Base URL/Model
+| whiteboard | 生成描述 |
+| mindmap | 扩展节点、总结 |
+| math | 解释公式 |
 
 ---
 
-## 五、导入功能
-
-**文件**: [src/components/ImportPanel.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/ImportPanel.tsx)
-
-### 5.1 标签页
-
-| 标签 | 支持方式 |
-|------|---------|
-| Markdown | 文件选择(.md) + 拖放 + 粘贴内容 |
-| CSV 表格 | 文件选择(.csv) + 拖放 + 粘贴内容 |
-| 图片 | 文件选择 + 拖放（自动导入为 media Block） |
-
-### 5.2 导入方法（Store）
-
-- `importFromMarkdown(md)` — 解析标题/代码块/待办/引用/分割线
-- `importFromCsv(csv)` — 解析 CSV → Table Block
-- `importImage(base64, caption?)` — 创建 Media Block
-
----
-
-## 六、导出功能
-
-**文件**: [src/components/ExportPanel.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/ExportPanel.tsx)
+## 十、导出格式支持
 
 | 格式 | 说明 |
 |------|------|
-| Markdown (.md) | 完整 Markdown 格式 |
-| HTML (.html) | 完整网页格式，含内嵌样式 |
-| PDF (.pdf) | 通过 Playwright 服务端渲染 |
-| Word (.doc) | Microsoft Word 兼容格式 |
-
-### 导出方法（Store）
-
-- `exportToMarkdown()` — 返回 Markdown 字符串
-- `exportToHtml()` — 返回 HTML 字符串
+| Markdown | 所有 Block 类型映射为 MD 语法 |
+| HTML | 完整 HTML 文档，含样式 |
+| PDF | Playwright 渲染 HTML 后生成 |
+| Word | .doc 格式（前端 blob 生成） |
 
 ---
 
-## 七、搜索功能
+## 十一、导入格式支持
 
-**文件**: [src/components/SearchPanel.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/SearchPanel.tsx)
-
-- 同时搜索 Block 的 `title` 和 `content`
-- 标题匹配结果标记"标题匹配"标签
-- 点击结果自动选中并滚动到对应 Block
-- 最多显示 20 条结果
-
----
-
-## 八、关系视图
-
-**文件**: [src/components/RelationDrawer.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/RelationDrawer.tsx)
-
-右侧滑出面板，三个标签页：
-
-### 8.1 链接关系
-- 显示正向链接（A→B）和反向链接（被谁引用）
-- 统计正向/反向链接数量
-- 点击跳转到对应 Block
-
-### 8.2 层级结构
-- 显示父子关系树
-- 支持缩进显示层级深度
-- 显示每个节点的子 Block 数量
-
-### 8.3 数据概览
-- Block 总数、连接总数、子 Block 数、孤立 Block 数
-- 类型分布（进度条 + 百分比）
-- 链接密度（每个 Block 平均连接数）
-
----
-
-## 九、帮助中心
-
-**文件**: [src/components/HelpPanel.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/HelpPanel.tsx)
-
-四个标签页：
-
-### 9.1 使用指南
-- 快速开始说明
-- 7 种 Block 类型卡片展示
-- 父子关系说明
-
-### 9.2 快捷键
-| 快捷键 | 功能 |
-|--------|------|
-| Ctrl+K | 打开 AI 助手 |
-| Ctrl+Z | 撤销 |
-| Ctrl+Shift+Z | 重做 |
-| Ctrl+F | 搜索 |
-| Esc | 关闭面板 |
-| Enter | 提交/AI 确认 |
-
-### 9.3 AI 功能
-- Agent 能力说明
-- 支持的操作及示例命令
-- Block 专属 AI 说明
-
-### 9.4 设置
-- 自定义 API Key
-- 自定义 Base URL
-- 自定义模型名称
-- 保存/恢复默认
-
----
-
-## 十、状态管理（Zustand Store）
-
-**文件**: [src/store/blockStore.ts](file:///c:/Users/86135/Desktop/blockOS/src/store/blockStore.ts)
-
-### 页面管理
-- `addPage(title?)` — 新建页面
-- `deletePage(id)` — 删除页面
-- `updatePageTitle(id, title)` — 更新页面标题
-- `setCurrentPage(id)` — 切换页面
-- `saveCurrentPageBlocks()` — 保存当前页面 Block 到缓存
-- `loadPageBlocks(pageId)` — 加载页面 Block
-
-### Block 操作
-- `addBlock(type, afterId?, position?)` — 创建 Block
-- `duplicateBlock(id)` — 复制 Block
-- `updateBlock(id, updates)` — 更新 Block
-- `deleteBlock(id)` — 删除 Block
-- `moveBlock(activeId, overId)` — 排序移动
-- `moveBlockTo(id, x, y)` — 自由移动位置
-- `resizeBlock(id, width)` — 调整宽度（最小200px）
-
-### 选择操作
-- `setSelection(ids)` — 设置选中
-- `toggleSelection(id)` — 切换选中
-- `clearSelection()` — 清除选中
-- `createLink(fromId, toId)` — 创建 Block 间链接
-
-### 层级操作
-- `indentBlock(id)` — 缩进（成为前一个 Block 的子节点，最大深度5）
-- `outdentBlock(id)` — 减少缩进
-- `getBlockDepth(id)` — 获取深度
-
-### 撤销/重做
-- `undo()` / `redo()` — 基于历史栈（最多50步）
-- `canUndo()` / `canRedo()` — 检查是否可操作
-- `saveHistory()` — 自动在每次修改时调用
-
-### 导出/导入
-- `exportToMarkdown()` / `exportToHtml()`
-- `importFromMarkdown(md)` / `importFromCsv(csv)` / `importImage(base64, caption?)`
-
-### 服务端同步
-- `syncToServer()` — 上传当前页 Block 到服务端
-- `loadFromServer(pageId)` — 从服务端加载 Block
-- `syncPages()` — 同步页面列表
-
-### Agent
-- `toggleAgent()` — 开关 Agent 自动规则
-- `addAgentLog(log)` — 添加日志（最多保留20条）
-
-### 持久化
-- 通过 `zustand/middleware/persist` 自动保存到 localStorage
-- Key: `blockos-storage`
-
----
-
-## 十一、侧边栏
-
-**文件**: [src/components/Sidebar.tsx](file:///c:/Users/86135/Desktop/blockOS/src/components/Sidebar.tsx)
-
-- 页面列表（图标 + 标题）
-- 点击切换页面
-- 新建页面按钮
-
----
-
-## 十二、其他组件
-
-| 组件 | 文件 | 说明 |
+| 格式 | 方式 | 说明 |
 |------|------|------|
-| BlockEditor | BlockEditor.tsx | 主画布，无限白板，支持缩放/平移/框选 |
-| SortableBlock | SortableBlock.tsx | 可拖拽排序的 Block 包装器 |
-| BlockRenderer | BlockRenderer.tsx | 根据 type 渲染对应 Block 组件 |
-| CommandMenu | CommandMenu.tsx | 右键菜单，选择新建 Block 类型（键盘方向键导航） |
-| AgentLogPanel | AgentLogPanel.tsx | Agent 运行日志面板 |
-| OnboardingTour | OnboardingTour.tsx | 首次使用引导 |
-| ShortcutPanel | ShortcutPanel.tsx | 快捷键面板 |
-| Logo | Logo.tsx | Logo 组件 |
+| Markdown | 文件上传 / 粘贴 | 解析标题、列表、代码块、引用、分隔线、待办 |
+| CSV | 文件上传 / 粘贴 | 自动处理引号和逗号，生成 table Block |
+| 图片 | 文件上传 | readAsDataURL，生成 media Block |
 
 ---
 
-## 十三、API 路由（共10个）
+## 十二、Agent 自动化规则
 
-| 路由 | 方法 | 说明 |
-|------|------|------|
-| `/api/ai/generate` | POST | AI 文本生成（流式） |
-| `/api/ai/command` | POST | AI Agent 命令（流式 JSON） |
-| `/api/ai/block-action` | POST | Block 专属 AI 操作 |
-| `/api/ai/summary` | POST | AI 文本总结 |
-| `/api/ai/format-document` | POST | AI 文档格式化 |
-| `/api/pages` | GET/POST | 页面列表 / 创建页面 |
-| `/api/pages/[id]` | GET | 获取单个页面及 Blocks |
-| `/api/pages/[id]/blocks` | POST | 同步 Block 数据 |
-| `/api/export/pdf` | POST | PDF 导出（Playwright） |
-| `/api/auth/[...nextauth]` | ALL | 认证 |
+默认内置规则：
+- **任务完成日志**：当 todo Block 从 unchecked → checked 时，自动创建 text Block 记录完成时间，并调用 AI 生成鼓励语
 
 ---
 
-## 十四、数据持久化
+## 十三、已移除的功能（勿恢复）
 
-- **本地**: localStorage (`blockos-storage`)，通过 Zustand persist 中间件
-- **服务端**: SQLite，通过 `/api/pages` 系列接口同步
-- **历史记录**: 内存中维护最多 50 步的历史栈，支持撤销/重做
-- **自动同步**: 每次 `saveHistory()` 后自动调用 `syncToServer()`
-- **启动加载**: 应用启动时先 rehydrate localStorage，再异步加载服务端数据
+- ~~ListBlock~~（列表类型 Block）— 用户认为价值不大，已删除
+- ~~ImageBlock~~ — 已合并为 MediaBlock
+- ~~AIGeneratePanel~~ — 已合并到 CommandPalette
 
 ---
 
-## 十五、Agent 规则系统
+## 十四、注意事项
 
-**类型定义**: [src/types/block.ts](file:///c:/Users/86135/Desktop/blockOS/src/types/block.ts) (AgentRule, AgentAction, AgentLog)
-
-- 预置规则：任务完成日志（todo 勾选时自动创建完成记录 + AI 鼓励语）
-- 可通过 `agentEnabled` 全局开关
-- `useAgent` hook 监听 Block 变更自动触发规则
+1. **所有新 Block 类型必须包含 x, y, width 字段**
+2. **共享状态必须使用 Zustand store，禁止用 useState**
+3. **代码中不要添加注释**（项目规则）
+4. **AI 模型使用 `@ai-sdk/openai-compatible`**，不能用 `@ai-sdk/openai`
+5. **SiliconFlow 不支持 `/v1/responses`**，必须使用 `/v1/chat/completions`
+6. **MediaBlock 使用 `<img>` 标签**，顶部有 `eslint-disable` 注释
+7. **构建验证**：每次修改后必须运行 `npm run build`，确保 0 errors 0 warnings
 
 ---
 
-## 十六、文件结构速查
+## 十五、文件结构速查
 
 ```
 src/
-├── app/api/
-│   ├── ai/
-│   │   ├── generate/route.ts        # AI 生成
-│   │   ├── command/route.ts         # AI Agent 命令
-│   │   ├── block-action/route.ts    # Block 专属 AI
-│   │   ├── summary/route.ts         # AI 总结
-│   │   └── format-document/route.ts # AI 格式化
-│   ├── pages/
-│   │   ├── route.ts                 # 页面 CRUD
-│   │   └── [id]/
-│   │       ├── route.ts             # 页面详情
-│   │       └── blocks/route.ts      # Block 同步
-│   ├── export/pdf/route.ts          # PDF 导出
-│   └── auth/[...nextauth]/route.ts  # 认证
-├── components/
-│   ├── blocks/
-│   │   ├── TextBlock.tsx            # 富文本（字体/字号/颜色）
-│   │   ├── TodoBlock.tsx
-│   │   ├── CodeBlock.tsx
-│   │   ├── TableBlock.tsx
-│   │   ├── MediaBlock.tsx           # 图片/视频/音频
-│   │   ├── QuoteBlock.tsx
-│   │   ├── ToggleBlock.tsx
-│   │   └── DividerBlock.tsx
-│   ├── BlockEditor.tsx              # 主画布
-│   ├── BlockRenderer.tsx            # Block 渲染器
-│   ├── SortableBlock.tsx            # 可拖拽 Block
-│   ├── Toolbar.tsx                  # 顶部导航栏
-│   ├── CommandPalette.tsx           # AI 助手面板
-│   ├── CommandMenu.tsx              # 新建 Block 菜单
-│   ├── AIResultCard.tsx             # AI 结果卡片
-│   ├── AIActionMenu.tsx             # Block 专属 AI 菜单
-│   ├── SearchPanel.tsx              # 搜索面板
-│   ├── ImportPanel.tsx              # 导入面板
-│   ├── ExportPanel.tsx              # 导出面板
-│   ├── HelpPanel.tsx                # 帮助中心
-│   ├── RelationDrawer.tsx           # 关系视图
-│   ├── Sidebar.tsx                  # 侧边栏
-│   ├── AgentLogPanel.tsx            # Agent 日志
-│   ├── BlockOSApp.tsx               # 主应用组件
-│   ├── OnboardingTour.tsx           # 新手引导
-│   └── ShortcutPanel.tsx            # 快捷键面板
-├── store/blockStore.ts              # Zustand 状态管理
-├── types/block.ts                   # 类型定义
-├── lib/ai-provider.ts               # AI SDK 配置
-└── hooks/useAgent.ts                # Agent 监听 Hook
+  app/
+    api/
+      ai/
+        generate/route.ts
+        command/route.ts
+        block-action/route.ts
+        summary/route.ts
+        format-document/route.ts
+      export/pdf/route.ts
+      pages/route.ts
+      pages/[id]/route.ts
+      pages/[id]/blocks/route.ts
+      auth/[...nextauth]/route.ts
+    page.tsx                    # 入口，动态导入 BlockOSApp
+  components/
+    blocks/
+      TextBlock.tsx
+      TodoBlock.tsx
+      CodeBlock.tsx
+      TableBlock.tsx
+      MediaBlock.tsx
+      QuoteBlock.tsx
+      ToggleBlock.tsx
+      DividerBlock.tsx
+      WhiteboardBlock.tsx
+      MindmapBlock.tsx
+      MathBlock.tsx
+    BlockOSApp.tsx
+    BlockEditor.tsx
+    BlockRenderer.tsx
+    SortableBlock.tsx
+    Toolbar.tsx
+    CommandPalette.tsx
+    CommandMenu.tsx
+    AIActionMenu.tsx
+    AIResultCard.tsx
+    ImportPanel.tsx
+    ExportPanel.tsx
+    HelpPanel.tsx
+    SearchPanel.tsx
+    RelationDrawer.tsx
+    Sidebar.tsx
+  store/
+    blockStore.ts
+  types/
+    block.ts
+    page.ts
+  lib/
+    ai-provider.ts
 ```
-
----
-
-## 十七、修改注意事项
-
-1. **不要删除 BlockType 中的类型**，除非确认该类型的所有引用已清理（BlockRenderer、blockStore、CommandMenu、AI_ACTIONS、种子数据）
-2. **不要修改 AI_ACTIONS 结构**，AIActionMenu 依赖此结构渲染菜单
-3. **修改 blockStore 方法签名**时需同步更新所有调用处
-4. **TextBlock 的格式化功能**（字体/字号/颜色）依赖 `document.execCommand`，修改时注意兼容性
-5. **CommandPalette 的 Agent 操作**依赖 `/api/ai/command` 返回 JSON 数组，不要改变返回格式
-6. **导出功能**依赖 `exportToMarkdown()` 和 `exportToHtml()` 两个 Store 方法
-7. **导入功能**依赖 `importFromMarkdown()`、`importFromCsv()`、`importImage()` 三个 Store 方法
-8. **帮助中心的设置**通过 localStorage 存储自定义 API 配置，Key 前缀为 `blockos-custom-`
-9. **所有弹窗面板**使用 `fixed inset-0 z-50` 层级，修改时注意 z-index 冲突
