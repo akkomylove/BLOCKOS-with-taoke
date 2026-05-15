@@ -4,24 +4,31 @@ import path from 'path';
 
 let db: Database | null = null;
 let SQL: SqlJsStatic | null = null;
+let dbInitError: Error | null = null;
 
 const DB_PATH = path.join(process.cwd(), 'data', 'blockos.db');
 
 export async function getDb() {
   if (db) return db;
+  if (dbInitError) throw dbInitError;
 
-  SQL = await initSqlJs();
+  try {
+    SQL = await initSqlJs();
 
-  let data: Buffer | null = null;
-  if (fs.existsSync(DB_PATH)) {
-    data = fs.readFileSync(DB_PATH);
+    let data: Buffer | null = null;
+    if (fs.existsSync(DB_PATH)) {
+      data = fs.readFileSync(DB_PATH);
+    }
+
+    db = new SQL.Database(data);
+
+    initSchema(db);
+
+    return db;
+  } catch (err) {
+    dbInitError = err instanceof Error ? err : new Error(String(err));
+    throw dbInitError;
   }
-
-  db = new SQL.Database(data);
-
-  initSchema(db);
-
-  return db;
 }
 
 function initSchema(database: Database) {
@@ -65,12 +72,16 @@ function initSchema(database: Database) {
 
 export function saveDb() {
   if (!db || !SQL) return;
-  const data = db.export();
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  try {
+    const data = db.export();
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  } catch {
+    // silent fail
   }
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
 }
 
 export function query(sql: string, params: (string | number | null)[] = []) {

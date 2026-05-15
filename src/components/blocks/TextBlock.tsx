@@ -57,12 +57,16 @@ export default function TextBlock({
 }: TextBlockProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [showToolbar, setShowToolbar] = useState(false);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
+  const fontPickerRef = useRef<HTMLDivElement>(null);
+  const sizePickerRef = useRef<HTMLDivElement>(null);
   const [fontSize, setFontSize] = useState(initialFontSize || 14);
   const [fontFamily, setFontFamily] = useState(initialFontFamily || '');
   const [fontColor, setFontColor] = useState(initialFontColor || '');
   const [showFontPicker, setShowFontPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  const [customColor, setCustomColor] = useState('');
   const [ghostText, setGhostText] = useState('');
   const [showGhost, setShowGhost] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(() => {
@@ -79,6 +83,23 @@ export default function TextBlock({
       ref.current.innerText = content;
     }
   }, [content]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (colorPickerRef.current && !colorPickerRef.current.contains(target)) {
+        setShowColorPicker(false);
+      }
+      if (fontPickerRef.current && !fontPickerRef.current.contains(target)) {
+        setShowFontPicker(false);
+      }
+      if (sizePickerRef.current && !sizePickerRef.current.contains(target)) {
+        setShowSizePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchCompletion = useCallback(async (text: string) => {
     const now = Date.now();
@@ -169,6 +190,23 @@ export default function TextBlock({
   const handleColorChange = (color: string) => {
     setFontColor(color);
     setShowColorPicker(false);
+    setCustomColor('');
+  };
+
+  const handleCustomColor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomColor(value);
+    if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+      setFontColor(value);
+    }
+  };
+
+  const applyCustomColor = () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(customColor)) {
+      setFontColor(customColor);
+      setShowColorPicker(false);
+      setCustomColor('');
+    }
   };
 
   const style: React.CSSProperties = {
@@ -258,7 +296,7 @@ export default function TextBlock({
               <ListOrdered className="w-3 h-3" />
             </button>
             <div className="w-px h-3 bg-gray-300 dark:bg-zinc-600 mx-0.5" />
-            <div className="relative">
+            <div className="relative" ref={sizePickerRef}>
               <button
                 onClick={() => { setShowFontPicker(false); setShowColorPicker(false); setShowSizePicker(!showSizePicker); }}
                 className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-100 transition-colors flex items-center gap-0.5"
@@ -283,7 +321,7 @@ export default function TextBlock({
                 </div>
               )}
             </div>
-            <div className="relative">
+            <div className="relative" ref={fontPickerRef}>
               <button
                 onClick={() => { setShowSizePicker(false); setShowColorPicker(false); setShowFontPicker(!showFontPicker); }}
                 className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-100 transition-colors"
@@ -308,7 +346,7 @@ export default function TextBlock({
                 </div>
               )}
             </div>
-            <div className="relative">
+            <div className="relative" ref={colorPickerRef}>
               <button
                 onClick={() => { setShowSizePicker(false); setShowFontPicker(false); setShowColorPicker(!showColorPicker); }}
                 className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-100 transition-colors"
@@ -320,17 +358,56 @@ export default function TextBlock({
                 />
               </button>
               {showColorPicker && (
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl p-2 z-20">
-                  <div className="grid grid-cols-5 gap-1">
-                    {COLORS.map((c) => (
-                      <button
-                        key={c.value}
-                        onClick={() => handleColorChange(c.value)}
-                        className="w-5 h-5 rounded border border-gray-300 dark:border-zinc-600 hover:scale-110 transition-transform"
-                        style={{ backgroundColor: c.value || '#e4e4e7' }}
-                        title={c.label}
+                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl p-2.5 z-20 w-52">
+                  <div className="text-[10px] text-gray-400 dark:text-zinc-500 mb-2">预设颜色</div>
+                  <div className="grid grid-cols-5 gap-1.5 mb-3">
+                    {COLORS.map((c) => {
+                      const isSelected = fontColor === c.value;
+                      return (
+                        <button
+                          key={c.value}
+                          onClick={() => handleColorChange(c.value)}
+                          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-transform hover:scale-110 ${
+                            isSelected
+                              ? 'border-blue-500 dark:border-blue-400'
+                              : 'border-transparent hover:border-gray-300 dark:hover:border-zinc-600'
+                          }`}
+                          title={c.label}
+                        >
+                          <div
+                            className="w-5 h-5 rounded-full border border-gray-200 dark:border-zinc-700"
+                            style={{ backgroundColor: c.value || '#e4e4e7' }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="border-t border-gray-200 dark:border-zinc-700 pt-2.5">
+                    <div className="text-[10px] text-gray-400 dark:text-zinc-500 mb-1.5">自定义颜色</div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={customColor || fontColor || '#e4e4e7'}
+                        onChange={(e) => {
+                          setCustomColor(e.target.value);
+                          setFontColor(e.target.value);
+                        }}
+                        className="w-7 h-7 rounded cursor-pointer border-0 p-0 bg-transparent"
                       />
-                    ))}
+                      <input
+                        type="text"
+                        value={customColor || fontColor || ''}
+                        onChange={handleCustomColor}
+                        placeholder="#000000"
+                        className="flex-1 min-w-0 bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded px-2 py-1 text-xs text-gray-700 dark:text-zinc-300 outline-none focus:border-blue-400 dark:focus:border-blue-500"
+                      />
+                      <button
+                        onClick={applyCustomColor}
+                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-[10px] transition-colors"
+                      >
+                        确定
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
