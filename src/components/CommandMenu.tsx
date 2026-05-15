@@ -76,16 +76,16 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-64 bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden animate-scale-in"
+      className="fixed z-50 w-64 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200/50 dark:border-zinc-700/50 rounded-xl shadow-2xl shadow-black/50 overflow-hidden animate-scale-in"
       style={{ top: position.top, left: position.left }}
     >
-      <div className="px-3 py-2 border-b border-zinc-800/60">
+      <div className="px-3 py-2 border-b border-gray-200/60 dark:border-zinc-800/60">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜索 Block 类型..."
-          className="w-full bg-transparent outline-none text-sm text-zinc-200 placeholder-zinc-600"
+          className="w-full bg-transparent outline-none text-sm text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600"
           autoFocus
         />
       </div>
@@ -97,15 +97,15 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
             onClose();
           }}
           className={`w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left ${
-            i === activeIndex ? 'bg-zinc-800/80' : 'hover:bg-zinc-800/50'
+            i === activeIndex ? 'bg-gray-100/80 dark:bg-zinc-800/80' : 'hover:bg-gray-100/50 dark:hover:bg-zinc-800/50'
           }`}
         >
-          <span className={`p-1 rounded ${i === activeIndex ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-500'}`}>
+          <span className={`p-1 rounded ${i === activeIndex ? 'text-blue-500 dark:text-blue-400 bg-blue-500/10' : 'text-gray-400 dark:text-zinc-500'}`}>
             {cmd.icon}
           </span>
           <div className="flex-1">
-            <div className="text-sm text-zinc-200">{cmd.label}</div>
-            <div className="text-[11px] text-zinc-500">{cmd.description}</div>
+            <div className="text-sm text-gray-900 dark:text-zinc-200">{cmd.label}</div>
+            <div className="text-[11px] text-gray-400 dark:text-zinc-500">{cmd.description}</div>
           </div>
         </button>
       ))}

@@ -51,7 +51,7 @@ export default function TodoBlock({ block, isSelected }: TodoBlockProps) {
         className={`mt-0.5 flex-shrink-0 w-[18px] h-[18px] rounded border-2 flex items-center justify-center transition-all duration-200 ${
           isChecked
             ? 'bg-blue-500 border-blue-500 animate-check-pop'
-            : 'border-zinc-600 hover:border-zinc-400 hover:bg-zinc-800'
+            : 'border-gray-400 dark:border-zinc-600 hover:border-gray-300 dark:hover:border-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
         }`}
       >
         {isChecked && (
@@ -63,8 +63,8 @@ export default function TodoBlock({ block, isSelected }: TodoBlockProps) {
       <span
         ref={textRef}
         className={`block-content flex-1 outline-none text-sm leading-relaxed transition-all duration-300 ${
-          isChecked ? 'line-through text-zinc-500 animate-strikethrough' : 'text-zinc-300'
-        } ${isSelected ? 'ring-1 ring-blue-500/20 ring-offset-2 ring-offset-zinc-950 rounded' : ''}`}
+          isChecked ? 'line-through text-gray-400 dark:text-zinc-500 animate-strikethrough' : 'text-gray-700 dark:text-zinc-300'
+        } ${isSelected ? 'ring-1 ring-blue-500/20 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950 rounded' : ''}`}
         contentEditable
         suppressContentEditableWarning
         onInput={handleInput}

@@ -122,7 +122,7 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
           <select
             value={value}
             onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)}
-            className="w-full bg-zinc-800 text-center text-sm text-zinc-200 outline-none rounded"
+            className="w-full bg-white dark:bg-zinc-800 text-center text-sm text-gray-800 dark:text-zinc-200 outline-none rounded border border-gray-200 dark:border-zinc-700"
             disabled={readOnly}
           >
             <option value="">--</option>
@@ -161,7 +161,7 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowTypeEditor(!showTypeEditor)}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded transition-colors"
           >
             <Settings className="w-3 h-3" />
             列类型
@@ -171,14 +171,14 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
           <div className="flex items-center gap-1">
             <button
               onClick={addColumn}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded transition-colors"
             >
               <Plus className="w-3 h-3" />
               列
             </button>
             <button
               onClick={addRow}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded transition-colors"
             >
               <Plus className="w-3 h-3" />
               行
@@ -188,21 +188,21 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
       </div>
 
       {showTypeEditor && (
-        <div className="mb-3 p-3 bg-zinc-900/80 border border-zinc-800 rounded-lg">
+        <div className="mb-3 p-3 bg-gray-50 dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800 rounded-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">列类型设置</span>
-            <button onClick={() => setShowTypeEditor(false)} className="text-zinc-500 hover:text-zinc-300">
+            <span className="text-xs text-gray-500 dark:text-zinc-400">列类型设置</span>
+            <button onClick={() => setShowTypeEditor(false)} className="text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
               <X className="w-3 h-3" />
             </button>
           </div>
           <div className="space-y-2">
             {columns.map((col, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-zinc-300 w-20 truncate">{col}</span>
+                <span className="text-xs text-gray-700 dark:text-zinc-300 w-20 truncate">{col}</span>
                 <select
                   value={columnTypes[i]?.type || 'text'}
                   onChange={(e) => updateColumnType(i, e.target.value as TableColumn['type'])}
-                  className="text-xs bg-zinc-800 text-zinc-200 rounded px-2 py-1 outline-none"
+                  className="text-xs bg-white dark:bg-zinc-800 text-gray-800 dark:text-zinc-200 rounded px-2 py-1 outline-none border border-gray-200 dark:border-zinc-700"
                 >
                   {Object.entries(COLUMN_TYPE_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>{label}</option>
@@ -217,9 +217,9 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
                           value={tempOptions}
                           onChange={(e) => setTempOptions(e.target.value)}
                           placeholder="选项1,选项2,选项3"
-                          className="text-xs bg-zinc-800 text-zinc-200 rounded px-2 py-1 outline-none w-32"
+                          className="text-xs bg-white dark:bg-zinc-800 text-gray-800 dark:text-zinc-200 rounded px-2 py-1 outline-none w-32 border border-gray-200 dark:border-zinc-700"
                         />
-                        <button onClick={() => saveOptions(i)} className="text-emerald-400">
+                        <button onClick={() => saveOptions(i)} className="text-emerald-500 dark:text-emerald-400">
                           <Check className="w-3 h-3" />
                         </button>
                       </div>
@@ -229,7 +229,7 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
                           setEditingColIndex(i);
                           setTempOptions((columnTypes[i]?.options || []).join(','));
                         }}
-                        className="text-[10px] text-zinc-500 hover:text-zinc-300 underline"
+                        className="text-[10px] text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 underline"
                       >
                         编辑选项
                       </button>
@@ -247,7 +247,7 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
           <thead>
             <tr>
               {columns.map((col, i) => (
-                <th key={i} className="border border-zinc-700 px-2 py-1.5 text-xs font-medium text-zinc-400 bg-zinc-900/50 min-w-[80px]">
+                <th key={i} className="border border-gray-300 dark:border-zinc-700 px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-zinc-400 bg-gray-100/50 dark:bg-zinc-900/50 min-w-[80px]">
                   <div className="flex items-center justify-between gap-1">
                     <span className="truncate">{col}</span>
                     {!readOnly && columns.length > 1 && (
@@ -268,7 +268,7 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
             {rows.map((row, rowIndex) => (
               <tr key={rowIndex} className="group">
                 {row.map((cell, colIndex) => (
-                  <td key={colIndex} className="border border-zinc-800 px-2 py-1">
+                  <td key={colIndex} className="border border-gray-200 dark:border-zinc-800 px-2 py-1">
                     {renderCellInput(rowIndex, colIndex, cell)}
                   </td>
                 ))}
@@ -289,7 +289,7 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
       </div>
 
       {rows.length === 0 && (
-        <div className="text-center py-4 text-zinc-600 text-xs">
+        <div className="text-center py-4 text-gray-400 dark:text-zinc-600 text-xs">
           点击 + 行 添加数据
         </div>
       )}

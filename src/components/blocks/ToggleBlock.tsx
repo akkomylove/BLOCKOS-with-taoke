@@ -38,7 +38,7 @@ export default function ToggleBlock({ block }: ToggleBlockProps) {
           <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
         )}
         <div
-          className="flex-1 text-sm font-medium text-zinc-200 outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-700"
+          className="flex-1 text-sm font-medium text-gray-800 dark:text-zinc-200 outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-zinc-700"
           contentEditable
           suppressContentEditableWarning
           data-placeholder="折叠标题..."
@@ -47,8 +47,8 @@ export default function ToggleBlock({ block }: ToggleBlockProps) {
         />
       </button>
       {isExpanded && (
-        <div className="pl-6 py-2 border-l border-zinc-800 ml-2 text-zinc-400 text-sm">
-          <span className="text-zinc-600 italic">（折叠内容区域 - 后续支持嵌套 Block）</span>
+        <div className="pl-6 py-2 border-l border-gray-200 dark:border-zinc-800 ml-2 text-gray-500 dark:text-zinc-400 text-sm">
+          <span className="text-gray-400 dark:text-zinc-600 italic">（折叠内容区域 - 后续支持嵌套 Block）</span>
         </div>
       )}
     </div>

@@ -69,6 +69,14 @@ export interface AgentLog {
   result: string;
 }
 
+export interface BlockTemplate {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  blocks: Omit<Block, 'id' | 'createdAt' | 'updatedAt'>[];
+}
+
 export interface AIActionConfig {
   id: string;
   label: string;

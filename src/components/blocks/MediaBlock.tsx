@@ -94,7 +94,7 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
     switch (mediaType) {
       case 'image':
         return (
-          <div className="relative overflow-hidden rounded-xl border border-zinc-700/40 bg-zinc-950/30">
+          <div className="relative overflow-hidden rounded-xl border border-gray-300/40 dark:border-zinc-700/40 bg-gray-50/30 dark:bg-zinc-950/30">
             <img
               src={content}
               alt={caption || '媒体'}
@@ -111,9 +111,9 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
                   <>
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="p-1.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-lg transition-colors"
+                      className="p-1.5 bg-white/80 dark:bg-zinc-800/80 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
                     >
-                      <Edit3 className="w-3 h-3 text-zinc-300" />
+                      <Edit3 className="w-3 h-3 text-gray-700 dark:text-zinc-300" />
                     </button>
                     <button
                       onClick={handleAnalyzeImage}
@@ -121,7 +121,7 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
                       className="p-1.5 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors disabled:opacity-50"
                       title="AI 分析图片"
                     >
-                      {analyzing ? <Loader2 className="w-3 h-3 text-purple-300 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-300" />}
+                      {analyzing ? <Loader2 className="w-3 h-3 text-purple-500 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
                     </button>
                   </>
                 )}
@@ -131,7 +131,7 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
         );
       case 'video':
         return (
-          <div className="relative rounded-xl overflow-hidden border border-zinc-700/40 bg-zinc-950/30">
+          <div className="relative rounded-xl overflow-hidden border border-gray-300/40 dark:border-zinc-700/40 bg-gray-50/30 dark:bg-zinc-950/30">
             <video
               src={content}
               controls
@@ -141,10 +141,10 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
             {!readOnly && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="absolute top-2 right-2 p-1.5 bg-zinc-800/80 hover:bg-zinc-700 rounded-lg opacity-0 hover:opacity-100 transition-opacity"
+                className="absolute top-2 right-2 p-1.5 bg-white/80 dark:bg-zinc-800/80 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg opacity-0 hover:opacity-100 transition-opacity"
                 style={{ opacity: isHovering ? 1 : 0 }}
               >
-                <Edit3 className="w-3 h-3 text-zinc-300" />
+                <Edit3 className="w-3 h-3 text-gray-700 dark:text-zinc-300" />
               </button>
             )}
           </div>
@@ -157,15 +157,15 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
                 <Music className={`w-5 h-5 ${mediaInfo.color}`} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-zinc-200 font-medium truncate">{caption || '音频文件'}</p>
-                <p className="text-[11px] text-zinc-500 truncate">{content.length > 50 ? content.substring(0, 50) + '...' : content}</p>
+                <p className="text-sm text-gray-800 dark:text-zinc-200 font-medium truncate">{caption || '音频文件'}</p>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-500 truncate">{content.length > 50 ? content.substring(0, 50) + '...' : content}</p>
               </div>
               {!readOnly && (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                 >
-                  <Edit3 className="w-3 h-3 text-zinc-500" />
+                  <Edit3 className="w-3 h-3 text-gray-500 dark:text-zinc-500" />
                 </button>
               )}
             </div>
@@ -184,14 +184,14 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
                   href={content}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-400 hover:text-blue-300 hover:underline truncate block transition-colors"
+                  className="text-sm text-blue-500 dark:text-blue-400 hover:text-blue-400 dark:hover:text-blue-300 hover:underline truncate block transition-colors"
                 >
                   {content}
                 </a>
-                <p className="text-[11px] text-zinc-500 mt-0.5">外部链接</p>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-500 mt-0.5">外部链接</p>
               </div>
-              <a href={content} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
+              <a href={content} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                <ExternalLink className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-500" />
               </a>
             </div>
           </div>
@@ -201,26 +201,26 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
 
   if (isEditing || !content) {
     return (
-      <div className="w-full rounded-xl border-2 border-dashed border-zinc-700/60 hover:border-blue-500/30 bg-zinc-900/30 transition-all duration-200 overflow-hidden">
+      <div className="w-full rounded-xl border-2 border-dashed border-gray-300/60 dark:border-zinc-700/60 hover:border-blue-500/30 bg-gray-50/30 dark:bg-zinc-900/30 transition-all duration-200 overflow-hidden">
         <div className="p-5">
           <div className="flex items-center justify-center gap-6 mb-5">
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                 <ImageIcon className="w-5 h-5 text-blue-400" />
               </div>
-              <span className="text-[10px] text-zinc-500">图片</span>
+              <span className="text-[10px] text-gray-500 dark:text-zinc-500">图片</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                 <Video className="w-5 h-5 text-purple-400" />
               </div>
-              <span className="text-[10px] text-zinc-500">视频</span>
+              <span className="text-[10px] text-gray-500 dark:text-zinc-500">视频</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
                 <Music className="w-5 h-5 text-emerald-400" />
               </div>
-              <span className="text-[10px] text-zinc-500">音频</span>
+              <span className="text-[10px] text-gray-500 dark:text-zinc-500">音频</span>
             </div>
           </div>
 
@@ -231,7 +231,7 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUrlSubmit()}
               placeholder="粘贴图片/视频/音频链接..."
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 outline-none focus:border-blue-500/40 transition-colors"
+              className="flex-1 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-gray-800 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-blue-500/40 transition-colors"
             />
             <button
               onClick={handleUrlSubmit}
@@ -245,12 +245,12 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
           <div className="flex items-center justify-between">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 rounded-xl transition-all"
+              className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200 hover:bg-gray-100/60 dark:hover:bg-zinc-800/60 rounded-xl transition-all"
             >
               <Upload className="w-3.5 h-3.5" />
               上传本地文件
             </button>
-            <span className="text-[10px] text-zinc-600">或拖放文件到此处</span>
+            <span className="text-[10px] text-gray-400 dark:text-zinc-600">或拖放文件到此处</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -275,7 +275,7 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
               value={caption}
               onChange={(e) => onChange(content, e.target.value)}
               placeholder="添加描述..."
-              className="w-full bg-transparent text-center text-xs text-zinc-500 outline-none placeholder-zinc-600"
+              className="w-full bg-transparent text-center text-xs text-gray-500 dark:text-zinc-500 outline-none placeholder-gray-400 dark:placeholder-zinc-600"
               readOnly={readOnly}
             />
           </div>

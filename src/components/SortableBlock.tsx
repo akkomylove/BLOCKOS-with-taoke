@@ -54,8 +54,8 @@ export default function SortableBlock({
       style={style}
       className={`group relative flex items-start gap-1.5 px-3 py-2 rounded-lg transition-all duration-150 ${
         isSelected
-          ? 'bg-zinc-700/60 border-l-2 border-blue-400'
-          : 'hover:bg-zinc-800/60 border-l-2 border-transparent'
+          ? 'bg-gray-200/60 dark:bg-zinc-700/60 border-l-2 border-blue-400'
+          : 'hover:bg-gray-100/60 dark:hover:bg-zinc-800/60 border-l-2 border-transparent'
       } ${isDragging ? 'z-50 opacity-60 shadow-xl shadow-black/30' : ''} ${
         isLinkTarget ? 'ring-1 ring-blue-400/50 cursor-pointer hover:bg-blue-500/10' : ''
       } ${

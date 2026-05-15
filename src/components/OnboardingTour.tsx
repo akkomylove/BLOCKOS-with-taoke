@@ -78,50 +78,77 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-6 space-y-6 animate-scale-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {steps.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === currentStep ? 'w-6 bg-blue-500' : 'w-1.5 bg-zinc-700'
-                }`}
-              />
-            ))}
+    <div className="fixed inset-0 z-[100] pointer-events-none">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+        <div className="relative bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200 dark:border-zinc-700/50 rounded-2xl shadow-2xl shadow-black/50 w-full max-w-lg overflow-hidden animate-scale-in">
+          <div className="relative h-40 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-emerald-500/10 border-b border-gray-200 dark:border-zinc-800/60">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Sparkles className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <button
+              onClick={handleSkip}
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={handleSkip}
-            className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
 
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="p-4 bg-zinc-800/50 rounded-xl">{step.icon}</div>
-          <h3 className="text-lg font-semibold text-zinc-100">{step.title}</h3>
-          <p className="text-sm text-zinc-400 leading-relaxed">{step.description}</p>
-        </div>
+          <div className="p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/20 font-medium">
+                步骤 {currentStep + 1}/{steps.length}
+              </span>
+              {currentStep === steps.length - 1 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 font-medium">
+                  完成
+                </span>
+              )}
+            </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <button
-            onClick={handlePrev}
-            disabled={currentStep === 0}
-            className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            上一步
-          </button>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-zinc-100 mb-2">{step.title}</h2>
+            <p className="text-sm text-gray-500 dark:text-zinc-400 leading-relaxed">{step.description}</p>
 
-          <button
-            onClick={handleNext}
-            className="flex items-center gap-1 px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-          >
-            {currentStep === steps.length - 1 ? '开始使用' : '下一步'}
-            <ChevronRight className="w-4 h-4" />
-          </button>
+            <div className="mt-6 flex items-center gap-2">
+              {steps.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentStep(i)}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === currentStep ? 'w-8 bg-blue-400' : 'w-4 bg-gray-300 dark:bg-zinc-700 hover:bg-gray-400 dark:hover:bg-zinc-600'
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <button
+                onClick={handleSkip}
+                className="text-xs text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+              >
+                跳过教程
+              </button>
+              <div className="flex items-center gap-2">
+                {currentStep > 0 && (
+                  <button
+                    onClick={handlePrev}
+                    className="px-4 py-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 text-sm rounded-lg transition-colors"
+                  >
+                    上一步
+                  </button>
+                )}
+                <button
+                  onClick={handleNext}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {currentStep === steps.length - 1 ? '开始使用' : '下一步'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { Plus, Minus, ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
 
 interface MindmapNode {
   id: string;
@@ -93,7 +92,7 @@ export default function MindmapBlock({ content, onChange, readOnly }: MindmapBlo
     setEditingId(null);
   };
 
-  const renderTree = (node: MindmapNode, depth: number, parentX: number, parentY: number, index: number, total: number): { nodes: React.ReactNode[]; lines: React.ReactNode[]; maxX: number } => {
+  const renderTree = (node: MindmapNode, depth: number, parentX: number, parentY: number, index: number, total: number): { nodes: React.ReactNode[]; lines: React.ReactNode[]; maxX: number; x: number; y: number } => {
     const NODE_W = 120;
     const NODE_H = 36;
     const GAP_X = 160;
@@ -114,16 +113,16 @@ export default function MindmapBlock({ content, onChange, readOnly }: MindmapBlo
           width={NODE_W}
           height={NODE_H}
           rx={8}
-          fill={depth === 0 ? '#3b82f6' : '#27272a'}
-          stroke={depth === 0 ? '#60a5fa' : '#52525b'}
+          fill={depth === 0 ? '#3b82f6' : '#e5e7eb'}
+          stroke={depth === 0 ? '#60a5fa' : '#d1d5db'}
           strokeWidth={1.5}
-          className="transition-all"
+          className="transition-all dark:fill-zinc-800 dark:stroke-zinc-600"
         />
         {isEditing ? (
           <foreignObject x={4} y={6} width={NODE_W - 8} height={NODE_H - 12}>
             <input
               autoFocus
-              className="w-full h-full bg-transparent text-zinc-100 text-xs text-center outline-none"
+              className="w-full h-full bg-transparent text-gray-800 dark:text-zinc-100 text-xs text-center outline-none"
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
               onBlur={() => saveEdit(node.id)}
@@ -139,9 +138,9 @@ export default function MindmapBlock({ content, onChange, readOnly }: MindmapBlo
             x={NODE_W / 2}
             y={NODE_H / 2 + 4}
             textAnchor="middle"
-            fill={depth === 0 ? '#ffffff' : '#d4d4d8'}
+            fill={depth === 0 ? '#ffffff' : '#374151'}
             fontSize={12}
-            className="cursor-pointer"
+            className="cursor-pointer dark:fill-zinc-300"
             onClick={() => !readOnly && startEdit(node)}
           >
             {node.text}
@@ -151,19 +150,19 @@ export default function MindmapBlock({ content, onChange, readOnly }: MindmapBlo
           <>
             {node.children.length > 0 && (
               <g transform={`translate(${NODE_W + 4}, ${NODE_H / 2 - 6})`} onClick={() => toggleCollapse(node.id)} className="cursor-pointer">
-                <circle r={6} fill="#3f3f46" />
-                <text x={0} y={3} textAnchor="middle" fill="#a1a1aa" fontSize={10}>
+                <circle r={6} fill="#d1d5db" className="dark:fill-zinc-700" />
+                <text x={0} y={3} textAnchor="middle" fill="#6b7280" fontSize={10} className="dark:fill-zinc-400">
                   {node.collapsed ? '+' : '-'}
                 </text>
               </g>
             )}
             <g transform={`translate(${NODE_W / 2 - 6}, ${NODE_H + 4})`} onClick={() => addChild(node.id)} className="cursor-pointer">
-              <circle r={6} fill="#3f3f46" />
-              <text x={0} y={3} textAnchor="middle" fill="#a1a1aa" fontSize={10}>+</text>
+              <circle r={6} fill="#d1d5db" className="dark:fill-zinc-700" />
+              <text x={0} y={3} textAnchor="middle" fill="#6b7280" fontSize={10} className="dark:fill-zinc-400">+</text>
             </g>
             {depth > 0 && (
               <g transform={`translate(-10, ${NODE_H / 2})`} onClick={() => removeNode(node.id)} className="cursor-pointer">
-                <circle r={6} fill="#3f3f46" />
+                <circle r={6} fill="#d1d5db" className="dark:fill-zinc-700" />
                 <text x={0} y={3} textAnchor="middle" fill="#ef4444" fontSize={10}>×</text>
               </g>
             )}
@@ -182,16 +181,17 @@ export default function MindmapBlock({ content, onChange, readOnly }: MindmapBlo
         allLines.push(
           <path
             key={`line-${node.id}-${child.id}`}
-            d={`M ${x + NODE_W} ${y + NODE_H / 2} C ${x + NODE_W + 40} ${y + NODE_H / 2}, ${childResult.nodes[0]?.props?.transform?.match(/translate\(([^,]+),\s*([^)]+)\)/)?.[1] || x + GAP_X} ${parseFloat(childResult.nodes[0]?.props?.transform?.match(/translate\(([^,]+),\s*([^)]+)\)/)?.[2] || y) + NODE_H / 2}, ${childResult.nodes[0]?.props?.transform?.match(/translate\(([^,]+),\s*([^)]+)\)/)?.[1] || x + GAP_X} ${parseFloat(childResult.nodes[0]?.props?.transform?.match(/translate\(([^,]+),\s*([^)]+)\)/)?.[2] || y) + NODE_H / 2}`}
+            d={`M ${x + NODE_W} ${y + NODE_H / 2} C ${x + NODE_W + 40} ${y + NODE_H / 2}, ${x + GAP_X} ${childResult.y + NODE_H / 2}, ${childResult.x} ${childResult.y + NODE_H / 2}`}
             fill="none"
-            stroke="#52525b"
+            stroke="#d1d5db"
+            className="dark:stroke-zinc-600"
             strokeWidth={1}
           />
         );
       });
     }
 
-    return { nodes: allNodes, lines: allLines, maxX };
+    return { nodes: allNodes, lines: allLines, maxX, x, y };
   };
 
   const { nodes, lines, maxX } = renderTree(root, 0, 0, 0, 0, 1);

@@ -66,7 +66,7 @@ export default function BlockRenderer({ block, isSelected }: BlockRendererProps)
     case 'toggle':
       return <ToggleBlock block={block} />;
     case 'divider':
-      return <DividerBlock block={block} />;
+      return <DividerBlock block={block} updateBlock={updateBlock} />;
     case 'whiteboard':
       return (
         <WhiteboardBlock

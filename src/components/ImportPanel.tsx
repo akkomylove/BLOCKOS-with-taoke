@@ -103,35 +103,35 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative w-full max-w-lg bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-scale-in"
+        className="relative w-full max-w-lg bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200 dark:border-zinc-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-scale-in"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/60">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-800/60">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20 flex items-center justify-center">
               <Upload className="w-4 h-4 text-blue-400" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-zinc-100">导入内容</h3>
-              <p className="text-[10px] text-zinc-500">支持拖放文件或粘贴内容</p>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">导入内容</h3>
+              <p className="text-[10px] text-gray-400 dark:text-zinc-500">支持拖放文件或粘贴内容</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-zinc-300">
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="px-5 pt-4">
-          <div className="flex bg-zinc-800/50 rounded-xl p-1 gap-0.5">
+          <div className="flex bg-gray-100/50 dark:bg-zinc-800/50 rounded-xl p-1 gap-0.5">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                   activeTab === tab.key
-                    ? 'bg-zinc-700 text-zinc-100 shadow-sm'
-                    : 'text-zinc-500 hover:text-zinc-300'
+                    ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-zinc-100 shadow-sm'
+                    : 'text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300'
                 }`}
               >
                 <tab.icon className="w-3.5 h-3.5" />
@@ -147,16 +147,16 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
               <div className="mb-3">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-zinc-700/60 hover:border-blue-500/30 bg-zinc-900/30 hover:bg-zinc-900/50 transition-all group"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-gray-300/60 dark:border-zinc-700/60 hover:border-blue-500/30 bg-gray-50/30 dark:bg-zinc-900/30 hover:bg-gray-100/50 dark:hover:bg-zinc-900/50 transition-all group"
                 >
                   <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <FileUp className="w-4 h-4 text-blue-400" />
                   </div>
                   <div className="text-left">
-                    <p className="text-xs text-zinc-300">
+                    <p className="text-xs text-gray-700 dark:text-zinc-300">
                       {fileName ? fileName : `点击选择 ${currentTab.label} 文件`}
                     </p>
-                    <p className="text-[10px] text-zinc-600 mt-0.5">或拖放文件到此处</p>
+                    <p className="text-[10px] text-gray-400 dark:text-zinc-600 mt-0.5">或拖放文件到此处</p>
                   </div>
                 </button>
                 <input
@@ -169,9 +169,9 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
               </div>
 
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex-1 h-px bg-zinc-800" />
-                <span className="text-[10px] text-zinc-600">或粘贴内容</span>
-                <div className="flex-1 h-px bg-zinc-800" />
+                <div className="flex-1 h-px bg-gray-200 dark:bg-zinc-800" />
+                <span className="text-[10px] text-gray-400 dark:text-zinc-600">或粘贴内容</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-zinc-800" />
               </div>
             </>
           )}
@@ -182,7 +182,7 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
                 placeholder="# 在此粘贴 Markdown 内容..."
-                className="w-full h-40 bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-blue-500/40 transition-colors resize-none font-mono"
+                className="w-full h-40 bg-gray-100/50 dark:bg-zinc-800/50 border border-gray-300/60 dark:border-zinc-700/60 rounded-xl p-4 text-sm text-gray-800 dark:text-zinc-200 placeholder:text-gray-400 dark:placeholder:text-zinc-600 outline-none focus:border-blue-500/40 transition-colors resize-none font-mono"
               />
               <button
                 onClick={handleImport}
@@ -201,7 +201,7 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
                 value={csvContent}
                 onChange={(e) => setCsvContent(e.target.value)}
                 placeholder="姓名,年龄,城市&#10;张三,28,北京&#10;李四,32,上海"
-                className="w-full h-40 bg-zinc-800/50 border border-zinc-700/60 rounded-xl p-4 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none focus:border-emerald-500/40 transition-colors resize-none font-mono"
+                className="w-full h-40 bg-gray-100/50 dark:bg-zinc-800/50 border border-gray-300/60 dark:border-zinc-700/60 rounded-xl p-4 text-sm text-gray-800 dark:text-zinc-200 placeholder:text-gray-400 dark:placeholder:text-zinc-600 outline-none focus:border-emerald-500/40 transition-colors resize-none font-mono"
               />
               <button
                 onClick={handleImport}
@@ -216,14 +216,14 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
 
           {activeTab === 'image' && (
             <div
-              className="border-2 border-dashed border-zinc-700/60 rounded-xl p-12 text-center hover:border-blue-500/30 transition-colors cursor-pointer bg-zinc-900/30"
+              className="border-2 border-dashed border-gray-300/60 dark:border-zinc-700/60 rounded-xl p-12 text-center hover:border-blue-500/30 transition-colors cursor-pointer bg-gray-50/30 dark:bg-zinc-900/30"
               onClick={() => fileInputRef.current?.click()}
             >
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 flex items-center justify-center">
-                <ImageIcon className="w-7 h-7 text-zinc-500" />
+                <ImageIcon className="w-7 h-7 text-gray-400 dark:text-zinc-500" />
               </div>
-              <p className="text-sm text-zinc-400 mb-1">拖放图片到此处</p>
-              <p className="text-xs text-zinc-600">支持 JPG、PNG、GIF、WebP、SVG</p>
+              <p className="text-sm text-gray-500 dark:text-zinc-400 mb-1">拖放图片到此处</p>
+              <p className="text-xs text-gray-400 dark:text-zinc-600">支持 JPG、PNG、GIF、WebP、SVG</p>
               <input
                 ref={fileInputRef}
                 type="file"

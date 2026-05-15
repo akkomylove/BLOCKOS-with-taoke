@@ -181,33 +181,33 @@ li { margin: 0.25em 0; }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800/60">
+      <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-800/60">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
               <Download className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <h3 className="text-sm font-semibold text-zinc-100">导出页面</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">导出页面</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-zinc-300">
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-5">
-          <div className="flex items-center gap-4 mb-5 px-3 py-3 bg-zinc-800/30 rounded-xl">
+          <div className="flex items-center gap-4 mb-5 px-3 py-3 bg-gray-100/30 dark:bg-zinc-800/30 rounded-xl">
             <div className="flex-1 min-w-0">
-              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">页面名称</div>
-              <div className="text-sm text-zinc-200 font-medium truncate">{title}</div>
+              <div className="text-[10px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">页面名称</div>
+              <div className="text-sm text-gray-800 dark:text-zinc-200 font-medium truncate">{title}</div>
             </div>
-            <div className="w-px h-8 bg-zinc-700/50" />
+            <div className="w-px h-8 bg-gray-300/50 dark:bg-zinc-700/50" />
             <div className="text-center">
-              <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Block</div>
-              <div className="text-sm text-zinc-300 font-mono font-semibold">{blocks.length}</div>
+              <div className="text-[10px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">Block</div>
+              <div className="text-sm text-gray-700 dark:text-zinc-300 font-mono font-semibold">{blocks.length}</div>
             </div>
           </div>
 
-          <p className="text-xs text-zinc-500 mb-3 font-medium">选择导出格式</p>
+          <p className="text-xs text-gray-400 dark:text-zinc-500 mb-3 font-medium">选择导出格式</p>
           <div className="space-y-2.5">
             {formats.map((fmt) => (
               <button
@@ -216,7 +216,7 @@ li { margin: 0.25em 0; }
                 disabled={exporting !== null}
                 className={`w-full flex items-center gap-4 p-3.5 rounded-xl border transition-all duration-200 group ${
                   exporting === fmt.key
-                    ? 'bg-zinc-800/80 border-zinc-600/50 opacity-70'
+                    ? 'bg-gray-100/80 dark:bg-zinc-800/80 border-gray-300/50 dark:border-zinc-600/50 opacity-70'
                     : `bg-gradient-to-r ${fmt.gradient} ${fmt.border} hover:shadow-lg hover:scale-[1.01]`
                 }`}
               >
@@ -231,12 +231,12 @@ li { margin: 0.25em 0; }
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-zinc-100">{fmt.label}</span>
-                    <span className="text-[10px] text-zinc-500 font-mono">{fmt.ext}</span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100">{fmt.label}</span>
+                    <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-mono">{fmt.ext}</span>
                   </div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">{fmt.desc}</div>
+                  <div className="text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5">{fmt.desc}</div>
                 </div>
-                <Download className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 transition-colors shrink-0" />
+                <Download className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-600 group-hover:text-gray-500 dark:group-hover:text-zinc-400 transition-colors shrink-0" />
               </button>
             ))}
           </div>

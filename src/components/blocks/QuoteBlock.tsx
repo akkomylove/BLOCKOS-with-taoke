@@ -6,6 +6,7 @@ interface QuoteBlockProps {
   block: {
     id: string;
     content: string;
+    title?: string;
   };
 }
 
@@ -13,15 +14,18 @@ export default function QuoteBlock({ block }: QuoteBlockProps) {
   const updateBlock = useBlockStore((state) => state.updateBlock);
 
   return (
-    <div className="flex gap-3 py-1">
-      <div className="w-1 bg-blue-500/60 rounded-full flex-shrink-0" />
-      <div
-        className="flex-1 text-zinc-400 italic text-sm leading-relaxed outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-700"
-        contentEditable
-        suppressContentEditableWarning
-        data-placeholder="输入引用内容..."
-        onBlur={(e) => updateBlock(block.id, { content: e.currentTarget.innerText })}
-        dangerouslySetInnerHTML={{ __html: block.content.replace(/\n/g, '<br/>') }}
+    <div className="pl-4 border-l-2 border-amber-500/40">
+      <textarea
+        value={block.content}
+        onChange={(e) => updateBlock(block.id, { content: e.target.value })}
+        placeholder="在此输入引用内容..."
+        className="w-full min-h-[60px] bg-transparent outline-none resize-none text-sm text-gray-700 dark:text-zinc-300 placeholder:text-gray-400 dark:placeholder:text-zinc-600 italic leading-relaxed"
+      />
+      <input
+        value={block.title || ''}
+        onChange={(e) => updateBlock(block.id, { title: e.target.value })}
+        placeholder="引用来源（可选）"
+        className="w-full bg-transparent outline-none text-xs text-gray-500 dark:text-zinc-500 placeholder:text-gray-400 dark:placeholder-zinc-700 mt-1"
       />
     </div>
   );

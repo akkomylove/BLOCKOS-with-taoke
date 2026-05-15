@@ -118,49 +118,49 @@ export default function WhiteboardBlock({ content, onChange, readOnly }: Whitebo
   return (
     <div className="w-full">
       {!readOnly && (
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-2 px-3 py-2 mb-2 flex-wrap border-b border-gray-200 dark:border-zinc-800/60">
           <div className="flex items-center gap-1">
             {COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => { setColor(c); setIsEraser(false); }}
-                className={`w-5 h-5 rounded-full border-2 transition-all ${
-                  color === c && !isEraser ? 'border-white scale-110' : 'border-transparent'
+                className={`w-4 h-4 rounded-full border transition-all ${
+                  color === c && !isEraser ? 'border-gray-400 dark:border-zinc-400 scale-110' : 'border-transparent hover:border-gray-400 dark:hover:border-zinc-600'
                 }`}
                 style={{ backgroundColor: c }}
               />
             ))}
           </div>
-          <div className="w-px h-4 bg-zinc-700" />
+          <div className="w-px h-4 bg-gray-300/50 dark:bg-zinc-700/50" />
           <button
             onClick={() => setIsEraser(false)}
-            className={`p-1 rounded ${!isEraser ? 'bg-zinc-700 text-blue-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`p-1.5 rounded-lg transition-colors ${!isEraser ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100/60 dark:hover:bg-zinc-800/60'}`}
             title="画笔"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setIsEraser(true)}
-            className={`p-1 rounded ${isEraser ? 'bg-zinc-700 text-blue-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`p-1.5 rounded-lg transition-colors ${isEraser ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100/60 dark:hover:bg-zinc-800/60'}`}
             title="橡皮擦"
           >
             <Eraser className="w-3.5 h-3.5" />
           </button>
           <div className="flex items-center gap-1">
-            <button onClick={() => setBrushSize(Math.max(1, brushSize - 1))} className="p-0.5 text-zinc-500 hover:text-zinc-300">
+            <button onClick={() => setBrushSize(Math.max(1, brushSize - 1))} className="p-0.5 text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
               <Minus className="w-3 h-3" />
             </button>
-            <span className="text-[10px] text-zinc-500 w-4 text-center">{brushSize}</span>
-            <button onClick={() => setBrushSize(Math.min(20, brushSize + 1))} className="p-0.5 text-zinc-500 hover:text-zinc-300">
+            <span className="text-[10px] text-gray-500 dark:text-zinc-500 w-4 text-center">{brushSize}</span>
+            <button onClick={() => setBrushSize(Math.min(20, brushSize + 1))} className="p-0.5 text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
               <Plus className="w-3 h-3" />
             </button>
           </div>
-          <div className="w-px h-4 bg-zinc-700" />
-          <button onClick={clearCanvas} className="p-1 text-zinc-500 hover:text-red-400" title="清空">
+          <div className="w-px h-4 bg-gray-300/50 dark:bg-zinc-700/50" />
+          <button onClick={clearCanvas} className="p-1.5 text-gray-500 dark:text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="清空">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
           {hasDrawing && (
-            <button onClick={downloadImage} className="p-1 text-zinc-500 hover:text-emerald-400" title="下载">
+            <button onClick={downloadImage} className="p-1.5 text-gray-500 dark:text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="下载">
               <Download className="w-3.5 h-3.5" />
             </button>
           )}

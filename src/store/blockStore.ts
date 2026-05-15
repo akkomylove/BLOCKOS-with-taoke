@@ -2,13 +2,15 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { Block, BlockType, AgentRule, AgentLog } from '@/types/block';
+import type { Block, BlockType, AgentRule, AgentLog, BlockTemplate } from '@/types/block';
 import type { Page, Folder } from '@/types/page';
 
 interface HistoryEntry {
   pageId: string;
   blocks: Block[];
   timestamp: number;
+  action: string;
+  blockCount: number;
 }
 
 interface BlockStore {
@@ -29,6 +31,7 @@ interface BlockStore {
   historyIndex: number;
 
   addPage: (title?: string, folderId?: string) => string;
+  addPageFromTemplate: (templateId: string, folderId?: string) => string;
   deletePage: (id: string) => void;
   updatePageTitle: (id: string, title: string) => void;
   setCurrentPage: (id: string) => void;
@@ -80,6 +83,9 @@ interface BlockStore {
   syncToServer: () => Promise<void>;
   loadFromServer: (pageId: string) => Promise<void>;
   syncPages: () => Promise<void>;
+
+  blockDependencies: Record<string, string[]>;
+  getDependents: (blockId: string) => string[];
 }
 
 function createEmptyBlock(type: BlockType): Block {
@@ -115,6 +121,60 @@ function createDefaultPage(): Page {
     updatedAt: now,
   };
 }
+
+export const BLOCK_TEMPLATES: BlockTemplate[] = [
+  {
+    id: 'meeting',
+    name: '会议纪要',
+    icon: '📝',
+    description: '记录会议主题、参会人、讨论要点和待办事项',
+    blocks: [
+      { type: 'text', title: '会议主题', content: '# 会议主题\n\n日期：\n参会人：\n', meta: {}, parentId: null, order: 0, x: 40, y: 40, width: 400, collapsed: false },
+      { type: 'todo', title: '待办事项', content: '完成会议纪要的整理和分发', meta: { checked: false }, parentId: null, order: 1, x: 40, y: 200, width: 400, collapsed: false },
+      { type: 'text', title: '讨论要点', content: '## 讨论要点\n\n1. \n2. \n3. ', meta: {}, parentId: null, order: 2, x: 480, y: 40, width: 400, collapsed: false },
+    ],
+  },
+  {
+    id: 'project-plan',
+    name: '项目计划',
+    icon: '📊',
+    description: '项目目标、里程碑、任务分配和进度追踪',
+    blocks: [
+      { type: 'text', title: '项目概述', content: '# 项目概述\n\n目标：\n范围：\n时间线：', meta: {}, parentId: null, order: 0, x: 40, y: 40, width: 420, collapsed: false },
+      { type: 'table', title: '任务分配', content: JSON.stringify({ columns: ['任务', '负责人', '状态', '截止日期'], rows: [['', '', '未开始', '']], columnTypes: [{ name: '任务', type: 'text' }, { name: '负责人', type: 'text' }, { name: '状态', type: 'select', options: ['未开始', '进行中', '已完成'] }, { name: '截止日期', type: 'date' }] }), meta: {}, parentId: null, order: 1, x: 40, y: 220, width: 480, collapsed: false },
+      { type: 'todo', title: '本周任务', content: '制定项目计划', meta: { checked: false }, parentId: null, order: 2, x: 40, y: 420, width: 400, collapsed: false },
+    ],
+  },
+  {
+    id: 'reading-notes',
+    name: '读书笔记',
+    icon: '📚',
+    description: '书籍信息、核心观点摘录和个人思考',
+    blocks: [
+      { type: 'text', title: '书籍信息', content: '# 《书名》\n\n作者：\n出版社：\n阅读日期：', meta: {}, parentId: null, order: 0, x: 40, y: 40, width: 400, collapsed: false },
+      { type: 'quote', title: '精彩摘录', content: '在此处记录书中的精彩段落...', meta: {}, parentId: null, order: 1, x: 40, y: 200, width: 400, collapsed: false },
+      { type: 'text', title: '个人思考', content: '## 思考与感悟\n\n', meta: {}, parentId: null, order: 2, x: 480, y: 40, width: 400, collapsed: false },
+    ],
+  },
+  {
+    id: 'weekly-report',
+    name: '周报',
+    icon: '📅',
+    description: '本周工作总结、成果展示和下周计划',
+    blocks: [
+      { type: 'text', title: '本周总结', content: '# 周报（第X周）\n\n## 本周完成\n\n- \n- \n\n## 遇到的问题\n\n', meta: {}, parentId: null, order: 0, x: 40, y: 40, width: 400, collapsed: false },
+      { type: 'todo', title: '下周计划', content: '制定下周工作计划', meta: { checked: false }, parentId: null, order: 1, x: 40, y: 280, width: 400, collapsed: false },
+      { type: 'text', title: '成果展示', content: '## 成果与数据\n\n', meta: {}, parentId: null, order: 2, x: 480, y: 40, width: 400, collapsed: false },
+    ],
+  },
+  {
+    id: 'blank',
+    name: '空白页面',
+    icon: '📄',
+    description: '从零开始创建你的页面',
+    blocks: [],
+  },
+];
 
 const defaultAgentRules: AgentRule[] = [
   {
@@ -405,7 +465,42 @@ export const useBlockStore = create<BlockStore>()(
           state.selectedIds = [];
         });
         get().saveHistory();
-        // sync new page to server
+        fetch('/api/pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newPage.title, icon: newPage.icon }),
+        }).catch(() => {});
+        return newPage.id;
+      },
+
+      addPageFromTemplate: (templateId: string, folderId?: string) => {
+        const template = BLOCK_TEMPLATES.find((t) => t.id === templateId);
+        const newPage = createDefaultPage();
+        newPage.title = template ? template.name : '新页面';
+        newPage.icon = template ? template.icon : '📄';
+        if (folderId) newPage.folderId = folderId;
+        set((state) => {
+          state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
+          state.pages.push(newPage);
+          state.currentPageId = newPage.id;
+          state.selectedIds = [];
+          if (template && template.blocks.length > 0) {
+            const now = Date.now();
+            const newBlocks: Block[] = template.blocks.map((b, i) => ({
+              ...b,
+              id: nanoid(),
+              createdAt: now,
+              updatedAt: now,
+              order: i,
+            }));
+            state.pageBlocks[newPage.id] = newBlocks;
+            state.blocks = newBlocks;
+          } else {
+            state.pageBlocks[newPage.id] = [];
+            state.blocks = [];
+          }
+        });
+        get().saveHistory();
         fetch('/api/pages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -574,7 +669,22 @@ export const useBlockStore = create<BlockStore>()(
         set((state) => {
           const block = state.blocks.find((b) => b.id === id);
           if (block) {
-            Object.assign(block, updates, { updatedAt: Date.now() });
+            const updatedMeta = updates.meta
+              ? { ...block.meta, ...updates.meta }
+              : block.meta;
+            Object.assign(block, { ...updates, meta: updatedMeta, updatedAt: Date.now() });
+          }
+        });
+        get().saveHistory();
+        // trigger dependents refresh
+        const dependents = get().getDependents(id);
+        dependents.forEach((depId) => {
+          const depBlock = get().blocks.find((b) => b.id === depId);
+          if (depBlock && depBlock.type === 'code') {
+            set((state) => {
+              const b = state.blocks.find((x) => x.id === depId);
+              if (b) b.updatedAt = Date.now();
+            });
           }
         });
       },
@@ -685,10 +795,19 @@ export const useBlockStore = create<BlockStore>()(
 
       saveHistory: () => {
         set((state) => {
+          const prevEntry = state.history[state.historyIndex];
+          const prevCount = prevEntry?.blocks.length || 0;
+          const currCount = state.blocks.length;
+          let action = '编辑';
+          if (currCount > prevCount) action = '创建';
+          else if (currCount < prevCount) action = '删除';
+
           const entry: HistoryEntry = {
             pageId: state.currentPageId,
             blocks: JSON.parse(JSON.stringify(state.blocks)),
             timestamp: Date.now(),
+            action,
+            blockCount: currCount,
           };
           state.history = state.history.slice(0, state.historyIndex + 1);
           state.history.push(entry);
@@ -697,7 +816,6 @@ export const useBlockStore = create<BlockStore>()(
           }
           state.historyIndex = state.history.length - 1;
         });
-        // auto sync to server after any history save
         get().syncToServer().catch(() => {});
       },
 
@@ -1118,6 +1236,27 @@ export const useBlockStore = create<BlockStore>()(
         } catch {
           // silent fail
         }
+      },
+
+      blockDependencies: {},
+
+      getDependents: (blockId: string) => {
+        const state = get();
+        const dependents: string[] = [];
+        state.blocks.forEach((b) => {
+          if (b.type === 'code' && b.content.includes(`// @ref`)) {
+            const regex = /\/\/\s*@ref\s+(\w+)/g;
+            let match;
+            while ((match = regex.exec(b.content)) !== null) {
+              const varName = match[1];
+              const target = state.blocks.find((x) => x.id === varName || x.title === varName);
+              if (target && target.id === blockId) {
+                dependents.push(b.id);
+              }
+            }
+          }
+        });
+        return dependents;
       },
     })),
     {

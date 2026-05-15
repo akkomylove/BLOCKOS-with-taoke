@@ -9,8 +9,9 @@ import AIResultCard from './AIResultCard';
 import AIActionMenu from './AIActionMenu';
 import CommandPalette from './CommandPalette';
 import RelationDrawer from './RelationDrawer';
-import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group } from 'lucide-react';
+import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon } from 'lucide-react';
 import type { BlockType, Block } from '@/types/block';
+import TagWheelPicker, { getTagStyle } from './TagWheelPicker';
 
 interface BlockEditorProps {
   commandPaletteOpen: boolean;
@@ -64,6 +65,8 @@ export default function BlockEditor({
   } | null>(null);
 
   const [showParentPicker, setShowParentPicker] = useState(false);
+  const [tagWheelBlockId, setTagWheelBlockId] = useState<string | null>(null);
+  const [tagWheelRect, setTagWheelRect] = useState<DOMRect | undefined>(undefined);
 
   const [aiMenu, setAiMenu] = useState<{
     blockId: string;
@@ -425,6 +428,22 @@ export default function BlockEditor({
     setAiMenu({ blockId, blockType, position });
   }, []);
 
+  const handleAddTag = useCallback((blockId: string, tag: string) => {
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block || !tag.trim()) return;
+    const tags = block.meta.tags || [];
+    if (tags.includes(tag.trim())) return;
+    updateBlock(blockId, { meta: { ...block.meta, tags: [...tags, tag.trim()] } });
+    setTagWheelBlockId(null);
+  }, [blocks, updateBlock]);
+
+  const handleRemoveTag = useCallback((blockId: string, tag: string) => {
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    const tags = (block.meta.tags || []).filter((t) => t !== tag);
+    updateBlock(blockId, { meta: { ...block.meta, tags } });
+  }, [blocks, updateBlock]);
+
   const renderBlockTree = useCallback((block: (typeof sortedBlocks)[0], depth: number = 0): React.ReactNode => {
     const isChild = !!block.parentId;
     const children = sortedBlocks.filter((b) => b.parentId === block.id);
@@ -443,40 +462,81 @@ export default function BlockEditor({
                 ? 'border-blue-400/60 shadow-lg shadow-blue-500/10'
                 : isChild
                   ? 'border-blue-800/40 hover:border-blue-700/40'
-                  : 'border-zinc-700/60 hover:border-zinc-600/60'
-            } bg-zinc-850 backdrop-blur-sm`}
-            style={{ backgroundColor: 'rgba(30,30,35,0.92)' }}
+                  : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60'
+            } bg-white dark:bg-zinc-900 backdrop-blur-sm`}
           >
             <div
               className={`flex items-center gap-1 h-7 px-2 cursor-grab active:cursor-grabbing border-b ${
-                isChild ? 'border-blue-800/30 bg-blue-950/25' : 'border-zinc-700/40'
+                isChild ? 'border-blue-300/40 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/25' : 'border-gray-200/40 dark:border-zinc-700/40'
               }`}
               onMouseDown={(e) => startDragBlock(block.id, e)}
             >
-              <Move className="w-3 h-3 text-zinc-400" />
+              <Move className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
               <input
                 value={block.title}
                 onChange={(e) => updateBlock(block.id, { title: e.target.value })}
                 placeholder="Block 标题"
-                className={`flex-1 bg-transparent text-[10px] outline-none placeholder:text-zinc-600 ${
-                  isChild ? 'text-blue-300/80' : 'text-zinc-300'
+                className={`flex-1 bg-transparent text-[10px] outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600 ${
+                  isChild ? 'text-blue-500 dark:text-blue-300/80' : 'text-gray-700 dark:text-zinc-300'
                 }`}
                 onMouseDown={(e) => e.stopPropagation()}
               />
               {childCountMap[block.id] && childCountMap[block.id] > 0 && (
-                <span className="text-[9px] text-blue-300/70 font-mono bg-blue-500/15 px-1.5 py-0.5 rounded-full">
+                <span className="text-[9px] text-blue-600 dark:text-blue-300/70 font-mono bg-blue-500/15 px-1.5 py-0.5 rounded-full">
                   {childCountMap[block.id]}
                 </span>
               )}
               {(childCountMap[block.id] || 0) > 0 && (
                 <button
                   onClick={() => updateBlock(block.id, { collapsed: !block.collapsed })}
-                  className="p-0.5 hover:bg-zinc-600 rounded text-zinc-400"
+                  className="p-0.5 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded text-gray-500 dark:text-zinc-400"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   {block.collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                 </button>
               )}
+              <div className="flex items-center gap-1 relative">
+                {(block.meta.tags || []).map((tag) => (
+                  <span
+                    key={tag}
+                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] ${getTagStyle(tag)}`}
+                  >
+                    {tag}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemoveTag(block.id, tag); }}
+                      className="hover:opacity-70"
+                    >
+                      <XIcon className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                ))}
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (tagWheelBlockId === block.id) {
+                        setTagWheelBlockId(null);
+                      } else {
+                        setTagWheelBlockId(block.id);
+                        setTagWheelRect(e.currentTarget.getBoundingClientRect());
+                      }
+                    }}
+                    className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-400 dark:text-zinc-500 transition-colors"
+                    title="添加标签"
+                  >
+                    <Tag className="w-3 h-3" />
+                  </button>
+                  {tagWheelBlockId === block.id && (
+                    <TagWheelPicker
+                      isOpen={true}
+                      onClose={() => setTagWheelBlockId(null)}
+                      onSelect={(tag) => handleAddTag(block.id, tag)}
+                      existingTags={block.meta.tags || []}
+                      triggerRect={tagWheelRect}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
 
             {!block.collapsed && (
@@ -508,12 +568,12 @@ export default function BlockEditor({
         )}
       </div>
     );
-  }, [sortedBlocks, selectedIds, childCountMap, updateBlock, startDragBlock, handleSelect, handleOpenAIMenu, linkMode, linkSource, startResizeBlock]);
+  }, [sortedBlocks, selectedIds, childCountMap, updateBlock, startDragBlock, handleSelect, handleOpenAIMenu, linkMode, linkSource, startResizeBlock, tagWheelBlockId, tagWheelRect, handleAddTag, handleRemoveTag]);
 
   return (
     <div
       ref={canvasRef}
-      className="flex-1 overflow-hidden relative cursor-crosshair bg-zinc-950"
+      className="flex-1 overflow-hidden relative cursor-crosshair bg-gray-50 dark:bg-zinc-950"
       style={{
         backgroundImage: 'radial-gradient(circle, rgba(161,161,170,0.2) 1px, transparent 1px)',
         backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
@@ -607,39 +667,39 @@ export default function BlockEditor({
         {visibleBlocks.filter((b) => !b.parentId).map((b) => renderBlockTree(b))}
       </div>
 
-      <div data-ui-control className="absolute bottom-4 right-4 flex items-center gap-2 bg-zinc-800/90 backdrop-blur-xl border border-zinc-600 rounded-lg px-3 py-1.5 z-20">
+      <div data-ui-control className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-3 py-1.5 z-20">
         <button
           onClick={() => setZoom((z) => Math.max(0.3, z - 0.1))}
-          className="text-xs text-zinc-300 hover:text-zinc-100 px-1"
+          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
         >
           −
         </button>
-        <span className="text-xs text-zinc-400 font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
+        <span className="text-xs text-gray-500 dark:text-zinc-400 font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
         <button
           onClick={() => setZoom((z) => Math.min(2, z + 0.1))}
-          className="text-xs text-zinc-300 hover:text-zinc-100 px-1"
+          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
         >
           +
         </button>
-        <div className="w-px h-4 bg-zinc-600" />
+        <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
         <button
           onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-          className="text-xs text-zinc-300 hover:text-zinc-100"
+          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100"
         >
           Reset
         </button>
       </div>
 
-      <div data-ui-control className="absolute bottom-4 left-4 text-xs text-zinc-500 z-20">
+      <div data-ui-control className="absolute bottom-4 left-4 text-xs text-gray-400 dark:text-zinc-500 z-20">
         右键空白处添加 Block · 滚轮缩放
       </div>
 
-      <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-zinc-800/90 backdrop-blur-xl border border-zinc-600 rounded-lg px-2 py-1 z-20">
+      <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1 z-20">
         {(['text', 'todo', 'code', 'table', 'media'] as BlockType[]).map((type) => (
           <button
             key={type}
             onClick={() => addBlockAtCenter(type)}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] text-zinc-300 hover:text-zinc-100 hover:bg-zinc-700 rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors"
             title={`添加 ${type}`}
           >
             <Plus className="w-3 h-3" />
@@ -651,11 +711,11 @@ export default function BlockEditor({
       {contextMenu && createPortal(
         <div
           data-ui-control
-          className="fixed z-[100] bg-zinc-800 border border-zinc-600 rounded-lg shadow-xl py-1 min-w-[160px]"
+          className="fixed z-[100] bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-xl py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="px-3 py-1.5 text-[11px] text-zinc-400 border-b border-zinc-700 mb-1">添加 Block</div>
+          <div className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">添加 Block</div>
           {(['text', 'todo', 'code', 'table', 'media'] as BlockType[]).map((type) => (
             <button
               key={type}
@@ -664,36 +724,36 @@ export default function BlockEditor({
                 e.stopPropagation();
                 addBlockAtPosition(type, contextMenu.x, contextMenu.y);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors flex items-center gap-2"
+              className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
             >
-              <Plus className="w-3 h-3 text-zinc-400" />
+              <Plus className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
               {type === 'text' ? '文本' : type === 'todo' ? '待办' : type === 'code' ? '代码' : type === 'table' ? '表格' : '媒体'}
             </button>
           ))}
-          <div className="border-t border-zinc-700 my-1" />
-          <div className="px-3 py-1.5 text-[11px] text-zinc-400 border-b border-zinc-700 mb-1">AI 操作</div>
+          <div className="border-t border-gray-200 dark:border-zinc-700 my-1" />
+          <div className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">AI 操作</div>
           <button
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
               setContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors flex items-center gap-2"
+            className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
           >
             <Wand2 className="w-3 h-3 text-purple-400" />
             AI 生成内容
           </button>
           {contextTargetId && selectedIds.length > 0 && selectedIds.some((id) => id !== contextTargetId) && (
             <>
-              <div className="border-t border-zinc-700 my-1" />
-              <div className="px-3 py-1.5 text-[11px] text-zinc-400 border-b border-zinc-700 mb-1">Block 操作</div>
+              <div className="border-t border-gray-200 dark:border-zinc-700 my-1" />
+              <div className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">Block 操作</div>
               <button
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleSetAsChild(contextTargetId);
                 }}
-                className="w-full text-left px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors flex items-center gap-2"
+                className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
               >
                 <ArrowDownToLine className="w-3 h-3 text-blue-400" />
                 设为子 Block
@@ -736,20 +796,20 @@ export default function BlockEditor({
       />
 
       {selectedIds.length > 0 && !linkMode && (
-        <div data-ui-control className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-2.5 bg-zinc-800/95 backdrop-blur-xl border border-zinc-600/60 rounded-full shadow-2xl shadow-black/50 z-40 animate-slide-up">
-          <span className="text-xs text-zinc-300 font-mono">{selectedIds.length} selected</span>
-          <div className="w-px h-4 bg-zinc-600" />
+        <div data-ui-control className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-2.5 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-xl border border-gray-300/60 dark:border-zinc-600/60 rounded-full shadow-2xl shadow-black/50 z-40 animate-slide-up">
+          <span className="text-xs text-gray-700 dark:text-zinc-300 font-mono">{selectedIds.length} selected</span>
+          <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
           <button
             onClick={() => {
               selectedIds.forEach((id) => duplicateBlock(id));
               clearSelection();
             }}
-            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-zinc-700 text-zinc-200 hover:bg-zinc-600 rounded-full transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-zinc-200 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded-full transition-colors"
           >
             <CopyPlus className="w-3 h-3" />
             复制
           </button>
-          <div className="w-px h-4 bg-zinc-600" />
+          <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
           {selectedIds.length >= 2 && (
             <>
               <button
@@ -772,62 +832,62 @@ export default function BlockEditor({
               return (
                 <>
                   <button
-                    onClick={() => {
-                      ungroupBlocks(selectedBlock.groupId!);
-                      clearSelection();
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1 text-xs bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 rounded-full transition-colors"
-                  >
-                    <Ungroup className="w-3 h-3" />
-                    取消组合 ({groupMembers.length})
-                  </button>
-                  <div className="w-px h-4 bg-zinc-600" />
+                onClick={() => {
+                  ungroupBlocks(selectedBlock.groupId!);
+                  clearSelection();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 rounded-full transition-colors"
+              >
+                <Ungroup className="w-3 h-3" />
+                取消组合 ({groupMembers.length})
+              </button>
+                  <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
                 </>
               );
             }
             return null;
           })()}
           <button
-            onClick={handleStartLink}
-            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 rounded-full transition-colors"
-          >
-            <Link2 className="w-3 h-3" />
-            创建链接
-          </button>
-          <div className="w-px h-4 bg-zinc-600" />
-          <div className="relative">
-            <button
-              onClick={() => setShowParentPicker(!showParentPicker)}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-zinc-700 text-zinc-200 hover:bg-zinc-600 rounded-full transition-colors"
+              onClick={handleStartLink}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 rounded-full transition-colors"
             >
-              <ArrowDownToLine className="w-3 h-3" />
-              设为子 Block
+              <Link2 className="w-3 h-3" />
+              创建链接
             </button>
-            {showParentPicker && (
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-h-48 overflow-y-auto bg-zinc-800 border border-zinc-600 rounded-lg shadow-xl py-1">
-                <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-700">
-                  <span className="text-[11px] text-zinc-400">选择父 Block</span>
-                  <button onClick={() => setShowParentPicker(false)} className="text-zinc-500 hover:text-zinc-300">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-                {selectableParents.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-zinc-500">没有可选的 Block</div>
-                ) : (
-                  selectableParents.map((b) => (
-                    <button
-                      key={b.id}
-                      onClick={() => handleSetAsChild(b.id)}
-                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 transition-colors truncate"
-                    >
-                      {b.title || '未命名 Block'}
+            <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+            <div className="relative">
+              <button
+                onClick={() => setShowParentPicker(!showParentPicker)}
+                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-zinc-200 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded-full transition-colors"
+              >
+                <ArrowDownToLine className="w-3 h-3" />
+                设为子 Block
+              </button>
+              {showParentPicker && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-xl py-1">
+                  <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-zinc-700">
+                    <span className="text-[11px] text-gray-500 dark:text-zinc-400">选择父 Block</span>
+                    <button onClick={() => setShowParentPicker(false)} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
+                      <X className="w-3 h-3" />
                     </button>
-                  ))
-                )}
-              </div>
-            )}
+                  </div>
+                  {selectableParents.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-gray-400 dark:text-zinc-500">没有可选的 Block</div>
+                  ) : (
+                    selectableParents.map((b) => (
+                      <button
+                        key={b.id}
+                        onClick={() => handleSetAsChild(b.id)}
+                        className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors truncate"
+                      >
+                        {b.title || '未命名 Block'}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
       )}
 
       {linkMode && (

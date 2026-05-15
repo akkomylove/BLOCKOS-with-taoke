@@ -3,10 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
+  --background: #f8f8f9;
+  --foreground: #18181b;
   --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
 }
 
 body {
@@ -24,7 +29,11 @@ body::before {
   opacity: 0.015;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-repeat: repeat;
-  background-size: 256px 256px;
+  background-size: 128px 128px;
+}
+
+.dark body::before {
+  opacity: 0.03;
 }
 
 @layer base {
@@ -72,12 +81,28 @@ body::before {
 
   .block-content:empty::before {
     content: attr(data-placeholder);
-    color: #3f3f46;
+    color: #a1a1aa;
     pointer-events: none;
+  }
+
+  .dark .block-content:empty::before {
+    color: #3f3f46;
   }
 
   .block-content:focus {
     outline: none;
+  }
+
+  [data-ghost]:not([data-ghost=""])::after {
+    content: attr(data-ghost);
+    color: #9ca3af;
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .dark [data-ghost]:not([data-ghost=""])::after {
+    color: #71717a;
   }
 }
 
