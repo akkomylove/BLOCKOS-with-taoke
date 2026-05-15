@@ -25,6 +25,15 @@ if not exist "node_modules" (
     )
 )
 
+echo.
+echo [INFO] Cleaning Next.js cache...
+if exist ".next" (
+    rmdir /s /q ".next"
+    echo [OK] Cache cleared
+) else (
+    echo [OK] No cache to clean
+)
+
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000"') do (
     for /f "tokens=2 delims=" %%b in ('tasklist /fi "pid eq %%a" ^| findstr /v "Image Name"') do (
         set "proc=%%b"

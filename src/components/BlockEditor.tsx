@@ -695,15 +695,24 @@ export default function BlockEditor({
       </div>
 
       <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1 z-20">
-        {(['text', 'todo', 'code', 'table', 'media'] as BlockType[]).map((type) => (
+        {([
+          { type: 'text' as BlockType, label: '文本' },
+          { type: 'todo' as BlockType, label: '待办' },
+          { type: 'code' as BlockType, label: '代码' },
+          { type: 'table' as BlockType, label: '表格' },
+          { type: 'media' as BlockType, label: '媒体' },
+          { type: 'whiteboard' as BlockType, label: '白板' },
+          { type: 'mindmap' as BlockType, label: '导图' },
+          { type: 'math' as BlockType, label: '公式' },
+        ]).map(({ type, label }) => (
           <button
             key={type}
             onClick={() => addBlockAtCenter(type)}
             className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors"
-            title={`添加 ${type}`}
+            title={`添加 ${label}`}
           >
             <Plus className="w-3 h-3" />
-            {type === 'text' ? '文本' : type === 'todo' ? '待办' : type === 'code' ? '代码' : type === 'table' ? '表格' : '媒体'}
+            {label}
           </button>
         ))}
       </div>
@@ -716,7 +725,19 @@ export default function BlockEditor({
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">添加 Block</div>
-          {(['text', 'todo', 'code', 'table', 'media'] as BlockType[]).map((type) => (
+          {([
+            { type: 'text' as BlockType, label: '文本' },
+            { type: 'todo' as BlockType, label: '待办' },
+            { type: 'code' as BlockType, label: '代码' },
+            { type: 'table' as BlockType, label: '表格' },
+            { type: 'media' as BlockType, label: '媒体' },
+            { type: 'whiteboard' as BlockType, label: '白板' },
+            { type: 'mindmap' as BlockType, label: '思维导图' },
+            { type: 'math' as BlockType, label: '公式' },
+            { type: 'quote' as BlockType, label: '引用' },
+            { type: 'toggle' as BlockType, label: '折叠' },
+            { type: 'divider' as BlockType, label: '分割线' },
+          ]).map(({ type, label }) => (
             <button
               key={type}
               onMouseDown={(e) => {
@@ -727,7 +748,7 @@ export default function BlockEditor({
               className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
             >
               <Plus className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
-              {type === 'text' ? '文本' : type === 'todo' ? '待办' : type === 'code' ? '代码' : type === 'table' ? '表格' : '媒体'}
+              {label}
             </button>
           ))}
           <div className="border-t border-gray-200 dark:border-zinc-700 my-1" />

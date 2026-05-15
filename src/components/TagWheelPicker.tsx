@@ -77,8 +77,8 @@ export default function TagWheelPicker({ isOpen, onClose, onSelect, existingTags
     { name: '其他', color: '#9ca3af', bg: 'bg-gray-100', text: 'text-gray-700', darkBg: 'dark:bg-zinc-500/20', darkText: 'dark:text-zinc-300', type: 'custom' as const },
   ];
 
-  const left = triggerRect ? triggerRect.left : 0;
-  const top = triggerRect ? triggerRect.bottom + 4 : 0;
+  const left = triggerRect ? triggerRect.left + triggerRect.width / 2 - (WHEEL_SIZE + 32) / 2 : 0;
+  const top = triggerRect ? triggerRect.top - (WHEEL_SIZE + 32) - 4 : 0;
 
   return (
     <div

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Type, CheckSquare, Code, Table, ImageIcon, Quote, ChevronRight, Minus } from 'lucide-react';
+import { Type, CheckSquare, Code, Table, ImageIcon, Quote, ChevronRight, Minus, Palette, GitBranch, Sigma } from 'lucide-react';
 import type { BlockType } from '@/types/block';
 
 interface CommandMenuProps {
@@ -20,6 +20,9 @@ const commands: { type: BlockType; label: string; icon: React.ReactNode; descrip
   { type: 'quote', label: '引用', icon: <Quote className="w-4 h-4" />, description: '引用块' },
   { type: 'toggle', label: '折叠', icon: <ChevronRight className="w-4 h-4" />, description: '可折叠内容' },
   { type: 'divider', label: '分割线', icon: <Minus className="w-4 h-4" />, description: '水平分割线' },
+  { type: 'whiteboard', label: '白板', icon: <Palette className="w-4 h-4" />, description: '自由绘图板' },
+  { type: 'mindmap', label: '思维导图', icon: <GitBranch className="w-4 h-4" />, description: '树状思维导图' },
+  { type: 'math', label: '公式', icon: <Sigma className="w-4 h-4" />, description: 'LaTeX数学公式' },
 ];
 
 export default function CommandMenu({ isOpen, onClose, onSelect, position }: CommandMenuProps) {
