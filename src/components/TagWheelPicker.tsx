@@ -78,7 +78,7 @@ export default function TagWheelPicker({ isOpen, onClose, onSelect, existingTags
   ];
 
   const left = triggerRect ? triggerRect.left + triggerRect.width / 2 - (WHEEL_SIZE + 32) / 2 : 0;
-  const top = triggerRect ? triggerRect.top - (WHEEL_SIZE + 32) - 4 : 0;
+  const top = triggerRect ? triggerRect.top - (WHEEL_SIZE + 32) + 28 : 0;
 
   return (
     <div

@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { nanoid } from 'nanoid';
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    let userId: string;
+    try {
+      userId = await getUserId();
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await getDb();
-    const pages = query('SELECT * FROM pages WHERE user_id = ? ORDER BY order_index', [session.userId]);
+    const pages = query('SELECT * FROM pages WHERE user_id = ? ORDER BY order_index', [userId]);
     return NextResponse.json({ pages });
   } catch (err) {
     console.error('GET /api/pages error:', err);
@@ -21,8 +23,10 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    let userId: string;
+    try {
+      userId = await getUserId();
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -33,7 +37,7 @@ export async function POST(req: NextRequest) {
     await getDb();
     run(
       'INSERT INTO pages (id, user_id, title, icon, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [id, session.userId, title || '无标题', icon || '📄', 0, now, now]
+      [id, userId, title || '无标题', icon || '📄', 0, now, now]
     );
     saveDb();
 

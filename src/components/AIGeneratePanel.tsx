@@ -15,6 +15,8 @@ export default function AIGeneratePanel({ isOpen, onClose }: AIGeneratePanelProp
   const [content, setContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const contentRef = useRef('');
+  const rafIdRef = useRef<number | null>(null);
   const addBlock = useBlockStore((state) => state.addBlock);
   const updateBlock = useBlockStore((state) => state.updateBlock);
 
@@ -34,6 +36,7 @@ export default function AIGeneratePanel({ isOpen, onClose }: AIGeneratePanelProp
     setIsLoading(true);
     setIsStreaming(true);
     setContent('');
+    contentRef.current = '';
 
     try {
       const response = await fetch('/api/ai/generate', {
@@ -48,25 +51,44 @@ export default function AIGeneratePanel({ isOpen, onClose }: AIGeneratePanelProp
       if (!reader) throw new Error('No reader');
 
       const decoder = new TextDecoder();
-      let accumulated = '';
+
+      const processChunk = () => {
+        setContent(contentRef.current);
+        rafIdRef.current = null;
+      };
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        accumulated += chunk;
-        setContent(accumulated);
+        contentRef.current += chunk;
+        if (!rafIdRef.current) {
+          rafIdRef.current = requestAnimationFrame(processChunk);
+        }
       }
 
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+      setContent(contentRef.current);
       setIsStreaming(false);
     } catch (error) {
       console.error('Generate Error:', error);
-      setContent('AI 生成失败，请重试。');
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      setContent(`AI 生成失败，请重试。错误信息: ${errorMsg}`);
       setIsStreaming(false);
     } finally {
       setIsLoading(false);
     }
   }, [input, isLoading]);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
 
   const handleKeep = useCallback(() => {
     if (content) {

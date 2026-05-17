@@ -7,10 +7,11 @@ import { useBlockStore } from '@/store/blockStore';
 interface AIResultCardProps {
   result: string;
   blockId: string;
+  loading?: boolean;
   onClose: () => void;
 }
 
-export default function AIResultCard({ result, blockId, onClose }: AIResultCardProps) {
+export default function AIResultCard({ result, blockId, loading, onClose }: AIResultCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -89,16 +90,24 @@ export default function AIResultCard({ result, blockId, onClose }: AIResultCardP
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-            <Check className="w-3.5 h-3.5 text-white" />
+            {loading ? (
+              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Check className="w-3.5 h-3.5 text-white" />
+            )}
           </div>
-          <span className="text-sm font-medium text-gray-800 dark:text-zinc-200">AI 处理完成</span>
+          <span className="text-sm font-medium text-gray-800 dark:text-zinc-200">
+            {loading ? 'AI 处理中...' : 'AI 处理完成'}
+          </span>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        {!loading && (
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       <div className="bg-gray-50/50 dark:bg-zinc-950/50 border border-gray-200/50 dark:border-zinc-800/50 rounded-lg p-3 mb-4 max-h-32 overflow-y-auto">

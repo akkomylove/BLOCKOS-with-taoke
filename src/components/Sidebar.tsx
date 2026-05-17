@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useBlockStore } from '@/store/blockStore';
 import TemplatePicker from './TemplatePicker';
-import { FileText, Plus, Trash2, MoreHorizontal, FolderPlus, Folder, ChevronDown, ChevronRight, FolderOpen, LayoutTemplate } from 'lucide-react';
+import { FileText, Plus, Trash2, MoreHorizontal, FolderPlus, Folder, ChevronDown, ChevronRight, FolderOpen } from 'lucide-react';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -14,7 +14,6 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
   const pages = useBlockStore((state) => state.pages);
   const folders = useBlockStore((state) => state.folders);
   const currentPageId = useBlockStore((state) => state.currentPageId);
-  const addPage = useBlockStore((state) => state.addPage);
   const deletePage = useBlockStore((state) => state.deletePage);
   const setCurrentPage = useBlockStore((state) => state.setCurrentPage);
   const updatePageTitle = useBlockStore((state) => state.updatePageTitle);

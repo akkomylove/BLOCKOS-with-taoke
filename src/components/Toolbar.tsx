@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
-  Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History
+  Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
+  LogOut, UserCircle, LayoutGrid, FileText, Command
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useBlockStore } from '@/store/blockStore';
@@ -28,6 +30,7 @@ export default function Toolbar({
   onToggleHelp, onToggleSearch, onToggleImport, onToggleExport,
   onToggleGroupPanel, showGroupPanel, onToggleHistory,
 }: ToolbarProps) {
+  const router = useRouter();
   const agentEnabled = useBlockStore((state) => state.agentEnabled);
   const toggleAgent = useBlockStore((state) => state.toggleAgent);
   const selectedIds = useBlockStore((state) => state.selectedIds);
@@ -47,6 +50,32 @@ export default function Toolbar({
 
   const currentPage = pages.find((p) => p.id === currentPageId);
   const [formatting, setFormatting] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const res = await fetch('/api/auth/user');
+        if (res.ok) {
+          const data = await res.json();
+          setUserName(data.name || '用户');
+        }
+      } catch (err) {
+        console.error('Failed to load user info:', err);
+      }
+    };
+    loadUserInfo();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push('/login');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
 
   const handleDeleteSelected = () => {
     selectedIds.forEach((id) => deleteBlock(id));
@@ -81,98 +110,142 @@ export default function Toolbar({
 
   const isTextSelected = selectedIds.length === 1 && blocks.find((b) => b.id === selectedIds[0])?.type === 'text';
 
-  const btnBase = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors border flex-shrink-0';
-  const btnDefault = `${btnBase} bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-700 hover:text-gray-900 dark:hover:text-zinc-200`;
-  const btnActive = `${btnBase} bg-purple-500/10 dark:bg-purple-500/15 text-purple-600 dark:text-purple-300 border-purple-500/20 dark:border-purple-500/30`;
+  const iconBtn = 'flex items-center justify-center w-8 h-8 rounded-lg text-xs transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200';
+  const iconBtnActive = 'flex items-center justify-center w-8 h-8 rounded-lg text-xs transition-colors bg-purple-500/10 dark:bg-purple-500/15 text-purple-600 dark:text-purple-300';
+  const iconBtnBlue = 'flex items-center justify-center w-8 h-8 rounded-lg text-xs transition-colors bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300';
 
   return (
-    <div className="h-12 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between px-4 shrink-0">
-      <div className="flex items-center gap-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <Logo size={18} />
-          <h1 className="text-sm font-semibold text-gray-900 dark:text-zinc-100 tracking-tight">BlockOS</h1>
+    <div className="h-11 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between px-3 shrink-0">
+      {/* Left: Logo + Page Title */}
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <Logo size={16} />
+          <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100 tracking-tight">BlockOS</span>
         </div>
-        <div className="h-3 w-px bg-gray-300 dark:bg-zinc-700" />
+        <div className="h-4 w-px bg-gray-300 dark:bg-zinc-700 mx-1" />
         {currentPage && (
           <input
-            className="bg-transparent text-sm text-gray-600 dark:text-zinc-300 outline-none hover:text-gray-900 dark:hover:text-zinc-100 focus:text-gray-900 dark:focus:text-zinc-100 transition-colors w-48"
+            className="bg-transparent text-sm text-gray-600 dark:text-zinc-300 outline-none hover:text-gray-900 dark:hover:text-zinc-100 focus:text-gray-900 dark:focus:text-zinc-100 transition-colors w-40 lg:w-56"
             value={currentPage.title}
             onChange={(e) => updatePageTitle(currentPage.id, e.target.value)}
           />
         )}
       </div>
 
-      <div className="flex items-center gap-1.5">
-        <button onClick={toggleTheme} className={btnDefault} title="切换主题">
-          {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+      {/* Center: Main Actions */}
+      <div className="flex items-center gap-0.5">
+        {/* AI Group */}
+        <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手">
+          <Sparkles className="w-4 h-4" />
         </button>
-        <button onClick={undo} disabled={!canUndo()} className={`${btnDefault} disabled:opacity-30`} title="撤销">
-          <Undo2 className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={redo} disabled={!canRedo()} className={`${btnDefault} disabled:opacity-30`} title="重做">
-          <Redo2 className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onToggleAIAssistant} className={btnActive}>
-          <Sparkles className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">AI 助手</span>
+        <button onClick={toggleAgent} className={agentEnabled ? iconBtnActive : iconBtn} title="Agent">
+          <Bot className="w-4 h-4" />
         </button>
 
-        <div className="w-px h-4 bg-gray-300 dark:bg-zinc-700 mx-1" />
+        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
 
+        {/* Edit Group */}
+        <button onClick={undo} disabled={!canUndo()} className={`${iconBtn} disabled:opacity-30`} title="撤销">
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button onClick={redo} disabled={!canRedo()} className={`${iconBtn} disabled:opacity-30`} title="重做">
+          <Redo2 className="w-4 h-4" />
+        </button>
+
+        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
+
+        {/* View Group */}
+        <button onClick={onToggleGroupPanel} className={showGroupPanel ? iconBtnActive : iconBtn} title="导航">
+          <LayoutGrid className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleRelationDrawer} className={iconBtn} title="关系">
+          <GitBranch className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleSearch} className={iconBtn} title="搜索">
+          <Search className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleHistory} className={iconBtn} title="历史">
+          <History className="w-4 h-4" />
+        </button>
+
+        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
+
+        {/* Tools Group */}
+        <button onClick={onToggleExport} className={iconBtn} title="导出">
+          <Download className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleImport} className={iconBtn} title="导入">
+          <Upload className="w-4 h-4" />
+        </button>
+        <button onClick={() => router.push('/teams')} className={iconBtn} title="协作">
+          <Users className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleLogs} className={showLogs ? iconBtnActive : iconBtn} title="日志">
+          <Activity className="w-4 h-4" />
+        </button>
+        <button onClick={toggleTheme} className={iconBtn} title="切换主题">
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+        <button onClick={onToggleHelp} className={iconBtn} title="帮助">
+          <HelpCircle className="w-4 h-4" />
+        </button>
+
+        {/* Selected Count + Actions */}
         {selectedIds.length > 0 && (
-          <div className={`${btnBase} bg-blue-500/10 dark:bg-blue-500/15 border-blue-500/20 dark:border-blue-500/30`}>
-            <span className="text-blue-600 dark:text-blue-300 font-mono text-xs">{selectedIds.length}</span>
-            <button onClick={handleDuplicateSelected} className="hover:bg-blue-500/20 rounded p-0.5" title="复制">
-              <CopyPlus className="w-3 h-3 text-blue-600 dark:text-blue-300" />
-            </button>
-            <button onClick={handleDeleteSelected} className="hover:bg-red-500/20 rounded p-0.5" title="删除">
-              <Trash2 className="w-3 h-3 text-red-500 dark:text-red-400" />
-            </button>
-          </div>
+          <>
+            <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
+            <div className="flex items-center gap-0.5 px-2 py-1 bg-blue-500/10 dark:bg-blue-500/15 rounded-lg">
+              <span className="text-blue-600 dark:text-blue-300 font-mono text-[11px] min-w-[16px] text-center">{selectedIds.length}</span>
+              <button onClick={handleDuplicateSelected} className={`${iconBtn} !w-6 !h-6`} title="复制">
+                <CopyPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+              </button>
+              <button onClick={handleDeleteSelected} className={`${iconBtn} !w-6 !h-6`} title="删除">
+                <Trash2 className="w-3.5 h-3.5 text-red-500 dark:text-red-400" />
+              </button>
+            </div>
+          </>
         )}
-
-        <button onClick={onToggleRelationDrawer} className={btnDefault}>
-          <GitBranch className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">关系</span>
-        </button>
-        <button onClick={onToggleGroupPanel} className={showGroupPanel ? btnActive : btnDefault}>
-          <Layers className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">导航</span>
-        </button>
-        <button onClick={toggleAgent} className={agentEnabled ? btnActive : btnDefault}>
-          <Bot className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Agent</span>
-        </button>
-        <button onClick={onToggleLogs} className={showLogs ? btnActive : btnDefault}>
-          <Activity className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">日志</span>
-        </button>
-
-        <div className="w-px h-4 bg-gray-300 dark:bg-zinc-700 mx-1" />
-
-        <button onClick={onToggleSearch} className={btnDefault} title="搜索">
-          <Search className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onToggleExport} className={btnDefault} title="导出">
-          <Download className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onToggleImport} className={btnDefault} title="导入">
-          <Upload className="w-3.5 h-3.5" />
-        </button>
 
         {isTextSelected && (
-          <button onClick={handleFormatDocument} disabled={formatting} className={btnActive}>
-            <Wand2 className={`w-3.5 h-3.5 ${formatting ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{formatting ? '格式化中...' : 'AI 格式化'}</span>
+          <button onClick={handleFormatDocument} disabled={formatting} className={iconBtnBlue} title="AI 格式化">
+            <Wand2 className={`w-4 h-4 ${formatting ? 'animate-spin' : ''}`} />
           </button>
         )}
+      </div>
 
-        <button onClick={onToggleHistory} className={btnDefault} title="历史">
-          <History className="w-3.5 h-3.5" />
-        </button>
-        <button onClick={onToggleHelp} className={btnDefault} title="帮助">
-          <HelpCircle className="w-3.5 h-3.5" />
-        </button>
+      {/* Right: User */}
+      <div className="flex items-center gap-1 shrink-0">
+        <div className="relative">
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className={`${iconBtn} gap-1 px-2 w-auto`}
+          >
+            <UserCircle className="w-4 h-4" />
+            <span className="hidden lg:inline text-xs max-w-[80px] truncate">
+              {userName || '用户'}
+            </span>
+          </button>
+
+          {userMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setUserMenuOpen(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg min-w-[140px]">
+                <div className="p-1.5">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>登出</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

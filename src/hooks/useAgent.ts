@@ -4,6 +4,11 @@ import { useEffect, useRef } from 'react';
 import { useBlockStore } from '@/store/blockStore';
 import type { Block } from '@/types/block';
 
+interface AgentTask {
+  block: Block;
+  prevBlock: Block;
+}
+
 export function useAgent() {
   const agentEnabled = useBlockStore((state) => state.agentEnabled);
   const agentRules = useBlockStore((state) => state.agentRules);
@@ -15,6 +20,17 @@ export function useAgent() {
   const prevBlocksRef = useRef<Block[]>([]);
   const processedChangesRef = useRef<Set<string>>(new Set());
   const isProcessingRef = useRef(false);
+  const taskQueueRef = useRef<AgentTask[]>([]);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      processedChangesRef.current.clear();
+      taskQueueRef.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     if (!agentEnabled) {
@@ -24,8 +40,7 @@ export function useAgent() {
     if (isProcessingRef.current) return;
 
     const prevBlocks = prevBlocksRef.current;
-
-    const changedBlocks: Array<{ block: Block; prevBlock: Block }> = [];
+    const newTasks: AgentTask[] = [];
 
     blocks.forEach((block) => {
       const prevBlock = prevBlocks.find((b) => b.id === block.id);
@@ -41,69 +56,88 @@ export function useAgent() {
 
           if (block.type === 'todo' && wasUnchecked && isChecked) {
             if (processedChangesRef.current.has(changeKey)) return;
-            changedBlocks.push({ block, prevBlock });
+            newTasks.push({ block, prevBlock });
           }
         }
       });
     });
 
-    if (changedBlocks.length === 0) {
+    if (newTasks.length === 0) {
       prevBlocksRef.current = [...blocks];
       return;
     }
 
-    isProcessingRef.current = true;
-
-    changedBlocks.forEach(({ block }) => {
+    taskQueueRef.current.push(...newTasks);
+    newTasks.forEach(({ block }) => {
       const changeKey = `${block.id}-${!!block.meta.checked}`;
       processedChangesRef.current.add(changeKey);
     });
 
-    const processBlocks = async () => {
-      for (const { block } of changedBlocks) {
+    if (taskQueueRef.current.length > 100) {
+      taskQueueRef.current = taskQueueRef.current.slice(-50);
+    }
+
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
+    const processQueue = async () => {
+      while (taskQueueRef.current.length > 0 && isMountedRef.current) {
+        const task = taskQueueRef.current.shift();
+        if (!task) break;
+
+        const { block } = task;
+
         try {
-          agentRules.forEach((rule) => {
-            if (!rule.enabled) return;
+          for (const rule of agentRules) {
+            if (!rule.enabled) continue;
 
             if (rule.id === 'todo-complete') {
-              rule.actions.forEach((action) => {
+              for (const action of rule.actions) {
                 if (action.type === 'createBlock') {
                   const timestamp = new Date().toLocaleString('zh-CN');
                   const content = (action.config.contentTemplate as string).replace('{timestamp}', timestamp);
                   const newBlockId = addBlock('text', block.id);
 
                   setTimeout(() => {
-                    updateBlock(newBlockId, { content });
+                    if (isMountedRef.current) {
+                      updateBlock(newBlockId, { content });
+                    }
                   }, 50);
 
-                  addAgentLog({
-                    ruleId: rule.id,
-                    blockId: block.id,
-                    result: `创建完成日志: ${content}`,
-                  });
+                  if (isMountedRef.current) {
+                    addAgentLog({
+                      ruleId: rule.id,
+                      blockId: block.id,
+                      result: `创建完成日志: ${content}`,
+                    });
+                  }
                 }
 
                 if (action.type === 'callAI') {
                   const prompt = action.config.prompt as string;
-                  fetch('/api/ai/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, context: block.content }),
-                  }).then(async (response) => {
-                    if (response.ok && response.body) {
+                  try {
+                    const response = await fetch('/api/ai/generate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ prompt, context: block.content }),
+                    });
+
+                    if (isMountedRef.current && response.ok && response.body) {
                       const reader = response.body.getReader();
                       const decoder = new TextDecoder();
                       let text = '';
                       while (true) {
                         const { done, value } = await reader.read();
-                        if (done) break;
+                        if (done || !isMountedRef.current) break;
                         text += decoder.decode(value, { stream: true });
                       }
                       const cleanText = text.trim();
-                      if (cleanText) {
+                      if (cleanText && isMountedRef.current) {
                         const newBlockId = addBlock('text', block.id);
                         setTimeout(() => {
-                          updateBlock(newBlockId, { content: `🎉 ${cleanText}` });
+                          if (isMountedRef.current) {
+                            updateBlock(newBlockId, { content: `🎉 ${cleanText}` });
+                          }
                         }, 50);
 
                         addAgentLog({
@@ -113,23 +147,30 @@ export function useAgent() {
                         });
                       }
                     }
-                  }).catch(() => {});
+                  } catch {
+                  }
                 }
-              });
+              }
             }
-          });
+          }
         } catch (error) {
           console.error('Agent rule error:', error);
         }
       }
+
+      isProcessingRef.current = false;
+
+      if (taskQueueRef.current.length > 0) {
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            isProcessingRef.current = true;
+            processQueue();
+          }
+        }, 100);
+      }
     };
 
-    processBlocks();
-
+    processQueue();
     prevBlocksRef.current = [...blocks];
-
-    requestAnimationFrame(() => {
-      isProcessingRef.current = false;
-    });
   }, [blocks, agentEnabled, agentRules, addBlock, updateBlock, addAgentLog]);
 }

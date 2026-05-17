@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, ChevronRight, ChevronLeft, Sparkles, MousePointer, Layout, GitBranch, Maximize2 } from 'lucide-react';
+import { X, Sparkles, MousePointer, Layout, GitBranch, Maximize2 } from 'lucide-react';
 
 interface OnboardingTourProps {
   onComplete: () => void;

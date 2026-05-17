@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
+import { isValidNanoid } from '@/lib/validation';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    let userId: string;
+    try {
+      userId = await getUserId();
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
+    if (!isValidNanoid(id)) {
+      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+    }
     await getDb();
 
-    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ?', [id, session.userId]);
+    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
     if (pages.length === 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -45,18 +51,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    let userId: string;
+    try {
+      userId = await getUserId();
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const { title, icon } = await req.json();
 
+    if (!isValidNanoid(id)) {
+      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+    }
     await getDb();
     run(
       'UPDATE pages SET title = ?, icon = ?, updated_at = ? WHERE id = ? AND user_id = ?',
-      [title, icon || '📄', Date.now(), id, session.userId]
+      [title, icon || '📄', Date.now(), id, userId]
     );
     saveDb();
 
@@ -69,15 +80,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    let userId: string;
+    try {
+      userId = await getUserId();
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
 
+    if (!isValidNanoid(id)) {
+      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+    }
     await getDb();
-    run('DELETE FROM pages WHERE id = ? AND user_id = ?', [id, session.userId]);
+    run('DELETE FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
     saveDb();
 
     return NextResponse.json({ success: true });

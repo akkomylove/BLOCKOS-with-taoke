@@ -196,7 +196,7 @@ export default function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
           {results.length === 0 && (query.trim() || activeTypeFilter || activeTagFilter) && (
             <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-zinc-600">未找到匹配内容</div>
           )}
-          {results.map(({ block, preview, matchedTitle, matchedContent, matchedTag }) => (
+          {results.map(({ block, preview, matchedTitle, matchedTag }) => (
             <button
               key={block.id}
               onClick={() => handleSelect(block.id)}

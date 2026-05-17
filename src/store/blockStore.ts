@@ -104,7 +104,7 @@ function createEmptyBlock(type: BlockType): Block {
     order: 0,
     x: 0,
     y: 0,
-    width: 320,
+    width: 480,
     collapsed: false,
     createdAt: now,
     updatedAt: now,

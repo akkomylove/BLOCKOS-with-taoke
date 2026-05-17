@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Pencil, Eraser, Trash2, Download, Palette, Minus, Plus } from 'lucide-react';
+import { Pencil, Eraser, Trash2, Download, Minus, Plus } from 'lucide-react';
 
 interface WhiteboardBlockProps {
   content: string;

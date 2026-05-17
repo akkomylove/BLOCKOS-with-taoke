@@ -41,7 +41,7 @@ export default function BlockEditor({
   const ungroupBlocks = useBlockStore((state) => state.ungroupBlocks);
 
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
-  const [aiResults, setAiResults] = useState<{ id: string; blockId: string; result: string; loading?: boolean }[]>([]);
+  const [aiResults, setAiResults] = useState<{ id: string; blockId: string; result: string; loading?: boolean; timestamp?: number }[]>([]);
   const [linkMode, setLinkMode] = useState(false);
   const [linkSource, setLinkSource] = useState<string | null>(null);
 
@@ -75,6 +75,11 @@ export default function BlockEditor({
   } | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const clearSelectionRef = useRef(clearSelection);
+  
+  useEffect(() => {
+    clearSelectionRef.current = clearSelection;
+  }, [clearSelection]);
 
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
@@ -160,7 +165,7 @@ export default function BlockEditor({
     const block = blocks.find((b) => b.id === blockId);
     if (!block) return;
     const resultId = `${blockId}-${action}-${Date.now()}`;
-    setAiResults((prev) => [...prev, { id: resultId, blockId, result: '', loading: true }]);
+    setAiResults((prev) => [...prev.slice(-19), { id: resultId, blockId, result: '', loading: true }]);
 
     try {
       const res = await fetch('/api/ai/block-action', {
@@ -198,7 +203,7 @@ export default function BlockEditor({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        clearSelection();
+        clearSelectionRef.current();
         setCommandMenuOpen(false);
         setLinkMode(false);
         setLinkSource(null);
@@ -224,7 +229,7 @@ export default function BlockEditor({
       document.removeEventListener('keydown', handleKeyDown, true);
       document.removeEventListener('contextmenu', handleDocContextMenu);
     };
-  }, [clearSelection]);
+  }, []);
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
@@ -793,12 +798,13 @@ export default function BlockEditor({
       />
 
       {aiResults.length > 0 && createPortal(
-        <div data-ui-control className="fixed bottom-20 right-4 z-50 space-y-2 max-w-sm">
+        <div data-ui-control className="fixed bottom-20 right-4 z-50 space-y-2 max-w-sm max-h-[60vh] overflow-y-auto">
           {aiResults.map((result) => (
             <AIResultCard
               key={result.id}
               result={result.result}
               blockId={result.blockId}
+              loading={result.loading}
               onClose={() => handleCloseResult(result.id)}
             />
           ))}

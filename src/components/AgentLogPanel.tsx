@@ -1,7 +1,7 @@
 'use client';
 
 import { useBlockStore } from '@/store/blockStore';
-import { X, Clock, Zap, Terminal } from 'lucide-react';
+import { X, Terminal } from 'lucide-react';
 
 interface AgentLogPanelProps {
   isOpen: boolean;

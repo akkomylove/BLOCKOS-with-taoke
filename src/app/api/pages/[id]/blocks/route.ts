@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
+import { isValidNanoid } from '@/lib/validation';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    let userId: string;
+    try {
+      userId = await getUserId();
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
+    if (!isValidNanoid(id)) {
+      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+    }
     await getDb();
 
-    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ?', [id, session.userId]);
+    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
     if (pages.length === 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -44,17 +50,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await auth();
-    if (!session?.userId) {
+    let userId: string;
+    try {
+      userId = await getUserId();
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const { blocks } = await req.json();
 
+    if (!isValidNanoid(id)) {
+      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+    }
     await getDb();
 
-    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ?', [id, session.userId]);
+    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
     if (pages.length === 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }

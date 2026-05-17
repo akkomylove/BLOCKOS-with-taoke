@@ -25,6 +25,8 @@ const iconMap: Record<string, React.ReactNode> = {
   BarChart3: <BarChart3 className="w-4 h-4" />,
 };
 
+const defaultIcon = <HelpCircle className="w-4 h-4" />;
+
 export default function AIActionMenu({ isOpen, onClose, onSelect, blockType, position }: AIActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const actions = AI_ACTIONS[blockType] || [];
@@ -62,7 +64,7 @@ export default function AIActionMenu({ isOpen, onClose, onSelect, blockType, pos
           className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-100/60 dark:hover:bg-zinc-800/60 transition-colors text-left group"
         >
           <span className="p-1 rounded text-gray-500 dark:text-zinc-500 group-hover:text-blue-400 group-hover:bg-blue-500/10 transition-colors">
-            {iconMap[action.icon]}
+            {iconMap[action.icon] || defaultIcon}
           </span>
           <div>
             <div className="text-sm text-gray-800 dark:text-zinc-200">{action.label}</div>

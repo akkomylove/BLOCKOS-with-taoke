@@ -4,18 +4,20 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const { nextUrl } = req;
 
-  if (process.env.NODE_ENV === 'development') {
-    return NextResponse.next();
-  }
-
-  const token = req.cookies.get('authjs.session-token') || req.cookies.get('__Secure-authjs.session-token');
-  const isLoggedIn = !!token;
+  const nextAuthToken = req.cookies.get('authjs.session-token') || req.cookies.get('__Secure-authjs.session-token');
+  const demoSession = req.cookies.get('demo-session');
+  const isLoggedIn = !!nextAuthToken || !!demoSession;
+  
   const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth');
   const isPublicRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/';
   const isApiRoute = nextUrl.pathname.startsWith('/api');
 
   if (isApiAuthRoute) {
     return NextResponse.next();
+  }
+
+  if (isLoggedIn && nextUrl.pathname === '/login') {
+    return NextResponse.redirect(new URL('/', nextUrl));
   }
 
   if (!isLoggedIn && isApiRoute && !isApiAuthRoute) {
@@ -32,3 +34,4 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)'],
 };
+
