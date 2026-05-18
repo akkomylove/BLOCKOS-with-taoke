@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useBlockStore } from '@/store/blockStore';
 import TemplatePicker from './TemplatePicker';
 import { FileText, Plus, Trash2, MoreHorizontal, FolderPlus, Folder, ChevronDown, ChevronRight, FolderOpen } from 'lucide-react';
@@ -309,6 +310,7 @@ function PageItem({
 
   return (
     <div
+      data-page-id={page.id}
       className={`group relative mx-2 ml-6 rounded-md flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer transition-colors ${
         isActive
           ? 'bg-gray-200 dark:bg-zinc-700 text-gray-900 dark:text-zinc-100'
@@ -343,56 +345,68 @@ function PageItem({
         </button>
       </div>
 
-      {menuOpenId === page.id && (
-        <div className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md shadow-lg z-50 py-1">
-          <button
-            className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
-            onClick={(e) => { e.stopPropagation(); onStartEdit(); }}
+      {menuOpenId === page.id && typeof document !== 'undefined' && createPortal(
+        <>
+          <div className="fixed inset-0 z-[180]" onClick={() => { setShowFolderPicker(false); onMenuToggle(); }} />
+          <div className="fixed z-[190] bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md shadow-lg py-1 w-36"
+            style={{ top: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().bottom ?? 0) + 4 : 0), left: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().right ?? 0) - 144 : 0) }}
           >
-            <FileText className="w-3 h-3" />
-            重命名
-          </button>
-          <div className="relative">
             <button
               className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowFolderPicker(!showFolderPicker);
-              }}
+              onClick={(e) => { e.stopPropagation(); onStartEdit(); onMenuToggle(); }}
             >
-              <Folder className="w-3 h-3" />
-              移动到...
+              <FileText className="w-3 h-3" />
+              重命名
             </button>
-            {showFolderPicker && (
-              <div className="absolute left-full top-0 ml-1 w-32 bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md shadow-lg py-1">
-                <button
-                  className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600"
-                  onClick={(e) => { e.stopPropagation(); onMoveToFolder(undefined); setShowFolderPicker(false); }}
-                >
-                  无文件夹
-                </button>
-                {folders.map((f) => (
-                  <button
-                    key={f.id}
-                    className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600"
-                    onClick={(e) => { e.stopPropagation(); onMoveToFolder(f.id); setShowFolderPicker(false); }}
+            <div className="relative">
+              <button
+                className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowFolderPicker(!showFolderPicker);
+                }}
+              >
+                <Folder className="w-3 h-3" />
+                移动到...
+              </button>
+              {showFolderPicker && typeof document !== 'undefined' && createPortal(
+                <>
+                  <div className="fixed inset-0 z-[200]" onClick={() => setShowFolderPicker(false)} />
+                  <div className="fixed z-[210] bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md shadow-lg py-1 w-32"
+                    style={{ top: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().bottom ?? 0) + 4 : 0), left: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().right ?? 0) - 144 + 144 + 4 : 0) }}
                   >
-                    {f.name}
-                  </button>
-                ))}
-              </div>
+                    <button
+                      className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600"
+                      onClick={(e) => { e.stopPropagation(); onMoveToFolder(undefined); setShowFolderPicker(false); onMenuToggle(); }}
+                    >
+                      无文件夹
+                    </button>
+                    {folders.map((f) => (
+                      <button
+                        key={f.id}
+                        className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600"
+                        onClick={(e) => { e.stopPropagation(); onMoveToFolder(f.id); setShowFolderPicker(false); onMenuToggle(); }}
+                      >
+                        {f.name}
+                      </button>
+                    ))}
+                  </div>
+                </>,
+                document.body
+              )}
+            </div>
+            {hasMultiplePages && (
+              <button
+                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
+                onClick={(e) => { e.stopPropagation(); onDelete(); onMenuToggle(); }}
+              >
+                <Trash2 className="w-3 h-3" />
+                删除
+              </button>
             )}
           </div>
-          {hasMultiplePages && (
-            <button
-              className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            >
-              <Trash2 className="w-3 h-3" />
-              删除
-            </button>
-          )}
-        </div>
+        </>,
+        document.body
       )}
     </div>
   );

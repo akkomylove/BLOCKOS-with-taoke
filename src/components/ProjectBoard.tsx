@@ -3,8 +3,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useCollaborationStore } from '@/store/collaborationStore';
 import { Task } from '@/types/collaboration';
-import { Plus, Calendar, MoreHorizontal, Trash2, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Plus, Calendar, MoreHorizontal, Trash2, ChevronDown, ArrowLeft, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ProjectImportModal } from '@/components/collaboration/ProjectImportModal';
 
 interface ProjectBoardProps {
   projectId: string;
@@ -35,6 +36,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({});
+  const [showImport, setShowImport] = useState(false);
   const isMountedRef = useRef(true);
 
   const handleFetchTasks = useCallback(() => {
@@ -57,8 +59,24 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
     setVisibleCount(initialCounts);
   }, []);
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/user/profile')
+      .then(r => r.json())
+      .then(data => {
+        setCurrentUserId(data.userId || null);
+        setIsAdmin(data.userId === 'demo-admin-001');
+      })
+      .catch(() => {});
+  }, []);
+
   const getTasksByStatus = (status: string) => {
-    return tasks.filter(task => task.status === status);
+    const filtered = tasks.filter(task => task.status === status);
+    if (isAdmin) return filtered;
+    if (!currentUserId) return filtered;
+    return filtered.filter(task => !task.assigneeId || task.assigneeId === currentUserId);
   };
 
   const getVisibleTasks = (status: string) => {
@@ -96,17 +114,21 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.back()}
-              className="p-2 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg text-gray-500 dark:text-zinc-400 transition-colors"
-              title="返回"
+              onClick={() => router.push('/teams')}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-500 dark:text-zinc-400 transition-colors"
+              title="返回团队"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">看板</h1>
-              <p className="text-gray-500 dark:text-zinc-400 mt-1">管理项目任务</p>
-            </div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">看板</h1>
           </div>
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg text-xs font-medium transition-all shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            AI 导入
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -196,6 +218,13 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
           ))}
         </div>
       </div>
+      {showImport && (
+        <ProjectImportModal
+          isOpen={showImport}
+          onClose={() => setShowImport(false)}
+          projectId={projectId}
+        />
+      )}
     </div>
   );
 }

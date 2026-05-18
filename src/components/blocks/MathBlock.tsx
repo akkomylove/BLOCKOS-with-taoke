@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { Edit3, Eye, Sigma, FunctionSquare, Grid3X3 } from 'lucide-react';
@@ -22,31 +22,43 @@ const TEMPLATES = [
 export default function MathBlock({ content, onChange, readOnly }: MathBlockProps) {
   const [isEditing, setIsEditing] = useState(!content);
   const [latex, setLatex] = useState(content || '');
+  const [rendered, setRendered] = useState('');
   const [error, setError] = useState('');
 
-  const render = useCallback((src: string) => {
-    if (!src.trim()) return '';
+  const renderLatex = useCallback((src: string) => {
+    if (!src.trim()) {
+      setRendered('');
+      setError('');
+      return;
+    }
     try {
       const html = katex.renderToString(src, {
         throwOnError: true,
         displayMode: true,
       });
+      setRendered(html);
       setError('');
-      return html;
     } catch (e: unknown) {
+      setRendered('');
       setError((e as Error).message || '渲染失败');
-      return '';
     }
+  }, []);
+
+  useEffect(() => {
+    renderLatex(latex);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = () => {
     onChange(latex);
+    renderLatex(latex);
     setIsEditing(false);
   };
 
   const insertTemplate = (tpl: string) => {
     const newLatex = latex ? `${latex} \\quad ${tpl}` : tpl;
     setLatex(newLatex);
+    renderLatex(newLatex);
   };
 
   return (
@@ -54,7 +66,12 @@ export default function MathBlock({ content, onChange, readOnly }: MathBlockProp
       {!readOnly && (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              if (isEditing) {
+                renderLatex(latex);
+              }
+              setIsEditing(!isEditing);
+            }}
             className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
               isEditing ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400' : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-700'
             }`}
@@ -89,7 +106,10 @@ export default function MathBlock({ content, onChange, readOnly }: MathBlockProp
           </div>
           <textarea
             value={latex}
-            onChange={(e) => setLatex(e.target.value)}
+            onChange={(e) => {
+              setLatex(e.target.value);
+              renderLatex(e.target.value);
+            }}
             placeholder="在此输入 LaTeX 公式，例如：E = mc^2"
             className="w-full min-h-[60px] bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 text-sm font-mono text-gray-800 dark:text-zinc-200 placeholder:text-gray-400 dark:placeholder:text-zinc-600 outline-none focus:border-blue-500/40 resize-none leading-relaxed"
           />
@@ -100,7 +120,11 @@ export default function MathBlock({ content, onChange, readOnly }: MathBlockProp
       {(!isEditing || readOnly) && (
         <div className="w-full min-h-[60px] flex items-center justify-center bg-gray-100/50 dark:bg-zinc-900/50 rounded-lg border border-gray-200/50 dark:border-zinc-800/50 px-4 py-3">
           {latex.trim() ? (
-            <div className="text-gray-800 dark:text-zinc-200" dangerouslySetInnerHTML={{ __html: render(latex) }} />
+            rendered ? (
+              <div className="text-gray-800 dark:text-zinc-200" dangerouslySetInnerHTML={{ __html: rendered }} />
+            ) : (
+              <span className="text-xs text-red-400">{error || '渲染失败'}</span>
+            )
           ) : (
             <span className="text-xs text-gray-400 dark:text-zinc-600">输入 LaTeX 公式进行渲染</span>
           )}

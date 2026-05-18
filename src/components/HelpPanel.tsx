@@ -5,7 +5,8 @@ import {
   X, BookOpen, Zap, HelpCircle, Settings, Key, Globe, Cpu,
   Sparkles, ArrowRight, CheckCircle2, ChevronDown, ChevronUp,
   Type, CheckSquare, Code, Table, ImageIcon, Quote, ChevronRight as ChevronRightIcon,
-  Search, Tag, History, Link2, Wand2, Palette, Lightbulb
+  Search, Tag, History, Link2, Wand2, Palette, Lightbulb,
+  Users, BarChart3, UserCircle
 } from 'lucide-react';
 
 interface HelpPanelProps {
@@ -36,6 +37,9 @@ const FEATURES = [
   { icon: Link2, title: 'Block 关联', desc: '通过链接建立 Block 之间的引用关系，关系视图可直观查看数据流向。' },
   { icon: Palette, title: '主题切换', desc: '支持深色/浅色主题切换，所有 Block 和 UI 自动适配。' },
   { icon: Wand2, title: 'AI 自动补全', desc: '在文本 Block 中输入内容后等待 1.5 秒，AI 会自动提示续写内容，按 Tab 接受。' },
+  { icon: Users, title: '团队管理', desc: '创建团队、添加成员、分配角色。团队详情面板可查看成员职能和项目参与情况。' },
+  { icon: BarChart3, title: '项目协作', desc: '项目看板（待办/进行中/已完成）、甘特图、里程碑追踪，支持 AI 自动导入计划书并切分任务。' },
+  { icon: UserCircle, title: '个人中心', desc: '设置个人信息、职务职能，查看跨项目任务分配情况。' },
 ];
 
 function AccordionItem({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {

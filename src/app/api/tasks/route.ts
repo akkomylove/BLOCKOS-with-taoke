@@ -3,6 +3,29 @@ import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { nanoid } from 'nanoid';
 
+function normalizeTask(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    parentId: row.parent_id,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    priority: row.priority,
+    assigneeId: row.assignee_id,
+    startDate: row.start_date,
+    dueDate: row.due_date,
+    dod: row.dod,
+    orderIndex: row.order_index,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    assigneeName: row.assignee_name,
+    assigneeEmail: row.assignee_email,
+    assigneeAvatar: row.assignee_avatar,
+    depth: row.depth,
+  };
+}
+
 /**
  * GET /api/tasks - 获取任务列表
  * @param req - Next.js 请求对象
@@ -54,7 +77,7 @@ export async function GET(req: NextRequest) {
         LEFT JOIN users u ON subtask_tree.assignee_id = u.id
         ORDER BY subtask_tree.depth ASC, subtask_tree.order_index ASC, subtask_tree.created_at DESC
       `, [projectId]);
-      return NextResponse.json({ tasks: allTasks, total: allTasks.length, page: 1, limit: allTasks.length });
+      return NextResponse.json({ tasks: allTasks.map(normalizeTask), total: allTasks.length, page: 1, limit: allTasks.length });
     }
 
     let countSql = `SELECT COUNT(*) as total FROM tasks t WHERE t.project_id = ?`;
@@ -91,7 +114,7 @@ export async function GET(req: NextRequest) {
     params.push(limit, offset);
 
     const tasks = query(sql, params);
-    return NextResponse.json({ tasks, total, page, limit });
+    return NextResponse.json({ tasks: tasks.map(normalizeTask), total, page, limit });
   } catch (err) {
     console.error('GET /api/tasks error:', err);
     return NextResponse.json({ error: 'Internal Server Error', tasks: [] }, { status: 500 });
@@ -122,7 +145,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { projectId, parentId, title, description, status, priority, assigneeId, dueDate, dod, orderIndex } = await req.json();
+    const { projectId, parentId, title, description, status, priority, assigneeId, startDate, dueDate, dod, orderIndex } = await req.json();
 
     if (!projectId || !title) {
       return NextResponse.json({ error: 'Project ID and title required' }, { status: 400 });
@@ -150,8 +173,8 @@ export async function POST(req: NextRequest) {
     const trimmedTitle = title.trim();
 
     run(
-      'INSERT INTO tasks (id, project_id, parent_id, title, description, status, priority, assignee_id, due_date, dod, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, projectId, parentId || null, trimmedTitle, description || null, status || 'todo', priority || 'medium', assigneeId || null, dueDate || null, dod || null, orderIndex || 0, now, now]
+      'INSERT INTO tasks (id, project_id, parent_id, title, description, status, priority, assignee_id, start_date, due_date, dod, order_index, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, projectId, parentId || null, trimmedTitle, description || null, status || 'todo', priority || 'medium', assigneeId || null, startDate || null, dueDate || null, dod || null, orderIndex || 0, now, now]
     );
     saveDb();
 

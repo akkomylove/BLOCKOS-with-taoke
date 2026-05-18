@@ -3,6 +3,18 @@ import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { nanoid } from 'nanoid';
 
+function normalizeMilestone(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    name: row.name,
+    description: row.description,
+    dueDate: row.due_date,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     let userId: string;
@@ -26,11 +38,11 @@ export async function GET(req: NextRequest) {
     }
 
     const milestones = query(
-      'SELECT * FROM milestones WHERE project_id = ? ORDER BY created_at DESC',
+      'SELECT * FROM milestones WHERE project_id = ? ORDER BY due_date ASC',
       [projectId]
     );
 
-    return NextResponse.json({ milestones });
+    return NextResponse.json({ milestones: milestones.map(normalizeMilestone) });
   } catch (err) {
     console.error('GET /api/milestones error:', err);
     return NextResponse.json({ error: 'Internal Server Error', milestones: [] }, { status: 500 });

@@ -11,20 +11,54 @@ interface MediaBlockProps {
   readOnly?: boolean;
 }
 
-function detectMediaType(url: string): 'image' | 'video' | 'audio' | 'unknown' {
+function detectMediaType(url: string): 'image' | 'video' | 'audio' | 'embed' | 'unknown' {
+  if (url.startsWith('data:')) {
+    if (url.startsWith('data:image/')) return 'image';
+    if (url.startsWith('data:video/')) return 'video';
+    if (url.startsWith('data:audio/')) return 'audio';
+    return 'unknown';
+  }
   const ext = url.split('.').pop()?.toLowerCase() || '';
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return 'image';
   if (['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(ext)) return 'video';
   if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(ext)) return 'audio';
-  if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('bilibili.com')) return 'video';
+  if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('bilibili.com')) return 'embed';
+  if (url.includes('vimeo.com') || url.includes('dailymotion.com')) return 'embed';
   return 'unknown';
 }
 
-function getMediaLabel(type: 'image' | 'video' | 'audio' | 'unknown') {
+function getEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+      let videoId = '';
+      if (u.hostname.includes('youtu.be')) {
+        videoId = u.pathname.slice(1);
+      } else {
+        videoId = u.searchParams.get('v') || u.pathname.split('/').pop() || '';
+      }
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (u.hostname.includes('bilibili.com')) {
+      const bvid = u.pathname.split('/').pop();
+      if (bvid) return `https://player.bilibili.com/player.html?bvid=${bvid}&page=1`;
+    }
+    if (u.hostname.includes('vimeo.com')) {
+      const id = u.pathname.split('/').pop();
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+  } catch {
+    // ignore invalid url
+  }
+  return null;
+}
+
+function getMediaLabel(type: 'image' | 'video' | 'audio' | 'embed' | 'unknown') {
   switch (type) {
     case 'image': return { label: '图片', icon: ImageIcon, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
     case 'video': return { label: '视频', icon: Video, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
     case 'audio': return { label: '音频', icon: Music, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+    case 'embed': return { label: '嵌入', icon: Video, color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20' };
     default: return { label: '链接', icon: Link2, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
   }
 }
@@ -84,6 +118,7 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
       const result = event.target?.result as string;
       if (result) {
         onChange(result);
+        setUrl(result);
         setIsEditing(false);
       }
     };
@@ -172,6 +207,54 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
             <audio src={content} controls className="w-full h-8" onError={() => onChange('')} />
           </div>
         );
+      case 'embed': {
+        const embedUrl = getEmbedUrl(content);
+        if (embedUrl) {
+          return (
+            <div className="relative rounded-xl overflow-hidden border border-gray-300/40 dark:border-zinc-700/40 bg-gray-50/30 dark:bg-zinc-950/30">
+              <iframe
+                src={embedUrl}
+                className="w-full aspect-video rounded-xl"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title="embedded media"
+              />
+              {!readOnly && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="absolute top-2 right-2 p-1.5 bg-white/80 dark:bg-zinc-800/80 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg opacity-0 hover:opacity-100 transition-opacity"
+                  style={{ opacity: isHovering ? 1 : 0 }}
+                >
+                  <Edit3 className="w-3 h-3 text-gray-700 dark:text-zinc-300" />
+                </button>
+              )}
+            </div>
+          );
+        }
+        return (
+          <div className={`rounded-xl border ${mediaInfo.border} ${mediaInfo.bg} p-4`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${mediaInfo.bg} border ${mediaInfo.border} flex items-center justify-center`}>
+                <Link2 className={`w-5 h-5 ${mediaInfo.color}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <a
+                  href={content}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-500 dark:text-blue-400 hover:text-blue-400 dark:hover:text-blue-300 hover:underline truncate block transition-colors"
+                >
+                  {content}
+                </a>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-500 mt-0.5">外部链接</p>
+              </div>
+              <a href={content} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
+                <ExternalLink className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-500" />
+              </a>
+            </div>
+          </div>
+        );
+      }
       default:
         return (
           <div className={`rounded-xl border ${mediaInfo.border} ${mediaInfo.bg} p-4`}>

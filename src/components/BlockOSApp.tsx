@@ -12,6 +12,7 @@ import GroupPanel from '@/components/GroupPanel';
 import ImportPanel from '@/components/ImportPanel';
 import ExportPanel from '@/components/ExportPanel';
 import HistoryPanel from '@/components/HistoryPanel';
+import { ProfilePanel } from '@/components/collaboration/ProfilePanel';
 import { useAgent } from '@/hooks/useAgent';
 import { useBlockStore } from '@/store/blockStore';
 import { ThemeProvider } from '@/components/ThemeProvider';
@@ -27,6 +28,7 @@ export default function BlockOSApp() {
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const hydrate = useBlockStore((state) => state.hydrate);
 
@@ -71,6 +73,7 @@ export default function BlockOSApp() {
             onToggleGroupPanel={() => setShowGroupPanel(!showGroupPanel)}
             showGroupPanel={showGroupPanel}
             onToggleHistory={() => setShowHistory(true)}
+            onOpenProfile={() => setShowProfile(true)}
           />
           <AgentLogPanel isOpen={showLogs} onClose={() => setShowLogs(false)} />
           <BlockEditor
@@ -94,7 +97,8 @@ export default function BlockOSApp() {
         <ImportPanel isOpen={showImport} onClose={() => setShowImport(false)} />
         <ExportPanel isOpen={showExport} onClose={() => setShowExport(false)} />
         <HistoryPanel isOpen={showHistory} onClose={() => setShowHistory(false)} />
-      </div>
-    </ThemeProvider>
-  );
+      <ProfilePanel isOpen={showProfile} onClose={() => setShowProfile(false)} />
+    </div>
+  </ThemeProvider>
+);
 }

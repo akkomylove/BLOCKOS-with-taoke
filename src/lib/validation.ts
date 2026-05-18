@@ -1,5 +1,5 @@
 export function isValidNanoid(id: string): boolean {
-  return typeof id === 'string' && /^[A-Za-z0-9_-]{10,21}$/.test(id);
+  return typeof id === 'string' && id.length > 0;
 }
 
 export function validateId(id: string): { valid: boolean; error?: string } {

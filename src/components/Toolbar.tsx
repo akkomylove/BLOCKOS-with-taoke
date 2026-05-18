@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
@@ -10,6 +11,7 @@ import {
 import Logo from '@/components/Logo';
 import { useBlockStore } from '@/store/blockStore';
 import { useTheme } from '@/components/ThemeProvider';
+
 
 interface ToolbarProps {
   onToggleLogs: () => void;
@@ -23,12 +25,13 @@ interface ToolbarProps {
   onToggleGroupPanel: () => void;
   showGroupPanel: boolean;
   onToggleHistory: () => void;
+  onOpenProfile: () => void;
 }
 
 export default function Toolbar({
   onToggleLogs, showLogs, onToggleAIAssistant, onToggleRelationDrawer,
   onToggleHelp, onToggleSearch, onToggleImport, onToggleExport,
-  onToggleGroupPanel, showGroupPanel, onToggleHistory,
+  onToggleGroupPanel, showGroupPanel, onToggleHistory, onOpenProfile,
 }: ToolbarProps) {
   const router = useRouter();
   const agentEnabled = useBlockStore((state) => state.agentEnabled);
@@ -52,6 +55,7 @@ export default function Toolbar({
   const [formatting, setFormatting] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -115,7 +119,8 @@ export default function Toolbar({
   const iconBtnBlue = 'flex items-center justify-center w-8 h-8 rounded-lg text-xs transition-colors bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300';
 
   return (
-    <div className="h-11 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between px-3 shrink-0">
+    <>
+      <div className="h-11 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between px-3 shrink-0">
       {/* Left: Logo + Page Title */}
       <div className="flex items-center gap-2 shrink-0">
         <div className="flex items-center gap-1.5">
@@ -217,6 +222,7 @@ export default function Toolbar({
       <div className="flex items-center gap-1 shrink-0">
         <div className="relative">
           <button
+            ref={userBtnRef}
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className={`${iconBtn} gap-1 px-2 w-auto`}
           >
@@ -226,13 +232,19 @@ export default function Toolbar({
             </span>
           </button>
 
-          {userMenuOpen && (
+          {userMenuOpen && typeof document !== 'undefined' && createPortal(
             <>
               <div
-                className="fixed inset-0 z-40"
+                className="fixed inset-0 z-[200]"
                 onClick={() => setUserMenuOpen(false)}
               />
-              <div className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg min-w-[140px]">
+              <div
+                className="fixed z-[210] bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg min-w-[140px]"
+                style={{
+                  top: (userBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                  right: window.innerWidth - (userBtnRef.current?.getBoundingClientRect().right ?? 0),
+                }}
+              >
                 <div className="p-1.5">
                   <button
                     onClick={handleLogout}
@@ -241,12 +253,21 @@ export default function Toolbar({
                     <LogOut className="w-4 h-4" />
                     <span>登出</span>
                   </button>
+                  <button
+                    onClick={() => { setUserMenuOpen(false); onOpenProfile(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                  >
+                    <UserCircle className="w-4 h-4" />
+                    <span>个人中心</span>
+                  </button>
                 </div>
               </div>
-            </>
+            </>,
+            document.body
           )}
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -124,6 +124,20 @@ function createDefaultPage(): Page {
 
 export const BLOCK_TEMPLATES: BlockTemplate[] = [
   {
+    id: 'demo-prd',
+    name: '实战演示文档',
+    icon: '🛒',
+    description: 'CircleLight 电商平台 PRD 完整演示文档，包含多种 Block 类型',
+    blocks: [
+      { type: 'text', title: '项目概述', content: '# 电商平台开发项目 PRD\n\n## 项目背景\n\nCircleLight 计划开发一款面向中小企业的电商平台，支持多店铺管理、商品上架、订单处理、支付集成和物流追踪。\n\n## 核心目标\n\n- 3个月内完成 MVP 版本上线\n- 支持日均 10,000 订单处理能力\n- 移动端响应式适配\n- 集成主流支付渠道（微信支付、支付宝、银联）', meta: { tags: ['实战演示文档'] }, parentId: null, order: 0, x: 40, y: 40, width: 480, collapsed: false },
+      { type: 'text', title: '功能模块', content: '## 功能模块清单\n\n### 用户系统\n- 用户注册/登录（手机号+验证码、微信授权）\n- 个人中心（订单、地址、收藏、优惠券）\n- 会员等级体系\n\n### 商品系统\n- 商品分类管理（三级分类）\n- SKU 管理（规格、库存、价格）\n- 商品搜索与筛选\n- 商品评价与问答\n\n### 订单系统\n- 购物车（增删改查、批量结算）\n- 订单创建与支付\n- 订单状态流转（待付款→待发货→已发货→已完成）\n- 售后退款/退货流程\n\n### 支付系统\n- 微信支付（JSAPI、Native、H5）\n- 支付宝（手机网站、APP）\n- 银联云闪付\n- 余额支付\n\n### 物流系统\n- 快递公司对接（顺丰、中通、圆通等）\n- 物流轨迹查询\n- 电子面单打印\n\n### 营销系统\n- 优惠券（满减、折扣、免邮）\n- 秒杀活动\n- 拼团功能\n- 积分商城', meta: { tags: ['实战演示文档'] }, parentId: null, order: 1, x: 40, y: 280, width: 480, collapsed: false },
+      { type: 'table', title: '技术栈选型', content: JSON.stringify({ headers: ['层级', '技术选型', '版本', '说明'], rows: [['前端', 'Next.js', '15.x', 'React 框架，支持 SSR/SSG'], ['前端', 'Tailwind CSS', '3.x', '原子化 CSS 框架'], ['前端', 'Zustand', '5.x', '状态管理'], ['后端', 'Node.js', '20 LTS', '运行环境'], ['后端', 'Prisma', '5.x', 'ORM 框架'], ['数据库', 'PostgreSQL', '16', '主数据库'], ['缓存', 'Redis', '7.x', '会话、缓存、队列'], ['搜索', 'Elasticsearch', '8.x', '商品搜索'], ['消息队列', 'RabbitMQ', '3.x', '异步任务'], ['支付', '官方 SDK', '-', '微信、支付宝、银联'], ['部署', 'Docker', '-', '容器化部署'], ['CI/CD', 'GitHub Actions', '-', '自动化构建']], }), meta: { tags: ['实战演示文档'] }, parentId: null, order: 2, x: 560, y: 40, width: 520, collapsed: false },
+      { type: 'text', title: '团队分工', content: '## 项目团队\n\n| 角色 | 姓名 | 职能 | 负责模块 |\n|------|------|------|----------|\n| 产品经理 | 陈明远 | 产品规划、需求分析 | 整体产品方向、PRD 文档 |\n| 前端开发 | 林小薇 | 前端架构、UI 实现 | 用户端 H5、管理后台 |\n| 后端开发 | 张浩然 | 后端架构、API 开发 | 用户系统、订单系统、支付系统 |\n| UI 设计师 | 苏婉清 | 视觉设计、交互设计 | 设计规范、高保真原型 |\n| 测试工程师 | 王志强 | 测试策略、自动化测试 | 功能测试、性能测试、回归测试 |', meta: { tags: ['实战演示文档'] }, parentId: null, order: 3, x: 560, y: 340, width: 480, collapsed: false },
+      { type: 'text', title: '开发里程碑', content: '## 项目里程碑\n\n### 第一阶段：基础架构（第1-2周）\n- 项目初始化、开发环境搭建\n- 数据库设计、API 规范制定\n- 前端组件库搭建\n\n### 第二阶段：核心功能（第3-6周）\n- 用户系统完整实现\n- 商品系统完整实现\n- 购物车与订单流程\n\n### 第三阶段：支付与物流（第7-9周）\n- 支付渠道对接\n- 物流系统对接\n- 订单状态机完善\n\n### 第四阶段：营销与优化（第10-11周）\n- 优惠券、秒杀、拼团\n- 性能优化、安全加固\n- 测试覆盖与 Bug 修复\n\n### 第五阶段：上线准备（第12周）\n- 生产环境部署\n- 数据迁移\n- 灰度发布', meta: { tags: ['实战演示文档'] }, parentId: null, order: 4, x: 40, y: 680, width: 480, collapsed: false },
+      { type: 'text', title: '风险与应对', content: '## 风险分析\n\n| 风险 | 影响 | 应对措施 |\n|------|------|----------|\n| 支付接口审核周期长 | 高 | 提前申请，准备备用方案 |\n| 高并发性能瓶颈 | 高 | 引入缓存、消息队列、数据库读写分离 |\n| 第三方物流接口不稳定 | 中 | 多物流商对接，降级策略 |\n| 需求变更频繁 | 中 | 敏捷开发，两周一个迭代 |\n| 团队成员请假/离职 | 低 | 代码审查、文档完善、知识共享 |', meta: { tags: ['实战演示文档'] }, parentId: null, order: 5, x: 560, y: 620, width: 480, collapsed: false },
+    ],
+  },
+  {
     id: 'meeting',
     name: '会议纪要',
     icon: '📝',
@@ -207,73 +221,89 @@ const seedBlocks: Block[] = [
     id: 'seed-1',
     type: 'text',
     title: '项目概述',
-    content: '# BlockOS v2.0 产品发布计划\n\nBlockOS 是一个 AI 原生知识操作系统，即将发布 v2.0 版本。\n本次更新聚焦于 AI Agent 能力和团队协作功能的全面提升。',
-    meta: {},
+    content: '# 电商平台开发项目 PRD\n\n## 项目背景\n\nCircleLight 计划开发一款面向中小企业的电商平台，支持多店铺管理、商品上架、订单处理、支付集成和物流追踪。\n\n## 核心目标\n\n- 3个月内完成 MVP 版本上线\n- 支持日均 10,000 订单处理能力\n- 移动端响应式适配\n- 集成主流支付渠道（微信支付、支付宝、银联）',
+    meta: { tags: ['实战演示文档'] },
     parentId: null,
     order: 0,
     x: 40,
     y: 40,
-    width: 420,
+    width: 480,
     collapsed: false,
     createdAt: 1700000000000,
     updatedAt: 1700000000000,
   },
   {
     id: 'seed-2',
-    type: 'todo',
-    title: '核心任务',
-    content: '完成 AI Agent 架构重构',
-    meta: { checked: false },
+    type: 'text',
+    title: '功能模块',
+    content: '## 功能模块清单\n\n### 用户系统\n- 用户注册/登录（手机号+验证码、微信授权）\n- 个人中心（订单、地址、收藏、优惠券）\n- 会员等级体系\n\n### 商品系统\n- 商品分类管理（三级分类）\n- SKU 管理（规格、库存、价格）\n- 商品搜索与筛选\n- 商品评价与问答\n\n### 订单系统\n- 购物车（增删改查、批量结算）\n- 订单创建与支付\n- 订单状态流转（待付款→待发货→已发货→已完成）\n- 售后退款/退货流程\n\n### 支付系统\n- 微信支付（JSAPI、Native、H5）\n- 支付宝（手机网站、APP）\n- 银联云闪付\n- 余额支付\n\n### 物流系统\n- 快递公司对接（顺丰、中通、圆通等）\n- 物流轨迹查询\n- 电子面单打印\n\n### 营销系统\n- 优惠券（满减、折扣、免邮）\n- 秒杀活动\n- 拼团功能\n- 积分商城',
+    meta: { tags: ['实战演示文档'] },
     parentId: null,
     order: 1,
     x: 40,
-    y: 240,
-    width: 320,
+    y: 280,
+    width: 480,
     collapsed: false,
     createdAt: 1700000001000,
     updatedAt: 1700000001000,
   },
   {
     id: 'seed-3',
-    type: 'todo',
-    title: '核心任务',
-    content: '实现实时协作编辑功能',
-    meta: { checked: false },
+    type: 'table',
+    title: '技术栈选型',
+    content: JSON.stringify({
+      headers: ['层级', '技术选型', '版本', '说明'],
+      rows: [
+        ['前端', 'Next.js', '15.x', 'React 框架，支持 SSR/SSG'],
+        ['前端', 'Tailwind CSS', '3.x', '原子化 CSS 框架'],
+        ['前端', 'Zustand', '5.x', '状态管理'],
+        ['后端', 'Node.js', '20 LTS', '运行环境'],
+        ['后端', 'Prisma', '5.x', 'ORM 框架'],
+        ['数据库', 'PostgreSQL', '16', '主数据库'],
+        ['缓存', 'Redis', '7.x', '会话、缓存、队列'],
+        ['搜索', 'Elasticsearch', '8.x', '商品搜索'],
+        ['消息队列', 'RabbitMQ', '3.x', '异步任务'],
+        ['支付', '官方 SDK', '-', '微信、支付宝、银联'],
+        ['部署', 'Docker', '-', '容器化部署'],
+        ['CI/CD', 'GitHub Actions', '-', '自动化构建'],
+      ],
+    }),
+    meta: { tags: ['实战演示文档'] },
     parentId: null,
     order: 2,
-    x: 40,
-    y: 300,
-    width: 320,
+    x: 560,
+    y: 40,
+    width: 520,
     collapsed: false,
     createdAt: 1700000002000,
     updatedAt: 1700000002000,
   },
   {
     id: 'seed-4',
-    type: 'todo',
-    title: '核心任务',
-    content: '完成移动端适配',
-    meta: { checked: false },
+    type: 'text',
+    title: '团队分工',
+    content: '## 项目团队\n\n| 角色 | 姓名 | 职能 | 负责模块 |\n|------|------|------|----------|\n| 产品经理 | 陈明远 | 产品规划、需求分析 | 整体产品方向、PRD 文档 |\n| 前端开发 | 林小薇 | 前端架构、UI 实现 | 用户端 H5、管理后台 |\n| 后端开发 | 张浩然 | 后端架构、API 开发 | 用户系统、订单系统、支付系统 |\n| UI 设计师 | 苏婉清 | 视觉设计、交互设计 | 设计规范、高保真原型 |\n| 测试工程师 | 王志强 | 测试策略、自动化测试 | 功能测试、性能测试、回归测试 |',
+    meta: { tags: ['实战演示文档'] },
     parentId: null,
     order: 3,
-    x: 40,
-    y: 360,
-    width: 320,
+    x: 560,
+    y: 340,
+    width: 480,
     collapsed: false,
     createdAt: 1700000003000,
     updatedAt: 1700000003000,
   },
   {
     id: 'seed-5',
-    type: 'todo',
-    title: '核心任务',
-    content: '通过安全审计和渗透测试',
-    meta: { checked: true },
+    type: 'text',
+    title: '开发里程碑',
+    content: '## 项目里程碑\n\n### 第一阶段：基础架构（第1-2周）\n- 项目初始化、开发环境搭建\n- 数据库设计、API 规范制定\n- 前端组件库搭建\n\n### 第二阶段：核心功能（第3-6周）\n- 用户系统完整实现\n- 商品系统完整实现\n- 购物车与订单流程\n\n### 第三阶段：支付与物流（第7-9周）\n- 支付渠道对接\n- 物流系统对接\n- 订单状态机完善\n\n### 第四阶段：营销与优化（第10-11周）\n- 优惠券、秒杀、拼团\n- 性能优化、安全加固\n- 测试覆盖与 Bug 修复\n\n### 第五阶段：上线准备（第12周）\n- 生产环境部署\n- 数据迁移\n- 灰度发布',
+    meta: { tags: ['实战演示文档'] },
     parentId: null,
     order: 4,
     x: 40,
-    y: 420,
-    width: 320,
+    y: 680,
+    width: 480,
     collapsed: false,
     createdAt: 1700000004000,
     updatedAt: 1700000004000,
@@ -281,132 +311,17 @@ const seedBlocks: Block[] = [
   {
     id: 'seed-6',
     type: 'text',
-    title: '目标用户',
-    content: '目标用户画像\n- 个人知识工作者：笔记、写作、研究整理\n- 小型团队：项目文档、会议记录、任务追踪\n- 开发者：API 文档、代码片段管理、技术方案\n- 产品经理：PRD、竞品分析、Roadmap 规划',
-    meta: {},
+    title: '风险与应对',
+    content: '## 风险分析\n\n| 风险 | 影响 | 应对措施 |\n|------|------|----------|\n| 支付接口审核周期长 | 高 | 提前申请，准备备用方案 |\n| 高并发性能瓶颈 | 高 | 引入缓存、消息队列、数据库读写分离 |\n| 第三方物流接口不稳定 | 中 | 多物流商对接，降级策略 |\n| 需求变更频繁 | 中 | 敏捷开发，两周一个迭代 |\n| 团队成员请假/离职 | 低 | 代码审查、文档完善、知识共享 |',
+    meta: { tags: ['实战演示文档'] },
     parentId: null,
     order: 5,
-    x: 520,
-    y: 40,
-    width: 360,
+    x: 560,
+    y: 620,
+    width: 480,
     collapsed: false,
     createdAt: 1700000005000,
     updatedAt: 1700000005000,
-  },
-  {
-    id: 'seed-7',
-    type: 'table',
-    title: '功能优先级矩阵',
-    content: JSON.stringify({
-      headers: ['功能模块', '优先级', '预计工时', '负责人'],
-      rows: [
-        ['AI Agent 重构', 'P0', '3周', '张三'],
-        ['实时协作', 'P0', '4周', '李四'],
-        ['移动端适配', 'P1', '3周', '王五'],
-        ['插件市场', 'P1', '2周', '张三'],
-        ['数据导出增强', 'P2', '1周', '李四'],
-        ['深色主题优化', 'P2', '1周', '王五'],
-      ],
-    }),
-    meta: {},
-    parentId: null,
-    order: 6,
-    x: 520,
-    y: 240,
-    width: 480,
-    collapsed: false,
-    createdAt: 1700000006000,
-    updatedAt: 1700000006000,
-  },
-  {
-    id: 'seed-8',
-    type: 'code',
-    title: 'API 接口定义',
-    content: 'interface AgentConfig {\n  model: string;\n  temperature: number;\n  maxTokens: number;\n  systemPrompt: string;\n  tools: AgentTool[];\n}\n\ntype AgentTool = {\n  name: string;\n  description: string;\n  parameters: Record<string, unknown>;\n  handler: (params: unknown) => Promise<unknown>;\n};',
-    meta: { language: 'typescript' },
-    parentId: null,
-    order: 7,
-    x: 40,
-    y: 520,
-    width: 440,
-    collapsed: false,
-    createdAt: 1700000007000,
-    updatedAt: 1700000007000,
-  },
-  {
-    id: 'seed-9',
-    type: 'quote',
-    title: '',
-    content: '软件正在吞噬世界，而 AI 正在吞噬软件。BlockOS 的目标是成为 AI 时代的操作系统级工具。',
-    meta: {},
-    parentId: null,
-    order: 8,
-    x: 520,
-    y: 520,
-    width: 420,
-    collapsed: false,
-    createdAt: 1700000008000,
-    updatedAt: 1700000008000,
-  },
-  {
-    id: 'seed-10',
-    type: 'toggle',
-    title: '竞品分析',
-    content: 'Notion、Obsidian、Craft 等竞品功能对比',
-    meta: {},
-    parentId: null,
-    order: 9,
-    x: 520,
-    y: 620,
-    width: 380,
-    collapsed: false,
-    createdAt: 1700000009000,
-    updatedAt: 1700000009000,
-  },
-  {
-    id: 'seed-11',
-    type: 'text',
-    title: '发布时间线',
-    content: '发布里程碑\n\n4月15日 → 内部 Alpha 测试\n5月1日 → 封闭 Beta 邀请\n5月15日 → 公开 Beta 上线\n6月1日 → v2.0 正式发布',
-    meta: {},
-    parentId: null,
-    order: 10,
-    x: 40,
-    y: 800,
-    width: 380,
-    collapsed: false,
-    createdAt: 1700000010000,
-    updatedAt: 1700000010000,
-  },
-  {
-    id: 'seed-12',
-    type: 'divider',
-    title: '',
-    content: '',
-    meta: {},
-    parentId: null,
-    order: 11,
-    x: 40,
-    y: 960,
-    width: 320,
-    collapsed: false,
-    createdAt: 1700000011000,
-    updatedAt: 1700000011000,
-  },
-  {
-    id: 'seed-13',
-    type: 'text',
-    title: '风险与应对',
-    content: '潜在风险\n\n1. AI 模型稳定性 → 配置多模型降级策略\n2. 实时协作冲突 → 采用 CRDT 算法\n3. 移动端性能 → 渐进式 Web App 方案\n4. 用户数据安全 → 端到端加密 + 本地优先存储',
-    meta: {},
-    parentId: null,
-    order: 12,
-    x: 40,
-    y: 1000,
-    width: 400,
-    collapsed: false,
-    createdAt: 1700000012000,
-    updatedAt: 1700000012000,
   },
 ];
 
@@ -425,7 +340,7 @@ const defaultPage = createDefaultPage();
 export const useBlockStore = create<BlockStore>()(
   persist(
     immer((set, get) => ({
-      pages: [{ ...defaultPage, title: 'BlockOS v2.0 产品发布计划', icon: '📋' }],
+      pages: [{ ...defaultPage, title: '电商平台开发项目 PRD', icon: '🛒' }],
       folders: [],
         groups: [],
         _blockCounter: 0,
@@ -524,10 +439,7 @@ export const useBlockStore = create<BlockStore>()(
       updatePageTitle: (id, title) => {
         set((state) => {
           const page = state.pages.find((p) => p.id === id);
-          if (page) {
-            page.title = title;
-            page.updatedAt = Date.now();
-          }
+          if (page) page.title = title;
         });
       },
 
@@ -541,16 +453,11 @@ export const useBlockStore = create<BlockStore>()(
       },
 
       addFolder: (name) => {
-        const folder: Folder = {
-          id: nanoid(),
-          name,
-          collapsed: false,
-          createdAt: Date.now(),
-        };
+        const id = nanoid();
         set((state) => {
-          state.folders.push(folder);
+          state.folders.push({ id, name, collapsed: false, createdAt: Date.now() });
         });
-        return folder.id;
+        return id;
       },
 
       deleteFolder: (id) => {
@@ -583,12 +490,10 @@ export const useBlockStore = create<BlockStore>()(
         });
       },
 
-      groupBlocks: (ids: string[]) => {
-        if (ids.length < 2) return;
-        const groupId = nanoid();
-        const groupName = `组合 ${get().groups.length + 1}`;
+      groupBlocks: (ids) => {
         set((state) => {
-          state.groups.push({ id: groupId, name: groupName });
+          const groupId = nanoid();
+          state.groups.push({ id: groupId, name: '分组' });
           ids.forEach((id) => {
             const block = state.blocks.find((b) => b.id === id);
             if (block) block.groupId = groupId;
@@ -597,17 +502,17 @@ export const useBlockStore = create<BlockStore>()(
         get().saveHistory();
       },
 
-      ungroupBlocks: (groupId: string) => {
+      ungroupBlocks: (groupId) => {
         set((state) => {
           state.groups = state.groups.filter((g) => g.id !== groupId);
-          state.blocks.forEach((b) => {
-            if (b.groupId === groupId) b.groupId = undefined;
+          state.blocks.forEach((block) => {
+            if (block.groupId === groupId) block.groupId = undefined;
           });
         });
         get().saveHistory();
       },
 
-      updateGroupName: (groupId: string, name: string) => {
+      updateGroupName: (groupId, name) => {
         set((state) => {
           const group = state.groups.find((g) => g.id === groupId);
           if (group) group.name = name;
@@ -616,75 +521,52 @@ export const useBlockStore = create<BlockStore>()(
 
       addBlock: (type, afterId, position) => {
         const newBlock = createEmptyBlock(type);
+        if (position) {
+          newBlock.x = position.x;
+          newBlock.y = position.y;
+        }
         set((state) => {
-          state._blockCounter = (state._blockCounter || 0) + 1;
-          newBlock.title = `未命名 Block ${state._blockCounter}`;
-          const blocks = state.blocks;
-          const maxOrder = blocks.length > 0 ? Math.max(...blocks.map((b) => b.order)) : -1;
-          newBlock.order = maxOrder + 1;
-
-          if (position) {
-            newBlock.x = position.x;
-            newBlock.y = position.y;
-          } else if (afterId) {
-            const afterBlock = blocks.find((b) => b.id === afterId);
-            if (afterBlock) {
-              newBlock.x = afterBlock.x;
-              newBlock.y = afterBlock.y + 80;
+          if (afterId) {
+            const idx = state.blocks.findIndex((b) => b.id === afterId);
+            if (idx >= 0) {
+              newBlock.order = state.blocks[idx].order + 1;
+              newBlock.x = state.blocks[idx].x;
+              newBlock.y = state.blocks[idx].y + 60;
             }
           } else {
-            const maxY = blocks.length > 0 ? Math.max(...blocks.map((b) => b.y + 80)) : 0;
-            newBlock.x = 40;
-            newBlock.y = maxY + 20;
+            newBlock.order = state.blocks.length;
           }
-          blocks.push(newBlock);
+          state.blocks.push(newBlock);
         });
         get().saveHistory();
         return newBlock.id;
       },
 
       duplicateBlock: (id) => {
-        const state = get();
-        const source = state.blocks.find((b) => b.id === id);
-        if (!source) return null;
-        const clone = createEmptyBlock(source.type);
-        clone.title = source.title;
-        clone.content = source.content;
-        clone.meta = JSON.parse(JSON.stringify(source.meta));
-        clone.parentId = source.parentId;
-        clone.width = source.width;
-        clone.collapsed = false;
-        set((s) => {
-          const maxOrder = s.blocks.length > 0 ? Math.max(...s.blocks.map((b) => b.order)) : -1;
-          clone.order = maxOrder + 1;
-          clone.x = source.x + 30;
-          clone.y = source.y + 40;
-          s.blocks.push(clone);
+        const block = get().blocks.find((b) => b.id === id);
+        if (!block) return null;
+        const newBlock: Block = {
+          ...block,
+          id: nanoid(),
+          x: block.x + 20,
+          y: block.y + 20,
+          order: block.order + 1,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        set((state) => {
+          state.blocks.push(newBlock);
         });
         get().saveHistory();
-        return clone.id;
+        return newBlock.id;
       },
 
       updateBlock: (id, updates) => {
         set((state) => {
           const block = state.blocks.find((b) => b.id === id);
           if (block) {
-            const updatedMeta = updates.meta
-              ? { ...block.meta, ...updates.meta }
-              : block.meta;
-            Object.assign(block, { ...updates, meta: updatedMeta, updatedAt: Date.now() });
-          }
-        });
-        get().saveHistory();
-        // trigger dependents refresh
-        const dependents = get().getDependents(id);
-        dependents.forEach((depId) => {
-          const depBlock = get().blocks.find((b) => b.id === depId);
-          if (depBlock && depBlock.type === 'code') {
-            set((state) => {
-              const b = state.blocks.find((x) => x.id === depId);
-              if (b) b.updatedAt = Date.now();
-            });
+            Object.assign(block, updates);
+            block.updatedAt = Date.now();
           }
         });
       },
@@ -692,21 +574,20 @@ export const useBlockStore = create<BlockStore>()(
       deleteBlock: (id) => {
         set((state) => {
           state.blocks = state.blocks.filter((b) => b.id !== id);
+          state.selectedIds = state.selectedIds.filter((sid) => sid !== id);
         });
         get().saveHistory();
       },
 
       moveBlock: (activeId, overId) => {
         set((state) => {
-          const activeIndex = state.blocks.findIndex((b) => b.id === activeId);
-          const overIndex = state.blocks.findIndex((b) => b.id === overId);
-          if (activeIndex === -1 || overIndex === -1) return;
-
-          const [moved] = state.blocks.splice(activeIndex, 1);
-          state.blocks.splice(overIndex, 0, moved);
-
-          state.blocks.forEach((block, index) => {
-            block.order = index;
+          const activeIdx = state.blocks.findIndex((b) => b.id === activeId);
+          const overIdx = state.blocks.findIndex((b) => b.id === overId);
+          if (activeIdx === -1 || overIdx === -1) return;
+          const [moved] = state.blocks.splice(activeIdx, 1);
+          state.blocks.splice(overIdx, 0, moved);
+          state.blocks.forEach((b, i) => {
+            b.order = i;
           });
         });
         get().saveHistory();
@@ -727,7 +608,7 @@ export const useBlockStore = create<BlockStore>()(
         set((state) => {
           const block = state.blocks.find((b) => b.id === id);
           if (block) {
-            block.width = Math.max(200, width);
+            block.width = width;
             block.updatedAt = Date.now();
           }
         });
@@ -741,9 +622,8 @@ export const useBlockStore = create<BlockStore>()(
 
       toggleSelection: (id) => {
         set((state) => {
-          const index = state.selectedIds.indexOf(id);
-          if (index > -1) {
-            state.selectedIds.splice(index, 1);
+          if (state.selectedIds.includes(id)) {
+            state.selectedIds = state.selectedIds.filter((sid) => sid !== id);
           } else {
             state.selectedIds.push(id);
           }
@@ -758,14 +638,18 @@ export const useBlockStore = create<BlockStore>()(
 
       createLink: (fromId, toId) => {
         set((state) => {
-          const fromBlock = state.blocks.find((b) => b.id === fromId);
-          if (fromBlock) {
-            if (!fromBlock.meta.links) {
-              fromBlock.meta.links = [];
+          const block = state.blocks.find((b) => b.id === fromId);
+          if (block) {
+            const links = block.meta.links || [];
+            if (!links.includes(toId)) {
+              block.meta.links = [...links, toId];
             }
-            if (!fromBlock.meta.links.includes(toId)) {
-              fromBlock.meta.links.push(toId);
-            }
+          }
+          if (!state.blockDependencies[fromId]) {
+            state.blockDependencies[fromId] = [];
+          }
+          if (!state.blockDependencies[fromId].includes(toId)) {
+            state.blockDependencies[fromId].push(toId);
           }
         });
       },
@@ -783,391 +667,231 @@ export const useBlockStore = create<BlockStore>()(
             id: nanoid(),
             timestamp: Date.now(),
           });
-          if (state.agentLogs.length > 20) {
-            state.agentLogs = state.agentLogs.slice(0, 20);
+          if (state.agentLogs.length > 100) {
+            state.agentLogs = state.agentLogs.slice(0, 100);
           }
         });
       },
 
       hydrate: () => {
-        set({ _hydrated: true });
+        set((state) => {
+          state._hydrated = true;
+        });
       },
+
+      undo: () => {
+        const { history, historyIndex } = get();
+        if (historyIndex > 0) {
+          const entry = history[historyIndex - 1];
+          set((state) => {
+            state.blocks = JSON.parse(JSON.stringify(entry.blocks));
+            state.historyIndex = historyIndex - 1;
+          });
+        }
+      },
+
+      redo: () => {
+        const { history, historyIndex } = get();
+        if (historyIndex < history.length - 1) {
+          const entry = history[historyIndex + 1];
+          set((state) => {
+            state.blocks = JSON.parse(JSON.stringify(entry.blocks));
+            state.historyIndex = historyIndex + 1;
+          });
+        }
+      },
+
+      canUndo: () => get().historyIndex > 0,
+      canRedo: () => get().historyIndex < get().history.length - 1,
 
       saveHistory: () => {
         set((state) => {
-          const prevEntry = state.history[state.historyIndex];
-          const prevCount = prevEntry?.blocks.length || 0;
-          const currCount = state.blocks.length;
-          let action = '编辑';
-          if (currCount > prevCount) action = '创建';
-          else if (currCount < prevCount) action = '删除';
-
           const entry: HistoryEntry = {
             pageId: state.currentPageId,
             blocks: JSON.parse(JSON.stringify(state.blocks)),
             timestamp: Date.now(),
-            action,
-            blockCount: currCount,
+            action: 'manual',
+            blockCount: state.blocks.length,
           };
           state.history = state.history.slice(0, state.historyIndex + 1);
           state.history.push(entry);
+          state.historyIndex++;
           if (state.history.length > 50) {
-            state.history.shift();
+            state.history = state.history.slice(-50);
+            state.historyIndex = state.history.length - 1;
           }
-          state.historyIndex = state.history.length - 1;
         });
-        get().syncToServer().catch(() => {});
-      },
-
-      undo: () => {
-        const state = get();
-        if (state.historyIndex <= 0) return;
-        const newIndex = state.historyIndex - 1;
-        const entry = state.history[newIndex];
-        set((s) => {
-          s.historyIndex = newIndex;
-          s.blocks = JSON.parse(JSON.stringify(entry.blocks));
-          s.currentPageId = entry.pageId;
-        });
-      },
-
-      redo: () => {
-        const state = get();
-        if (state.historyIndex >= state.history.length - 1) return;
-        const newIndex = state.historyIndex + 1;
-        const entry = state.history[newIndex];
-        set((s) => {
-          s.historyIndex = newIndex;
-          s.blocks = JSON.parse(JSON.stringify(entry.blocks));
-          s.currentPageId = entry.pageId;
-        });
-      },
-
-      canUndo: () => {
-        const state = get();
-        return state.historyIndex > 0;
-      },
-
-      canRedo: () => {
-        const state = get();
-        return state.historyIndex < state.history.length - 1;
       },
 
       indentBlock: (id) => {
         set((state) => {
-          const blocks = state.blocks;
-          const index = blocks.findIndex((b) => b.id === id);
-          if (index <= 0) return;
-
-          const current = blocks[index];
-          const prev = blocks[index - 1];
-
-          // Find the previous block at the same or higher level to become parent
-          let targetParent = prev.id;
-          for (let i = index - 1; i >= 0; i--) {
-            const b = blocks[i];
-            const depth = getBlockDepthInBlocks(blocks, b.id);
-            if (depth <= getBlockDepthInBlocks(blocks, current.id)) {
-              targetParent = b.id;
-              break;
-            }
-          }
-
-          // Max depth 5
-          const currentDepth = getBlockDepthInBlocks(blocks, current.id);
-          if (currentDepth >= 5) return;
-
-          current.parentId = targetParent;
-          current.order = index;
+          const idx = state.blocks.findIndex((b) => b.id === id);
+          if (idx <= 0) return;
+          const prevBlock = state.blocks[idx - 1];
+          const block = state.blocks[idx];
+          if (block.parentId === prevBlock.id) return;
+          block.parentId = prevBlock.id;
+          block.updatedAt = Date.now();
         });
         get().saveHistory();
       },
 
       outdentBlock: (id) => {
         set((state) => {
-          const blocks = state.blocks;
-          const index = blocks.findIndex((b) => b.id === id);
-          if (index < 0) return;
-
-          const current = blocks[index];
-          if (!current.parentId) return;
-
-          // Find grandparent
-          const parent = blocks.find((b) => b.id === current.parentId);
-          current.parentId = parent?.parentId || null;
-          current.order = index;
+          const block = state.blocks.find((b) => b.id === id);
+          if (!block || !block.parentId) return;
+          block.parentId = null;
+          block.updatedAt = Date.now();
         });
         get().saveHistory();
       },
 
-      getBlockDepth: (id) => {
-        const state = get();
-        return getBlockDepthInBlocks(state.blocks, id);
-      },
+      getBlockDepth: (id) => getBlockDepthInBlocks(get().blocks, id),
 
       exportToMarkdown: () => {
-        const state = get();
-        const sorted = [...state.blocks].sort((a, b) => a.order - b.order);
-        const lines: string[] = [];
-
-        const getDepth = (id: string) => getBlockDepthInBlocks(sorted, id);
-
-        for (const block of sorted) {
-          const depth = getDepth(block.id);
-          const indent = '  '.repeat(depth);
-
-          switch (block.type) {
-            case 'text':
-              lines.push(`${indent}${block.content}`);
-              break;
-            case 'todo':
-              lines.push(`${indent}- [${block.meta.checked ? 'x' : ' '}] ${block.content}`);
-              break;
-            case 'code':
-              lines.push(`${indent}\`\`\`${block.meta.language || ''}`);
-              lines.push(`${indent}${block.content}`);
-              lines.push(`${indent}\`\`\``);
-              break;
-            case 'table':
-              try {
-                const data = JSON.parse(block.content);
-                if (data.headers) {
-                  lines.push(`${indent}| ${data.headers.join(' | ')} |`);
-                  lines.push(`${indent}| ${data.headers.map(() => '---').join(' | ')} |`);
-                  for (const row of data.rows || []) {
-                    lines.push(`${indent}| ${row.join(' | ')} |`);
-                  }
+        return get().blocks
+          .map((block) => {
+            switch (block.type) {
+              case 'text':
+                return block.content;
+              case 'todo':
+                return `- [${block.meta?.checked ? 'x' : ' '}] ${block.content}`;
+              case 'code':
+                return '```' + (block.meta?.language || '') + '\n' + block.content + '\n```';
+              case 'table':
+                try {
+                  const data = JSON.parse(block.content);
+                  const headers = data.headers?.join(' | ') || '';
+                  const separator = data.headers?.map(() => '---').join(' | ') || '';
+                  const rows = data.rows?.map((row: string[]) => row.join(' | ')).join('\n') || '';
+                  return '| ' + headers + ' |\n| ' + separator + ' |\n| ' + rows + ' |';
+                } catch {
+                  return block.content;
                 }
-              } catch {
-                lines.push(`${indent}${block.content}`);
-              }
-              break;
-            case 'media':
-              lines.push(`${indent}![${block.meta.caption || 'media'}](${block.content})`);
-              break;
-            case 'quote':
-              lines.push(`${indent}> ${block.content}`);
-              break;
-            case 'toggle':
-              lines.push(`${indent}<details><summary>${block.content}</summary>`);
-              lines.push(`${indent}</details>`);
-              break;
-            case 'divider':
-              lines.push(`${indent}---`);
-              break;
-          }
-          lines.push('');
-        }
-
-        return lines.join('\n');
+              case 'quote':
+                return block.content
+                  .split('\n')
+                  .map((line) => `> ${line}`)
+                  .join('\n');
+              default:
+                return block.content;
+            }
+          })
+          .join('\n\n');
       },
 
       exportToHtml: () => {
-        const state = get();
-        const sorted = [...state.blocks].sort((a, b) => a.order - b.order);
-
-        const renderBlock = (block: Block, depth: number = 0): string => {
-          const children = sorted.filter((b) => b.parentId === block.id);
-          let html = '';
-          const indent = depth * 20;
-
-          switch (block.type) {
-            case 'text':
-              html = `<p style="margin-left:${indent}px">${block.content}</p>`;
-              break;
-            case 'todo':
-              html = `<p style="margin-left:${indent}px" class="${block.meta.checked ? 'todo-checked' : 'todo-item'}">${block.meta.checked ? '☑' : '☐'} ${block.content}</p>`;
-              break;
-            case 'code':
-              html = `<pre style="margin-left:${indent}px"><code>${block.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`;
-              break;
-            case 'table':
-              try {
-                const data = JSON.parse(block.content);
-                if (data.headers) {
-                  html = `<table style="margin-left:${indent}px"><thead><tr>${data.headers.map((h: string) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${(data.rows || []).map((row: string[]) => `<tr>${row.map((c: string) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+        return get().blocks
+          .map((block) => {
+            switch (block.type) {
+              case 'text':
+                return `<div class="prose">${block.content}</div>`;
+              case 'todo':
+                return `<div class="todo"><input type="checkbox" ${block.meta?.checked ? 'checked' : ''} /> ${block.content}</div>`;
+              case 'code':
+                return `<pre><code class="language-${block.meta?.language || 'text'}">${block.content}</code></pre>`;
+              case 'table':
+                try {
+                  const data = JSON.parse(block.content);
+                  const headers = data.headers?.map((h: string) => `<th>${h}</th>`).join('') || '';
+                  const rows = data.rows?.map((row: string[]) => `<tr>${row.map((cell: string) => `<td>${cell}</td>`).join('')}</tr>`).join('') || '';
+                  return `<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+                } catch {
+                  return `<div>${block.content}</div>`;
                 }
-              } catch {
-                html = `<p style="margin-left:${indent}px">${block.content}</p>`;
-              }
-              break;
-            case 'media':
-              html = `<img src="${block.content}" style="max-width:100%;margin-left:${indent}px" alt="${block.meta.caption || ''}" />`;
-              break;
-            case 'quote':
-              html = `<blockquote style="margin-left:${indent}px">${block.content}</blockquote>`;
-              break;
-            case 'toggle':
-              html = `<details style="margin-left:${indent}px"><summary>${block.content}</summary></details>`;
-              break;
-            case 'divider':
-              html = '<hr />';
-              break;
-          }
-
-          if (children.length > 0) {
-            html += `<div style="margin-left:20px">${children.map((c) => renderBlock(c, depth + 1)).join('')}</div>`;
-          }
-
-          return html;
-        };
-
-        const roots = sorted.filter((b) => !b.parentId);
-        return roots.map((b) => renderBlock(b)).join('\n');
+              default:
+                return `<div>${block.content}</div>`;
+            }
+          })
+          .join('\n');
       },
 
       importFromMarkdown: (markdown) => {
         const lines = markdown.split('\n');
         const newBlocks: Block[] = [];
-        let currentCode: string[] = [];
-        let codeLang = '';
-        let inCode = false;
-        let textBuffer: string[] = [];
+        let currentContent = '';
+        let currentType: BlockType = 'text';
 
-        const flushText = () => {
-          if (textBuffer.length > 0) {
-            const content = textBuffer.join('\n').trim();
-            if (content) {
-              newBlocks.push({
-                ...createEmptyBlock('text'),
-                content,
-              });
+        const flushBlock = () => {
+          if (currentContent.trim()) {
+            const block = createEmptyBlock(currentType);
+            block.content = currentContent.trim();
+            if (currentType === 'code') {
+              const firstLine = currentContent.split('\n')[0];
+              block.meta.language = firstLine || 'text';
+              block.content = currentContent.split('\n').slice(1).join('\n');
             }
-            textBuffer = [];
+            newBlocks.push(block);
           }
+          currentContent = '';
         };
 
         for (const line of lines) {
           if (line.startsWith('```')) {
-            if (!inCode) {
-              flushText();
-              codeLang = line.slice(3).trim();
-              inCode = true;
+            if (currentType === 'code') {
+              flushBlock();
+              currentType = 'text';
             } else {
-              newBlocks.push({
-                ...createEmptyBlock('code'),
-                content: currentCode.join('\n'),
-                meta: { language: codeLang || 'text' },
-              });
-              currentCode = [];
-              codeLang = '';
-              inCode = false;
+              flushBlock();
+              currentType = 'code';
+              currentContent = line.slice(3).trim() + '\n';
             }
-            continue;
+          } else if (line.startsWith('- [') || line.startsWith('* [')) {
+            if (currentType !== 'todo') {
+              flushBlock();
+              currentType = 'todo';
+            }
+            const checked = line.includes('[x]');
+            const content = line.replace(/^[-*]\s*\[[x ]\]\s*/, '');
+            const block = createEmptyBlock('todo');
+            block.content = content;
+            block.meta.checked = checked;
+            newBlocks.push(block);
+            currentContent = '';
+          } else {
+            if (currentType === 'todo') {
+              flushBlock();
+              currentType = 'text';
+            }
+            currentContent += line + '\n';
           }
-
-          if (inCode) {
-            currentCode.push(line);
-            continue;
-          }
-
-          const trimmed = line.trim();
-          if (!trimmed) {
-            textBuffer.push(line);
-            continue;
-          }
-
-          if (trimmed === '---') {
-            flushText();
-            newBlocks.push(createEmptyBlock('divider'));
-            continue;
-          }
-
-          if (trimmed.startsWith('- [') || trimmed.startsWith('* [')) {
-            flushText();
-            const checked = trimmed.includes('[x]');
-            const content = trimmed.replace(/^[-*]\s*\[[x\s]\]\s*/, '');
-            newBlocks.push({
-              ...createEmptyBlock('todo'),
-              content,
-              meta: { checked },
-            });
-            continue;
-          }
-
-          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-            flushText();
-            newBlocks.push({
-              ...createEmptyBlock('text'),
-              content: trimmed,
-            });
-            continue;
-          }
-
-          if (/^\d+\.\s/.test(trimmed)) {
-            flushText();
-            newBlocks.push({
-              ...createEmptyBlock('text'),
-              content: trimmed,
-            });
-            continue;
-          }
-
-          if (trimmed.startsWith('> ')) {
-            flushText();
-            newBlocks.push({
-              ...createEmptyBlock('quote'),
-              content: trimmed.slice(2),
-            });
-            continue;
-          }
-
-          if (trimmed.startsWith('#')) {
-            flushText();
-          }
-
-          textBuffer.push(line);
         }
 
-        flushText();
+        flushBlock();
 
         set((state) => {
-          const maxOrder = state.blocks.length > 0 ? Math.max(...state.blocks.map((b) => b.order)) : -1;
-          newBlocks.forEach((b, i) => {
-            b.order = maxOrder + 1 + i;
-          });
-          state.blocks.push(...newBlocks);
+          state.blocks = newBlocks;
+          state.selectedIds = [];
         });
         get().saveHistory();
       },
 
       importFromCsv: (csv) => {
-        const lines = csv.trim().split('\n');
+        const lines = csv.split('\n').filter((l) => l.trim());
         if (lines.length < 2) return;
 
-        const parseLine = (line: string): string[] => {
-          const result: string[] = [];
-          let current = '';
+        const headers = lines[0].split(',').map((h) => h.trim());
+        const rows = lines.slice(1).map((line) => {
+          const cells: string[] = [];
+          let cell = '';
           let inQuotes = false;
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
+          for (const char of line) {
             if (char === '"') {
-              if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++;
-              } else {
-                inQuotes = !inQuotes;
-              }
+              inQuotes = !inQuotes;
             } else if (char === ',' && !inQuotes) {
-              result.push(current.trim());
-              current = '';
+              cells.push(cell.trim());
+              cell = '';
             } else {
-              current += char;
+              cell += char;
             }
           }
-          result.push(current.trim());
-          return result;
-        };
-
-        const headers = parseLine(lines[0]);
-        const rows = lines.slice(1).map(parseLine);
+          cells.push(cell.trim());
+          return cells;
+        });
 
         const block = createEmptyBlock('table');
         block.content = JSON.stringify({ headers, rows });
-
         set((state) => {
-          const maxOrder = state.blocks.length > 0 ? Math.max(...state.blocks.map((b) => b.order)) : -1;
-          block.order = maxOrder + 1;
           state.blocks.push(block);
         });
         get().saveHistory();
@@ -1176,93 +900,82 @@ export const useBlockStore = create<BlockStore>()(
       importImage: (base64, caption) => {
         const block = createEmptyBlock('media');
         block.content = base64;
-        if (caption) block.meta = { ...block.meta, caption };
-
+        block.meta.caption = caption;
         set((state) => {
-          const maxOrder = state.blocks.length > 0 ? Math.max(...state.blocks.map((b) => b.order)) : -1;
-          block.order = maxOrder + 1;
           state.blocks.push(block);
         });
         get().saveHistory();
       },
 
       syncToServer: async () => {
-        const state = get();
-        const pageId = state.currentPageId;
-        if (!pageId) return;
+        const { currentPageId, blocks } = get();
         try {
-          await fetch(`/api/pages/${pageId}/blocks`, {
-            method: 'POST',
+          await fetch(`/api/pages/${currentPageId}/blocks`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blocks: state.blocks }),
+            body: JSON.stringify({ blocks }),
           });
-        } catch {
-          // silent fail - localStorage still works
+        } catch (err) {
+          console.error('Sync failed:', err);
         }
       },
 
       loadFromServer: async (pageId) => {
         try {
-          const res = await fetch(`/api/pages/${pageId}`);
-          if (!res.ok) return;
-          const data = await res.json();
-          if (data.blocks) {
+          const res = await fetch(`/api/pages/${pageId}/blocks`);
+          if (res.ok) {
+            const data = await res.json();
             set((state) => {
-              state.blocks = data.blocks;
-              state.pageBlocks[pageId] = data.blocks;
+              state.pageBlocks[pageId] = data.blocks || [];
+              if (state.currentPageId === pageId) {
+                state.blocks = data.blocks || [];
+              }
             });
           }
-        } catch {
-          // silent fail - keep local data
+        } catch (err) {
+          console.error('Load failed:', err);
         }
       },
 
       syncPages: async () => {
+        const { pages } = get();
         try {
-          const res = await fetch('/api/pages');
-          if (!res.ok) return;
-          const data = await res.json();
-          if (data.pages && data.pages.length > 0) {
-            set((s) => {
-              s.pages = data.pages.map((p: Record<string, unknown>) => ({
-                id: p.id as string,
-                title: p.title as string,
-                icon: p.icon as string,
-                createdAt: p.created_at as number,
-                updatedAt: p.updated_at as number,
-              }));
-            });
-          }
-        } catch {
-          // silent fail
+          await fetch('/api/pages', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pages }),
+          });
+        } catch (err) {
+          console.error('Pages sync failed:', err);
         }
       },
 
       blockDependencies: {},
-
-      getDependents: (blockId: string) => {
-        const state = get();
-        const dependents: string[] = [];
-        state.blocks.forEach((b) => {
-          if (b.type === 'code' && b.content.includes(`// @ref`)) {
-            const regex = /\/\/\s*@ref\s+(\w+)/g;
-            let match;
-            while ((match = regex.exec(b.content)) !== null) {
-              const varName = match[1];
-              const target = state.blocks.find((x) => x.id === varName || x.title === varName);
-              if (target && target.id === blockId) {
-                dependents.push(b.id);
-              }
-            }
-          }
-        });
-        return dependents;
+      getDependents: (blockId) => {
+        const deps = get().blockDependencies;
+        return Object.entries(deps)
+          .filter(([, targets]) => targets.includes(blockId))
+          .map(([source]) => source);
       },
     })),
     {
-      name: 'blockos-storage',
-      skipHydration: true,
+      name: 'block-os-storage',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        pages: state.pages,
+        folders: state.folders,
+        groups: state.groups,
+        currentPageId: state.currentPageId,
+        pageBlocks: state.pageBlocks,
+        agentRules: state.agentRules,
+        agentEnabled: state.agentEnabled,
+        blockDependencies: state.blockDependencies,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state._hydrated = true;
+        }
+      },
     }
   )
 );

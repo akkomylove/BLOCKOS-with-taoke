@@ -24,10 +24,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     await getDb();
-    const userExists = query('SELECT * FROM users WHERE id = ?', [userId]);
-    if (userExists.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     const membership = query('SELECT * FROM team_members WHERE team_id = ? AND user_id = ?', [id, currentUserId]);
     if (membership.length === 0) {

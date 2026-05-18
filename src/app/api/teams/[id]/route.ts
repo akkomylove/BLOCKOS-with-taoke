@@ -3,6 +3,16 @@ import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 
+function parseJsonArray(value: unknown): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
@@ -26,9 +36,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const members = query(`
-      SELECT tm.*, u.name, u.email, u.avatar 
+      SELECT tm.*, u.name, u.email, u.avatar,
+        up.title, up.functions
       FROM team_members tm 
-      JOIN users u ON tm.user_id = u.id 
+      JOIN users u ON tm.user_id = u.id
+      LEFT JOIN user_profiles up ON tm.user_id = up.user_id
       WHERE tm.team_id = ?
     `, [id]);
 
@@ -42,7 +54,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         joinedAt: m.joined_at,
         name: m.name,
         email: m.email,
-        avatar: m.avatar
+        avatar: m.avatar,
+        title: m.title || '',
+        functions: parseJsonArray(m.functions),
       }))
     });
   } catch (err) {

@@ -2,100 +2,109 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Terminal, User } from 'lucide-react';
+import { LogIn, Shield, User, Sparkles } from 'lucide-react';
+import { DEMO_ADMIN, DEMO_EMPLOYEES } from '@/lib/demo-users';
 
 export default function LoginPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
+  const handleDemoLogin = async (userId: string, name: string, email: string) => {
     setLoading(true);
-    
+    setError('');
     try {
       const res = await fetch('/api/auth/simple-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim() || 'demo@blockos.app',
-        }),
+        body: JSON.stringify({ userId, name, email }),
       });
-
-      if (res.ok) {
-        window.location.href = '/';
-      } else {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || '登录失败');
-      }
-    } catch (err) {
-      console.error('Login failed:', err);
-      alert('登录请求失败，请检查网络');
-    } finally {
+      if (!res.ok) throw new Error('登录失败');
+      window.location.href = '/';
+    } catch {
+      setError('登录失败，请重试');
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2">
-            <Terminal className="w-8 h-8 text-blue-500" />
-            <h1 className="text-2xl font-bold text-zinc-100">BlockOS</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-900">
+      <div className="w-full max-w-md mx-4">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <p className="text-sm text-zinc-500">AI 原生的知识操作系统</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">CircleLight</h1>
+          <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">AI 驱动的项目协作平台</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">
-              姓名
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="请输入您的姓名"
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              required
-            />
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+            {error}
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">
-              邮箱 (可选)
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="demo@blockos.app"
-              className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
+        <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border border-gray-200 dark:border-zinc-700 overflow-hidden">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border-b border-blue-100 dark:border-blue-900/20">
+            <h2 className="text-sm font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              管理者账号
+            </h2>
+            <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-0.5">可管理团队、添加成员、查看所有任务</p>
           </div>
-
           <button
-            type="submit"
-            disabled={loading || !name.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            onClick={() => handleDemoLogin(DEMO_ADMIN.id, DEMO_ADMIN.name, DEMO_ADMIN.email)}
+            disabled={loading}
+            className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-zinc-750 transition-colors text-left"
           >
-            <User className="w-5 h-5" />
-            {loading ? '登录中...' : '开始使用'}
+            <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 text-sm font-bold">
+              {DEMO_ADMIN.name.charAt(0)}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{DEMO_ADMIN.name}</p>
+              <p className="text-xs text-gray-500 dark:text-zinc-400">{DEMO_ADMIN.title}</p>
+            </div>
+            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded text-xs font-medium">
+              管理者
+            </span>
           </button>
-        </form>
-
-        <div className="pt-4 border-t border-zinc-800">
-          <p className="text-xs text-zinc-600 text-center">
-            这是演示模式，不需要密码。
-          </p>
         </div>
+
+        <div className="mt-4 bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border border-gray-200 dark:border-zinc-700 overflow-hidden">
+          <div className="p-4 bg-gray-50 dark:bg-zinc-800/50 border-b border-gray-200 dark:border-zinc-700">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-zinc-300 flex items-center gap-2">
+              <User className="w-4 h-4" />
+              员工账号
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">仅查看任务、无法管理团队</p>
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-zinc-700">
+            {DEMO_EMPLOYEES.map(emp => (
+              <button
+                key={emp.id}
+                onClick={() => handleDemoLogin(emp.id, emp.name, emp.email)}
+                disabled={loading}
+                className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-zinc-750 transition-colors text-left"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold">
+                  {emp.name.charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{emp.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-zinc-400">{emp.title}</p>
+                </div>
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 text-gray-500 dark:text-zinc-400 rounded text-xs">
+                  员工
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 dark:text-zinc-500 mt-6">
+          Demo 模式 · 数据仅存储在本地
+        </p>
       </div>
     </div>
   );
 }
-

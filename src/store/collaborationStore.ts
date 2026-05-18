@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Team, Project, Milestone, Task } from '@/types/collaboration';
+import type { Team, TeamMember, TeamWithMembers, Project, ProjectMember, ProjectWithDetails, Milestone, Task, TaskComment, UserProfile, UserTaskSummary } from '@/types/collaboration';
 
 interface CollaborationState {
   teams: Team[];
@@ -10,6 +10,8 @@ interface CollaborationState {
   tasks: Task[];
   currentTeamId: string | null;
   currentProjectId: string | null;
+  userProfile: UserProfile | null;
+  userTasks: UserTaskSummary[];
   loading: boolean;
   _mutations: {
     teams: { loading: boolean; error: string | null };
@@ -38,6 +40,10 @@ interface CollaborationState {
   createTask: (projectId: string, title: string, parentId?: string, description?: string, status?: 'todo' | 'in_progress' | 'done', priority?: 'low' | 'medium' | 'high' | 'urgent', assigneeId?: string, dueDate?: number, dod?: string, orderIndex?: number) => Promise<string>;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+
+  fetchUserProfile: () => Promise<void>;
+  updateUserProfile: (updates: Partial<Pick<UserProfile, 'displayName' | 'title' | 'functions' | 'bio'>>) => Promise<void>;
+  fetchUserTasks: () => Promise<void>;
 }
 
 export const useCollaborationStore = create<CollaborationState>()(
@@ -49,6 +55,8 @@ export const useCollaborationStore = create<CollaborationState>()(
       tasks: [],
       currentTeamId: null,
       currentProjectId: null,
+      userProfile: null,
+      userTasks: [],
       loading: false,
       _mutations: {
         teams: { loading: false, error: null },
@@ -294,6 +302,10 @@ export const useCollaborationStore = create<CollaborationState>()(
         set((state) => {
           state.currentProjectId = id;
         });
+        if (id) {
+          get().fetchTasks(id);
+          get().fetchMilestones(id);
+        }
       },
 
       fetchMilestones: async (projectId: string) => {
@@ -484,6 +496,54 @@ export const useCollaborationStore = create<CollaborationState>()(
             state._mutations.tasks.error = (err as Error).message;
           });
           throw err;
+        }
+      },
+
+      fetchUserProfile: async () => {
+        try {
+          const res = await fetch('/api/user/profile');
+          if (!res.ok) throw new Error('Failed to fetch user profile');
+          const data = await res.json();
+          set((state) => {
+            state.userProfile = data;
+          });
+        } catch (err) {
+          console.error('fetchUserProfile error:', err);
+        }
+      },
+
+      updateUserProfile: async (updates) => {
+        const original = get().userProfile;
+        set((state) => {
+          if (state.userProfile) {
+            Object.assign(state.userProfile, updates);
+          }
+        });
+        try {
+          const res = await fetch('/api/user/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+          });
+          if (!res.ok) throw new Error('Failed to update user profile');
+        } catch (err) {
+          if (original) {
+            set((state) => { state.userProfile = original; });
+          }
+          throw err;
+        }
+      },
+
+      fetchUserTasks: async () => {
+        try {
+          const res = await fetch('/api/user/tasks');
+          if (!res.ok) throw new Error('Failed to fetch user tasks');
+          const data = await res.json();
+          set((state) => {
+            state.userTasks = data.summaries || [];
+          });
+        } catch (err) {
+          console.error('fetchUserTasks error:', err);
         }
       },
     })),

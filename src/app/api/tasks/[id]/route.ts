@@ -3,6 +3,28 @@ import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 
+function normalizeTask(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    parentId: row.parent_id,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    priority: row.priority,
+    assigneeId: row.assignee_id,
+    startDate: row.start_date,
+    dueDate: row.due_date,
+    dod: row.dod,
+    orderIndex: row.order_index,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    assigneeName: row.assignee_name,
+    assigneeEmail: row.assignee_email,
+    assigneeAvatar: row.assignee_avatar,
+  };
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
@@ -45,7 +67,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       ORDER BY st.order_index ASC, st.created_at DESC
     `, [id]);
 
-    return NextResponse.json({ task, subtasks });
+    return NextResponse.json({ task: normalizeTask(task), subtasks: subtasks.map(normalizeTask) });
   } catch (err) {
     console.error('GET /api/tasks/[id] error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -63,7 +85,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const { id } = await params;
     const body = await req.json();
-    const { title, description, status, priority, assigneeId, dueDate, dod, orderIndex, parentId } = body;
+    const { title, description, status, priority, assigneeId, startDate, dueDate, dod, orderIndex, parentId } = body;
 
     if (!isValidNanoid(id)) {
       return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
@@ -141,6 +163,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
       updates.push('assignee_id = ?');
       updateParams.push(assigneeId);
+    }
+    if ('startDate' in body) {
+      updates.push('start_date = ?');
+      updateParams.push(startDate);
     }
     if ('dueDate' in body) {
       updates.push('due_date = ?');

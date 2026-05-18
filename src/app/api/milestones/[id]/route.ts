@@ -3,6 +3,18 @@ import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 
+function normalizeMilestone(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    name: row.name,
+    description: row.description,
+    dueDate: row.due_date,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
@@ -29,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Not a project member' }, { status: 403 });
     }
 
-    return NextResponse.json({ milestone });
+    return NextResponse.json({ milestone: normalizeMilestone(milestone) });
   } catch (err) {
     console.error('GET /api/milestones/[id] error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

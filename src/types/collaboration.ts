@@ -55,6 +55,7 @@ export interface Task {
   status: 'todo' | 'in_progress' | 'done';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assigneeId?: string;
+  startDate?: number;
   dueDate?: number;
   dod?: string;
   orderIndex: number;
@@ -84,4 +85,46 @@ export interface TeamWithMembers extends Team {
 export interface ProjectWithDetails extends Project {
   tasks: Task[];
   pages: Array<{ id: string; title: string }>;
+}
+
+export interface UserProfile {
+  userId: string;
+  displayName?: string;
+  title?: string;
+  functions: string[];
+  bio?: string;
+  updatedAt: number;
+}
+
+export interface UserTaskSummary {
+  projectId: string;
+  projectName: string;
+  tasks: Task[];
+  totalTasks: number;
+  completedTasks: number;
+}
+
+export interface AIAnalysisResult {
+  tasks: {
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    suggestedAssigneeFunction: string;
+    subtasks?: { title: string; description: string }[];
+    estimatedDays: number;
+  }[];
+  review: {
+    strengths: string[];
+    weaknesses: string[];
+    suggestions: string[];
+    riskPoints: string[];
+  };
+  workflow: {
+    phase: string;
+    description: string;
+    tasks: string[];
+    assigneeFunction: string;
+    order: number;
+    estimatedDays: number;
+  }[];
 }

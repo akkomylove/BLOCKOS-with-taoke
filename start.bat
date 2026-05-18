@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
 title BlockOS Launcher
 echo ==========================================
@@ -29,9 +30,25 @@ echo.
 echo [INFO] Cleaning Next.js cache...
 if exist ".next" (
     rmdir /s /q ".next"
-    echo [OK] Cache cleared
-) else (
-    echo [OK] No cache to clean
+    echo [OK] .next cache cleared
+)
+if exist "dist" (
+    rmdir /s /q "dist"
+    echo [OK] dist cache cleared
+)
+echo [OK] Cache cleared
+
+echo.
+set "DB_FILE=%~dp0data\blockos.db"
+if exist "%DB_FILE%" (
+    echo [WARN] Found existing database: %DB_FILE%
+    set /p DEL_DB="Delete database to re-seed demo data? (Y/N): "
+    if /I "!DEL_DB!"=="Y" (
+        del /f /q "%DB_FILE%"
+        echo [OK] Database deleted, demo data will be re-seeded
+    ) else (
+        echo [INFO] Keeping existing database
+    )
 )
 
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3000"') do (
