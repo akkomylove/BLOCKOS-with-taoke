@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import type { Block, BlockType, AgentRule, AgentLog, BlockTemplate } from '@/types/block';
 import type { Page, Folder } from '@/types/page';
+import { PRESET_DOCUMENTS, getPresetDocumentBlocks } from '@/config/presetDocuments';
 
 interface HistoryEntry {
   pageId: string;
@@ -337,16 +338,39 @@ function getBlockDepthInBlocks(blocks: Block[], id: string): number {
 
 const defaultPage = createDefaultPage();
 
+function createPresetPages(): { pages: Page[]; pageBlocks: Record<string, Block[]> } {
+  const now = Date.now();
+  const pages: Page[] = [];
+  const pageBlocks: Record<string, Block[]> = {};
+
+  for (let i = 0; i < PRESET_DOCUMENTS.length; i++) {
+    const doc = PRESET_DOCUMENTS[i];
+    const pageId = nanoid();
+    pages.push({
+      id: pageId,
+      title: doc.title,
+      icon: doc.icon,
+      createdAt: now + i,
+      updatedAt: now + i,
+    });
+    pageBlocks[pageId] = getPresetDocumentBlocks(doc.id);
+  }
+
+  return { pages, pageBlocks };
+}
+
+const presetData = createPresetPages();
+
 export const useBlockStore = create<BlockStore>()(
   persist(
     immer((set, get) => ({
-      pages: [{ ...defaultPage, title: '电商平台开发项目 PRD', icon: '🛒' }],
+      pages: presetData.pages,
       folders: [],
-        groups: [],
-        _blockCounter: 0,
-      currentPageId: defaultPage.id,
-      pageBlocks: { [defaultPage.id]: seedBlocks },
-      blocks: seedBlocks,
+      groups: [],
+      _blockCounter: 0,
+      currentPageId: presetData.pages[0]?.id || defaultPage.id,
+      pageBlocks: presetData.pageBlocks,
+      blocks: presetData.pageBlocks[presetData.pages[0]?.id] || seedBlocks,
       selectedIds: [],
       agentRules: defaultAgentRules,
       agentLogs: [],

@@ -24,6 +24,7 @@ interface CollaborationState {
   createTeam: (name: string, description?: string, avatar?: string) => Promise<string>;
   updateTeam: (id: string, updates: Partial<Omit<Team, 'id' | 'createdAt' | 'ownerId'>>) => Promise<void>;
   deleteTeam: (id: string) => Promise<void>;
+  setCurrentTeam: (id: string | null) => void;
 
   fetchProjects: (teamId: string) => Promise<void>;
   createProject: (teamId: string, name: string, description?: string, icon?: string, color?: string) => Promise<string>;
@@ -44,6 +45,17 @@ interface CollaborationState {
   fetchUserProfile: () => Promise<void>;
   updateUserProfile: (updates: Partial<Pick<UserProfile, 'displayName' | 'title' | 'functions' | 'bio'>>) => Promise<void>;
   fetchUserTasks: () => Promise<void>;
+
+  saveAnalysis: (data: {
+    projectId?: string;
+    documentName: string;
+    documentSummary?: string;
+    workflowRoles: string[];
+    roleFlow?: { title: string; stages: { role: string; stageGoal: string; handoffToNext: string; stageInput?: string; watchPoints: string[]; stageOutput?: string }[] } | null;
+    taskSchedule?: { step: number; owner: string; goal: string; inputFrom: string[]; output: string; priority: 'high' | 'medium' | 'low' }[] | null;
+  }) => Promise<string>;
+
+  createTasksFromAnalysis: (analysisId: string, projectId: string) => Promise<{ id: string; title: string; step: number }[]>;
 }
 
 export const useCollaborationStore = create<CollaborationState>()(
@@ -178,6 +190,12 @@ export const useCollaborationStore = create<CollaborationState>()(
           });
           throw err;
         }
+      },
+
+      setCurrentTeam: (id: string | null) => {
+        set((state) => {
+          state.currentTeamId = id;
+        });
       },
 
       fetchProjects: async (teamId: string) => {
@@ -544,6 +562,39 @@ export const useCollaborationStore = create<CollaborationState>()(
           });
         } catch (err) {
           console.error('fetchUserTasks error:', err);
+        }
+      },
+
+      saveAnalysis: async (data) => {
+        try {
+          const res = await fetch('/api/workflow/analyses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+          if (!res.ok) throw new Error('Failed to save analysis');
+          const result = await res.json();
+          return result.id;
+        } catch (err) {
+          console.error('saveAnalysis error:', err);
+          throw err;
+        }
+      },
+
+      createTasksFromAnalysis: async (analysisId, projectId) => {
+        try {
+          const res = await fetch(`/api/workflow/analyses/${analysisId}/tasks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectId }),
+          });
+          if (!res.ok) throw new Error('Failed to create tasks from analysis');
+          const result = await res.json();
+          await get().fetchTasks(projectId);
+          return result.tasks;
+        } catch (err) {
+          console.error('createTasksFromAnalysis error:', err);
+          throw err;
         }
       },
     })),

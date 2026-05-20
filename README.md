@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BlockOS - AI 原生无界文档系统
 
-## Getting Started
+> 赛道四 · 无界文档 π（半命题）参赛作品  
+> 选手：曹琅 · 杜诺琦 · 伍菲琪
 
-First, run the development server:
+---
+
+## 一句话定位
+
+BlockOS 是一个以 **Block 为原子**、**AI 为副驾**、**决策可追溯**的 AI 原生无界文档系统——让同一份原文在不被改写的前提下，按角色折叠呈现不同视角，并把 AI 从「对话者」升级为拥有独立画布的「副驾操作者」。
+
+## 核心能力
+
+| 能力 | 说明 |
+|------|------|
+| **多角色折叠** | 同一份文档，按产品经理 / UI设计师 / 前端 / 后端 / 测试等角色自动折叠呈现 |
+| **AI 副驾** | AI 拥有独立画布，可自主创建、编辑、关联 Block，而非仅对话 |
+| **决策溯源** | 所有 AI 操作留痕，可回溯、可审计 |
+| **文档关联** | 多文档智能关联分析，按角色推荐阅读优先级 |
+| **工作流分析** | 基于文档内容自动拆解任务并分配到角色 |
+
+## 技术栈
+
+- **前端**: Next.js 15 + React 19 + TypeScript + Tailwind CSS
+- **状态管理**: Zustand + Immer
+- **拖拽**: @dnd-kit
+- **AI 接口**: 阿里云 DashScope (千问 Qwen3-8B)
+- **数据库**: sql.js (SQLite 内存模式)
+- **部署**: 腾讯云轻量应用服务器
+
+## 快速开始
+
+### 本地开发
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. 克隆仓库
+git clone https://github.com/akkomylove/BLOCKOS-with-taoke.git
+cd BLOCKOS-with-taoke
+
+# 2. 安装依赖
+npm install
+
+# 3. 启动开发服务器（默认 8000 端口）
+./start.bat
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+浏览器自动打开 http://localhost:8000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 环境变量
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+创建 `.env.local`：
 
-## Learn More
+```bash
+# AI 配置（阿里云 DashScope）
+SILICONFLOW_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+SILICONFLOW_API_KEY=sk-你的阿里云密钥
+AI_MODEL=qwen3-8b
 
-To learn more about Next.js, take a look at the following resources:
+# NextAuth
+AUTH_SECRET=你的随机密钥
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 生产部署
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# 构建
+npm run build
 
-## Deploy on Vercel
+# 启动（端口 8000）
+npm start -- --port 8000
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+或使用 PM2：
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pm2 start ecosystem.config.js
+```
+
+## 项目结构
+
+```
+blockOS/
+├── src/
+│   ├── app/              # Next.js App Router
+│   ├── components/       # React 组件
+│   ├── lib/              # 工具库
+│   ├── store/            # Zustand 状态管理
+│   └── types/            # TypeScript 类型
+├── public/               # 静态资源
+├── deploy/               # 部署脚本
+└── start.bat             # Windows 一键启动
+```
+
+## 演示数据
+
+项目内置 5 份预设文档和 5 人研发团队：
+
+- **PRD** - 电商平台开发项目需求文档
+- **技术方案** - 系统架构设计
+- **UI 设计规范** - 视觉和交互规范
+- **数据分析报告** - 用户行为分析
+- **测试计划** - 功能测试和性能测试
+
+团队成员：产品经理、UI设计师、前端开发、后端开发、测试工程师
+
+## 部署指南
+
+详见 [deploy/tencent-lighthouse/README.md](deploy/tencent-lighthouse/README.md)
+
+## 许可证
+
+MIT License

@@ -128,3 +128,41 @@ export interface AIAnalysisResult {
     estimatedDays: number;
   }[];
 }
+
+export interface WorkflowAnalysis {
+  id: string;
+  projectId: string | null;
+  documentName: string;
+  documentSummary: string | null;
+  workflowRoles: string[];
+  roleFlow: {
+    title: string;
+    stages: {
+      role: string;
+      stageGoal: string;
+      handoffToNext: string;
+      stageInput?: string;
+      watchPoints: string[];
+      stageOutput?: string;
+    }[];
+  } | null;
+  taskSchedule: {
+    step: number;
+    owner: string;
+    goal: string;
+    inputFrom: string[];
+    output: string;
+    priority: 'high' | 'medium' | 'low';
+  }[] | null;
+  createdAt: number;
+  createdBy: string;
+}
+
+export interface WorkflowTaskLink {
+  id: string;
+  analysisId: string;
+  taskId: string | null;
+  stepNumber: number;
+  role: string;
+  goal: string;
+}

@@ -6,7 +6,7 @@ import {
   Sparkles, ArrowRight, CheckCircle2, ChevronDown, ChevronUp,
   Type, CheckSquare, Code, Table, ImageIcon, Quote, ChevronRight as ChevronRightIcon,
   Search, Tag, History, Link2, Wand2, Palette, Lightbulb,
-  Users, BarChart3, UserCircle
+  Users, BarChart3, UserCircle, FileText, ExternalLink
 } from 'lucide-react';
 
 interface HelpPanelProps {
@@ -189,6 +189,20 @@ export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
                   左侧导航栏的标签页可按标签筛选 Block，快速定位相关内容。
                 </p>
               </AccordionItem>
+
+              <AccordionItem icon={FileText} title="说明文档">
+                <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed mb-3">
+                  查看 BlockOS 参赛说明文档，了解项目背景、功能介绍和技术实现。
+                </p>
+                <button
+                  onClick={() => window.open('/FDoc-赛道四-曹琅+杜诺琦+伍菲琪_说明文档(1).pdf', '_blank')}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  查看说明文档 (PDF)
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </AccordionItem>
             </div>
           )}
 
@@ -238,7 +252,7 @@ export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
             <div className="space-y-4">
               <AccordionItem icon={Key} title="自定义 API">
                 <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed mb-3">
-                  配置你自己的 API 密钥以使用自定义模型。留空则使用系统默认的 SiliconFlow API。
+                  配置你自己的 API 密钥以使用自定义模型。留空则使用系统默认的阿里云百炼 API。
                 </p>
                 <div className="space-y-3">
                   <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800">
@@ -264,7 +278,7 @@ export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
                       type="text"
                       value={baseURL}
                       onChange={(e) => setBaseURL(e.target.value)}
-                      placeholder="https://api.siliconflow.cn/v1"
+                      placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
                       className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-emerald-500/40 transition-colors"
                     />
                   </div>
@@ -278,7 +292,7 @@ export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
                       type="text"
                       value={model}
                       onChange={(e) => setModel(e.target.value)}
-                      placeholder="Qwen/Qwen3-8B"
+                      placeholder="qwen3.6-plus"
                       className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-emerald-500/40 transition-colors"
                     />
                   </div>

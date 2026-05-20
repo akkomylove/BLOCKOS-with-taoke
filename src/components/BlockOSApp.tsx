@@ -6,12 +6,19 @@ import Toolbar from '@/components/Toolbar';
 import AgentLogPanel from '@/components/AgentLogPanel';
 import { Sidebar } from '@/components/Sidebar';
 import OnboardingTour from '@/components/OnboardingTour';
+import PdfNoticeModal from '@/components/PdfNoticeModal';
 import HelpPanel from '@/components/HelpPanel';
 import SearchPanel from '@/components/SearchPanel';
 import GroupPanel from '@/components/GroupPanel';
 import ImportPanel from '@/components/ImportPanel';
 import ExportPanel from '@/components/ExportPanel';
 import HistoryPanel from '@/components/HistoryPanel';
+import CopilotPanel from '@/components/CopilotPanel';
+import AnalyzePanel from '@/components/AnalyzePanel';
+import ChatPanel from '@/components/ChatPanel';
+import ReviewEnrichPanel from '@/components/ReviewEnrichPanel';
+import FoldPlanPanel from '@/components/FoldPlanPanel';
+import DocRelationsPanel from '@/components/DocRelationsPanel';
 import { ProfilePanel } from '@/components/collaboration/ProfilePanel';
 import { useAgent } from '@/hooks/useAgent';
 import { useBlockStore } from '@/store/blockStore';
@@ -23,12 +30,19 @@ export default function BlockOSApp() {
   const [showRelationDrawer, setShowRelationDrawer] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showPdfNotice, setShowPdfNotice] = useState(false);
   const [showGroupPanel, setShowGroupPanel] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showCopilot, setShowCopilot] = useState(false);
+  const [showAnalyze, setShowAnalyze] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showReviewEnrich, setShowReviewEnrich] = useState(false);
+  const [showFoldPlan, setShowFoldPlan] = useState(false);
+  const [showDocRelations, setShowDocRelations] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const hydrate = useBlockStore((state) => state.hydrate);
 
@@ -54,6 +68,11 @@ export default function BlockOSApp() {
     if (!completed) {
       setShowOnboarding(true);
     }
+
+    const pdfDismissed = localStorage.getItem('blockos-pdf-notice-dismissed');
+    if (!pdfDismissed) {
+      setShowPdfNotice(true);
+    }
   }, [hydrate, syncPages, loadFromServer]);
 
   return (
@@ -74,6 +93,12 @@ export default function BlockOSApp() {
             showGroupPanel={showGroupPanel}
             onToggleHistory={() => setShowHistory(true)}
             onOpenProfile={() => setShowProfile(true)}
+            onToggleCopilot={() => setShowCopilot(true)}
+            onToggleAnalyze={() => setShowAnalyze(true)}
+            onToggleChat={() => setShowChat(true)}
+            onToggleReviewEnrich={() => setShowReviewEnrich(true)}
+            onToggleFoldPlan={() => setShowFoldPlan(true)}
+            onToggleDocRelations={() => setShowDocRelations(true)}
           />
           <AgentLogPanel isOpen={showLogs} onClose={() => setShowLogs(false)} />
           <BlockEditor
@@ -91,12 +116,22 @@ export default function BlockOSApp() {
           />
         )}
 
+        {showPdfNotice && (
+          <PdfNoticeModal onClose={() => setShowPdfNotice(false)} />
+        )}
+
         <HelpPanel isOpen={showHelp} onClose={() => setShowHelp(false)} />
         <SearchPanel isOpen={showSearch} onClose={() => setShowSearch(false)} />
         <GroupPanel isOpen={showGroupPanel} onClose={() => setShowGroupPanel(false)} />
         <ImportPanel isOpen={showImport} onClose={() => setShowImport(false)} />
         <ExportPanel isOpen={showExport} onClose={() => setShowExport(false)} />
         <HistoryPanel isOpen={showHistory} onClose={() => setShowHistory(false)} />
+        <CopilotPanel isOpen={showCopilot} onClose={() => setShowCopilot(false)} />
+        <AnalyzePanel isOpen={showAnalyze} onClose={() => setShowAnalyze(false)} />
+        <ChatPanel isOpen={showChat} onClose={() => setShowChat(false)} />
+        <ReviewEnrichPanel isOpen={showReviewEnrich} onClose={() => setShowReviewEnrich(false)} />
+        <FoldPlanPanel isOpen={showFoldPlan} onClose={() => setShowFoldPlan(false)} />
+        <DocRelationsPanel isOpen={showDocRelations} onClose={() => setShowDocRelations(false)} />
       <ProfilePanel isOpen={showProfile} onClose={() => setShowProfile(false)} />
     </div>
   </ThemeProvider>

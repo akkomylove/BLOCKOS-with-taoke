@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
   Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
-  LogOut, UserCircle, LayoutGrid, FileText, Command
+  LogOut, UserCircle, LayoutGrid, FileText, Command, BarChart3, BrainCircuit,
+  MessageSquare, ClipboardCheck, Link2
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useBlockStore } from '@/store/blockStore';
@@ -26,12 +27,20 @@ interface ToolbarProps {
   showGroupPanel: boolean;
   onToggleHistory: () => void;
   onOpenProfile: () => void;
+  onToggleCopilot: () => void;
+  onToggleAnalyze: () => void;
+  onToggleChat: () => void;
+  onToggleReviewEnrich: () => void;
+  onToggleFoldPlan: () => void;
+  onToggleDocRelations: () => void;
 }
 
 export default function Toolbar({
   onToggleLogs, showLogs, onToggleAIAssistant, onToggleRelationDrawer,
   onToggleHelp, onToggleSearch, onToggleImport, onToggleExport,
   onToggleGroupPanel, showGroupPanel, onToggleHistory, onOpenProfile,
+  onToggleCopilot, onToggleAnalyze, onToggleChat, onToggleReviewEnrich,
+  onToggleFoldPlan, onToggleDocRelations,
 }: ToolbarProps) {
   const router = useRouter();
   const agentEnabled = useBlockStore((state) => state.agentEnabled);
@@ -142,6 +151,21 @@ export default function Toolbar({
         {/* AI Group */}
         <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手">
           <Sparkles className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleCopilot} className={iconBtnBlue} title="AI Copilot">
+          <BrainCircuit className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleAnalyze} className={iconBtnBlue} title="工作流分析">
+          <BarChart3 className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleChat} className={iconBtnBlue} title="AI 对话">
+          <MessageSquare className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleReviewEnrich} className={iconBtnBlue} title="角色审阅">
+          <ClipboardCheck className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleDocRelations} className={iconBtnBlue} title="文档关联">
+          <Link2 className="w-4 h-4" />
         </button>
         <button onClick={toggleAgent} className={agentEnabled ? iconBtnActive : iconBtn} title="Agent">
           <Bot className="w-4 h-4" />

@@ -17,9 +17,12 @@ export async function POST(
       return NextResponse.json({ error: 'Missing content' }, { status: 400 });
     }
 
-    const apiKey = process.env.SILICONFLOW_API_KEY;
-    const baseUrl = process.env.SILICONFLOW_BASE_URL || 'https://api.siliconflow.cn/v1';
-    const model = process.env.AI_MODEL || 'Qwen/Qwen3-8B';
+    const apiKey = process.env.DASHSCOPE_API_KEY || process.env.SILICONFLOW_API_KEY;
+    const baseUrl =
+      process.env.DASHSCOPE_BASE_URL ||
+      process.env.SILICONFLOW_BASE_URL ||
+      'https://dashscope.aliyuncs.com/compatible-mode/v1';
+    const model = process.env.AI_MODEL || 'qwen3.6-plus';
 
     const prompt = `你是一个项目管理专家。请分析以下项目计划书，并返回JSON格式的分析结果（只返回JSON，不要其他内容）。
 

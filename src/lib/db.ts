@@ -182,6 +182,30 @@ function initSchema(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id);
     CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
+
+    CREATE TABLE IF NOT EXISTS workflow_analyses (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      document_name TEXT NOT NULL,
+      document_summary TEXT,
+      workflow_roles TEXT NOT NULL,
+      role_flow TEXT,
+      task_schedule TEXT,
+      created_at INTEGER NOT NULL,
+      created_by TEXT NOT NULL REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS workflow_tasks (
+      id TEXT PRIMARY KEY,
+      analysis_id TEXT NOT NULL REFERENCES workflow_analyses(id) ON DELETE CASCADE,
+      task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+      step_number INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      goal TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_workflow_analyses_project ON workflow_analyses(project_id);
+    CREATE INDEX IF NOT EXISTS idx_workflow_tasks_analysis ON workflow_tasks(analysis_id);
   `);
 
   try {

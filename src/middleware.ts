@@ -5,7 +5,22 @@ export function middleware(req: NextRequest) {
   const { nextUrl } = req;
 
   const nextAuthToken = req.cookies.get('authjs.session-token') || req.cookies.get('__Secure-authjs.session-token');
-  const demoSession = req.cookies.get('demo-session');
+  let demoSession = req.cookies.get('demo-session');
+  
+  if (!demoSession && process.env.NODE_ENV === 'development') {
+    const response = NextResponse.next();
+    response.cookies.set({
+      name: 'demo-session',
+      value: 'demo-admin-001',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+    demoSession = { value: 'demo-admin-001' };
+  }
+
   const isLoggedIn = !!nextAuthToken || !!demoSession;
   
   const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth');

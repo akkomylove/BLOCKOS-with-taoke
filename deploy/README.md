@@ -68,7 +68,9 @@ GITHUB_CLIENT_ID=your-github-app-id
 GITHUB_CLIENT_SECRET=your-github-app-secret
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
-OPENAI_API_KEY=your-openai-api-key
+DASHSCOPE_API_KEY=your-dashscope-api-key
+DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+AI_MODEL=qwen3.6-plus
 ```
 
 ### 6. 配置 OAuth
