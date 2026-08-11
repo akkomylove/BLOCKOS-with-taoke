@@ -34,3 +34,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ===== 本地环境变量(防止密钥泄露) =====
+# 原配置只忽略了 .env*.local, 裸 .env / .env.production 等仍会被提交!
+.env
+.env.*
+!.env.example
+
+# ===== 运行时本地数据库(程序生成, 不应入库) =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== 个人推送辅助脚本(不属于应用本身) =====
+push-to-github*
