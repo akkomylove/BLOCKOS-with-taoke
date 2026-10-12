@@ -17,12 +17,16 @@ export async function POST(
       return NextResponse.json({ error: 'Missing content' }, { status: 400 });
     }
 
-    const apiKey = process.env.DASHSCOPE_API_KEY || process.env.SILICONFLOW_API_KEY;
+    const apiKey =
+      process.env.ZHIPU_API_KEY ||
+      process.env.DASHSCOPE_API_KEY ||
+      process.env.SILICONFLOW_API_KEY;
     const baseUrl =
+      process.env.ZHIPU_BASE_URL ||
       process.env.DASHSCOPE_BASE_URL ||
       process.env.SILICONFLOW_BASE_URL ||
-      'https://dashscope.aliyuncs.com/compatible-mode/v1';
-    const model = process.env.AI_MODEL || 'qwen3.6-plus';
+      'https://open.bigmodel.cn/api/paas/v4';
+    const model = process.env.AI_MODEL || 'glm-4-flash';
 
     const prompt = `你是一个项目管理专家。请分析以下项目计划书，并返回JSON格式的分析结果（只返回JSON，不要其他内容）。
 

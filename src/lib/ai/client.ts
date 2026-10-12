@@ -12,18 +12,22 @@ export class AIServiceError extends Error {
 
 function getSettings() {
   return {
-    apiKey: process.env.DASHSCOPE_API_KEY || process.env.SILICONFLOW_API_KEY,
-    model: process.env.AI_MODEL || 'qwen3.6-plus',
+    apiKey:
+      process.env.ZHIPU_API_KEY ||
+      process.env.DASHSCOPE_API_KEY ||
+      process.env.SILICONFLOW_API_KEY,
+    model: process.env.AI_MODEL || 'glm-4-flash',
     endpoint:
+      process.env.ZHIPU_BASE_URL ||
       process.env.DASHSCOPE_BASE_URL ||
       process.env.SILICONFLOW_BASE_URL ||
-      'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      'https://open.bigmodel.cn/api/paas/v4',
   };
 }
 
 export function ensureConfigured(): void {
   if (!getSettings().apiKey) {
-    throw new AIServiceError('后端未配置 DASHSCOPE_API_KEY', 'missing_api_key', 503);
+    throw new AIServiceError('后端未配置 AI API Key (请在 .env.local 配置 ZHIPU_API_KEY 或 DASHSCOPE_API_KEY)', 'missing_api_key', 503);
   }
 }
 
@@ -51,6 +55,26 @@ export async function postJsonCompletion(
 
     if (!response.ok) {
       const detail = await response.text();
+      if ((response.status === 429 || response.status === 404) && settings.model !== 'glm-4-flash') {
+        console.warn(`[AI Client] 模型 ${settings.model} 请求异常 (${response.status})，自动降级至 glm-4-flash 重试`);
+        const fallbackRes = await fetch(`${settings.endpoint}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${settings.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'glm-4-flash',
+            messages,
+            response_format: { type: 'json_object' },
+            temperature,
+          }),
+        });
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          return extractMessageContent(fallbackData);
+        }
+      }
       throw new AIServiceError(`AI 请求失败: ${detail}`, 'ai_http_error', 502, {
         status: response.status,
         response: detail,
