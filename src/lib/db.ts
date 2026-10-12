@@ -38,17 +38,8 @@ export async function getDb() {
       const publicWasm = path.join(process.cwd(), 'public', 'sql-wasm.wasm');
       const nodeModulesWasm = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
       const wasmPath = fs.existsSync(publicWasm) ? publicWasm : nodeModulesWasm;
-      let wasmBinary: Buffer | undefined;
-      try {
-        if (fs.existsSync(wasmPath)) {
-          wasmBinary = fs.readFileSync(wasmPath);
-        }
-      } catch (err) {
-        console.warn('Failed to read wasm binary:', err);
-      }
       SQL = await initSqlJs({
         locateFile: () => wasmPath,
-        ...(wasmBinary ? { wasmBinary } : {}),
       });
     }
 
