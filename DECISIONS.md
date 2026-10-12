@@ -153,3 +153,26 @@
      - 严禁版本碎片化蔓延，确保团队始终保持单一、稳定、清晰的事实基准源。
 
 
+
+---
+
+## ADR-008: 混合持久化架构：WebAssembly SQLite 内存引擎 + Neon (Vercel Postgres) 远端快照无缝同步
+
+### 1. 业务痛点与技术冲突
+1. **Serverless 无状态存储困境**：
+   - Vercel Serverless Function 宿主容器为只读文件系统且具有瞬态生命周期，本地 /tmp/blockos.db 会在函数空闲冷启后重置为初始种子，无法实现跨容器永久持久化；
+2. **全盘重构 Postgres 的巨大破坏性成本**：
+   - 全站 22 个 API 路由及 165 个测试用例均基于 SQLite 内存引擎的纯同步调用（query(...)、run(...)，无 await）；
+   - 若将数据层全面重构为异步 PostgreSQL（await pg.query），需要彻底破坏 22 个文件接口定义、转换 SQL 占位符（? 转 $1, $2）并重写全部测试，违背“架构整洁与无破坏性演进原则”。
+
+### 2. 决策方案：双层混合持久化 (Dual-Tier Hybrid Persistence)
+1. **读写执行层（Tier 1）**：
+   - 保持 WebAssembly SQLite (sql.js) 作为唯一内存 SQL 执行内核，保留 60fps 无延迟读写与 100% 同步语法兼容；
+2. **云端持久化层（Tier 2 - Vercel Neon Postgres）**：
+   - 引入 @neondatabase/serverless，利用 HTTP API 实现轻量无池化云端连接；
+   - 在 Neon 中维护 blockos_db_sync 元数据与 Base64 快照存储；
+   - **冷启动载入**：getDb() 优先从 Neon 拉取最新的云端数据库快照，拉取成功即自动水合进入内存；
+   - **状态变更推送**：saveDb() 在写入本地临时磁盘的同时，异步将最新二进制快照回传同步至 Neon；
+   - **自动优雅降级**：未绑定 POSTGRES_URL 或本地离线开发时，自动平滑回退至种子数据库，绝不产生网络阻塞与页面白屏；
+3. **健康透视 API (/api/db-status)**：
+   - 暴露实时连通性、同步时间戳与引擎状态，确保数据状态透明可测。

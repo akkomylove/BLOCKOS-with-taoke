@@ -2,6 +2,7 @@ import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
 import { DEMO_USERS } from './demo-users';
+import { neon } from '@neondatabase/serverless';
 
 let db: Database | null = null;
 let SQL: SqlJsStatic | null = null;
@@ -12,6 +13,21 @@ const isVercel = !!process.env.VERCEL;
 const DB_PATH = isVercel
   ? path.join('/tmp', 'blockos.db')
   : path.join(process.cwd(), 'data', 'blockos.db');
+
+function getPostgresClient() {
+  const conn =
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.STORAGE_URL;
+  if (!conn || conn === '[SENSITIVE]') return null;
+  try {
+    return neon(conn);
+  } catch (err) {
+    console.error('Failed to initialize Neon Postgres client:', err);
+    return null;
+  }
+}
 
 export async function getDb() {
   if (db) return db;
@@ -33,11 +49,35 @@ export async function getDb() {
     }
 
     let data: Buffer | null = null;
-    const seedDbPath = path.join(process.cwd(), 'data', 'blockos.db');
-    if (fs.existsSync(DB_PATH)) {
-      data = fs.readFileSync(DB_PATH);
-    } else if (fs.existsSync(seedDbPath)) {
-      data = fs.readFileSync(seedDbPath);
+    const pg = getPostgresClient();
+    if (pg) {
+      try {
+        await pg`
+          CREATE TABLE IF NOT EXISTS blockos_db_sync (
+            id VARCHAR(32) PRIMARY KEY,
+            payload TEXT NOT NULL,
+            updated_at BIGINT NOT NULL
+          );
+        `;
+        const rows = await pg`
+          SELECT payload, updated_at FROM blockos_db_sync WHERE id = 'main' LIMIT 1;
+        `;
+        if (rows && rows.length > 0 && typeof rows[0].payload === 'string') {
+          data = Buffer.from(rows[0].payload, 'base64');
+          console.log('[Neon Postgres] Loaded database snapshot from remote, size:', data.length);
+        }
+      } catch (pgErr) {
+        console.warn('[Neon Postgres] Could not fetch remote snapshot, falling back to local seed:', pgErr);
+      }
+    }
+
+    if (!data) {
+      const seedDbPath = path.join(process.cwd(), 'data', 'blockos.db');
+      if (fs.existsSync(DB_PATH)) {
+        data = fs.readFileSync(DB_PATH);
+      } else if (fs.existsSync(seedDbPath)) {
+        data = fs.readFileSync(seedDbPath);
+      }
     }
 
     db = new SQL.Database(data);
@@ -232,9 +272,47 @@ export function saveDb() {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(DB_PATH, Buffer.from(data));
+
+    // 异步推送到 Neon Postgres 云端存储，保障跨容器重启不丢数据
+    const pg = getPostgresClient();
+    if (pg) {
+      const base64 = Buffer.from(data).toString('base64');
+      const now = Date.now();
+      pg`
+        INSERT INTO blockos_db_sync (id, payload, updated_at)
+        VALUES ('main', ${base64}, ${now})
+        ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at;
+      `.catch((err) => {
+        console.error('[Neon Postgres] Async snapshot push error:', err);
+      });
+    }
   } catch (err) {
     console.error('Failed to save database:', err);
   }
+}
+
+export async function getDbStatus() {
+  const pg = getPostgresClient();
+  let pgStatus = 'disconnected';
+  let lastSynced: number | null = null;
+  if (pg) {
+    try {
+      const rows = await pg`SELECT updated_at FROM blockos_db_sync WHERE id = 'main' LIMIT 1;`;
+      pgStatus = 'connected';
+      if (rows && rows.length > 0) {
+        lastSynced = Number(rows[0].updated_at);
+      }
+    } catch (err) {
+      pgStatus = 'error: ' + (err instanceof Error ? err.message : String(err));
+    }
+  }
+  return {
+    engine: 'Hybrid WebAssembly SQLite + Neon Serverless Postgres',
+    isVercel,
+    postgresConfigured: !!pg,
+    postgresStatus: pgStatus,
+    lastSynced,
+  };
 }
 
 export function query(sql: string, params: (string | number | null)[] = []) {
