@@ -21,14 +21,15 @@ function validateEnvVars() {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'blockos-fallback-session-secret-key-32chars',
   providers: [
     GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      clientId: process.env.GITHUB_CLIENT_ID || 'placeholder-github-id',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || 'placeholder-github-secret',
     }),
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID || 'placeholder-google-id',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'placeholder-google-secret',
     }),
   ],
   session: {

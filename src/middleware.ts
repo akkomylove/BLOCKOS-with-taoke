@@ -18,7 +18,7 @@ export function middleware(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
-    demoSession = { value: 'demo-admin-001' };
+    demoSession = { name: 'demo-session', value: 'demo-admin-001' };
   }
 
   const isLoggedIn = !!nextAuthToken || !!demoSession;

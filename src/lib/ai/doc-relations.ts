@@ -63,11 +63,11 @@ function safeRelations(value: unknown, payload: DocRelationsRequest): DocRelatio
       relationDescription: safeText(dict.relation_description, '可在前端编辑补充。'),
       relationReason: safeText(dict.relation_reason, '来自 AI 推荐。'),
       confidence: confidence as 'high' | 'medium' | 'low',
-      readingGuide: dict.reading_guide ? {
-        priority: Number(dict.reading_guide.priority) || 2,
-        readingOrder: Number(dict.reading_guide.reading_order) || 2,
-        keyPoints: safeList(dict.reading_guide.key_points),
-        jumpToSection: safeText(dict.reading_guide.jump_to_section),
+      readingGuide: dict.reading_guide && typeof dict.reading_guide === 'object' ? {
+        priority: Number((dict.reading_guide as Record<string, unknown>).priority) || 2,
+        readingOrder: Number((dict.reading_guide as Record<string, unknown>).reading_order) || 2,
+        keyPoints: safeList((dict.reading_guide as Record<string, unknown>).key_points),
+        jumpToSection: safeText((dict.reading_guide as Record<string, unknown>).jump_to_section),
       } : undefined,
     });
   }

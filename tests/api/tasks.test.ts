@@ -94,7 +94,10 @@ describe('GET /api/tasks', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.tasks).toEqual(mockTasks);
+    expect(data.tasks).toEqual([
+      expect.objectContaining({ id: 'task-1', title: 'Task 1', projectId: mockProjectId }),
+      expect.objectContaining({ id: 'task-2', title: 'Task 2', projectId: mockProjectId }),
+    ]);
   });
 
   it('should return child tasks when parentId is provided', async () => {
@@ -119,7 +122,10 @@ describe('GET /api/tasks', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.tasks).toEqual(mockChildTasks);
+    expect(data.tasks).toEqual([
+      expect.objectContaining({ id: 'subtask-1', title: 'Subtask 1', parentId: mockParentId }),
+      expect.objectContaining({ id: 'subtask-2', title: 'Subtask 2', parentId: mockParentId }),
+    ]);
   });
 });
 

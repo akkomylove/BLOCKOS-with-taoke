@@ -16,7 +16,7 @@ function normalizeSection(
   const matchedTopics = allRelevant.filter((topic) => content.includes(topic)).slice(0, 6);
   const matchedFoldables = foldableTopics.filter((topic) => topic && content.includes(topic));
 
-  let rawRelevance = safeText(rawItem.relevance, '');
+  const rawRelevance = safeText(rawItem.relevance, '');
   let relevance: 'high' | 'medium' | 'low';
   if (!['high', 'medium', 'low'].includes(rawRelevance)) {
     if (matchedTopics.length) relevance = matchedTopics.length >= 2 ? 'high' : 'medium';
@@ -27,8 +27,8 @@ function normalizeSection(
     relevance = rawRelevance as 'high' | 'medium' | 'low';
   }
 
-  let shouldFold = typeof rawItem.should_fold === 'boolean' ? rawItem.should_fold : (relevance === 'low' && !matchedTopics.length);
-  let highlight = typeof rawItem.highlight === 'boolean' ? rawItem.highlight : (relevance === 'high');
+  const shouldFold = typeof rawItem.should_fold === 'boolean' ? rawItem.should_fold : (relevance === 'low' && !matchedTopics.length);
+  const highlight = typeof rawItem.highlight === 'boolean' ? rawItem.highlight : (relevance === 'high');
 
   const fallbackReason = matchedTopics.length
     ? `该段直接涉及 ${payload.currentRole} 需要优先查看的主题。`

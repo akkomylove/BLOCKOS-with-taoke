@@ -8,7 +8,10 @@ let SQL: SqlJsStatic | null = null;
 let dbInitError: Error | null = null;
 let dbSeeded = false;
 
-const DB_PATH = path.join(process.cwd(), 'data', 'blockos.db');
+const isVercel = !!process.env.VERCEL;
+const DB_PATH = isVercel
+  ? path.join('/tmp', 'blockos.db')
+  : path.join(process.cwd(), 'data', 'blockos.db');
 
 export async function getDb() {
   if (db) return db;
@@ -16,7 +19,9 @@ export async function getDb() {
 
   try {
     if (!SQL) {
-      const wasmPath = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+      const publicWasm = path.join(process.cwd(), 'public', 'sql-wasm.wasm');
+      const nodeModulesWasm = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+      const wasmPath = fs.existsSync(publicWasm) ? publicWasm : nodeModulesWasm;
       SQL = await initSqlJs({
         locateFile: () => wasmPath,
       });
@@ -28,8 +33,11 @@ export async function getDb() {
     }
 
     let data: Buffer | null = null;
+    const seedDbPath = path.join(process.cwd(), 'data', 'blockos.db');
     if (fs.existsSync(DB_PATH)) {
       data = fs.readFileSync(DB_PATH);
+    } else if (fs.existsSync(seedDbPath)) {
+      data = fs.readFileSync(seedDbPath);
     }
 
     db = new SQL.Database(data);

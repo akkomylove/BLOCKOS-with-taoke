@@ -9,11 +9,11 @@ export async function summarizeVersion(payload: VersionSummaryRequest): Promise<
 
   try {
     const parsed = normalizeVersionPayload(parseJsonContent(rawContent), payload);
-    return parsed as VersionSummaryResponse;
+    return parsed as unknown as VersionSummaryResponse;
   } catch (error) {
     try {
       const repaired = normalizeVersionPayload(await repairJson(rawContent, payload.workflow, '{version_number, change_summary, self_conclusion, decision_trace:[...], key_changes:[...], affected_roles:[...]}'), payload);
-      return repaired as VersionSummaryResponse;
+      return repaired as unknown as VersionSummaryResponse;
     } catch (repairError) {
       throw new AIServiceError('版本总结数据无法自动修复', 'invalid_version_summary_payload', 502, { error: String(repairError) });
     }

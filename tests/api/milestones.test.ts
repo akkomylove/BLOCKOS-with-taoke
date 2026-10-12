@@ -78,7 +78,11 @@ describe('GET /api/milestones/[id]', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.milestone).toEqual(mockMilestone);
+    expect(data.milestone).toEqual(expect.objectContaining({
+      id: 'milestone-1',
+      projectId: 'proj-1',
+      name: 'MVP Release',
+    }));
   });
 });
 

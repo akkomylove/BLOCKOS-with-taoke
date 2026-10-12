@@ -2,7 +2,7 @@ export interface AnalyzeRequest {
   documentName: string;
   documentContent: string;
   workflow: string[];
-  sourceType: 'canvas' | 'page' | 'upload' | 'preset';
+  sourceType: 'canvas' | 'page' | 'upload' | 'preset' | 'multi-page';
   pageId?: string;
 }
 

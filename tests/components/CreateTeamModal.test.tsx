@@ -199,6 +199,10 @@ describe('CreateTeamModal', () => {
     await user.click(submitButton);
 
     expect(screen.getByText('创建中...')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(mockOnClose).toHaveBeenCalled();
+    });
   });
 
   it('disables submit button during loading', async () => {
@@ -216,6 +220,10 @@ describe('CreateTeamModal', () => {
     await waitFor(() => {
       const loadingButton = screen.getByText('创建中...');
       expect(loadingButton.closest('button')).toBeDisabled();
+    });
+
+    await waitFor(() => {
+      expect(mockOnClose).toHaveBeenCalled();
     });
   });
 

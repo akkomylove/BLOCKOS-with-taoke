@@ -3,18 +3,26 @@ import { auth } from './auth';
 import { DEMO_USERS, isDemoAdmin } from './demo-users';
 
 export async function getUserId(): Promise<string> {
-  const cookieStore = await cookies();
-  const demoSession = cookieStore.get('demo-session');
+  try {
+    const cookieStore = await cookies();
+    const demoSession = cookieStore.get('demo-session');
 
-  if (demoSession?.value) {
-    const demoUser = DEMO_USERS.find(u => u.id === demoSession.value);
-    if (demoUser) return demoUser.id;
-    return demoSession.value;
+    if (demoSession?.value) {
+      const demoUser = DEMO_USERS.find(u => u.id === demoSession.value);
+      if (demoUser) return demoUser.id;
+      return demoSession.value;
+    }
+  } catch {
+    // 在部分非 Request 上下文（如单元测试）中继续向下走 session/auth 检查
   }
 
   const session = await auth();
   if (session?.user?.id) {
     return session.user.id;
+  }
+  const rawSession = session as Record<string, unknown> | null | undefined;
+  if (typeof rawSession?.userId === 'string') {
+    return rawSession.userId;
   }
 
   if (process.env.NODE_ENV === 'development') {

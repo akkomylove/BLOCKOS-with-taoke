@@ -32,6 +32,9 @@ vi.mock('lucide-react', () => ({
   Users: vi.fn(({ className }: { className?: string }) => (
     <svg data-testid="users-icon" className={className} />
   )),
+  ArrowLeft: vi.fn(({ className }: { className?: string }) => (
+    <svg data-testid="arrow-left-icon" className={className} />
+  )),
 }));
 
 const mockUseCollaborationStore = vi.fn();
