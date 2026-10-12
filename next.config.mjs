@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['sql.js'],
   images: {
     unoptimized: true,
   },
@@ -7,7 +8,7 @@ const nextConfig = {
     return [
       {
         source: '/sql-wasm.wasm',
-        destination: '/node_modules/sql.js/dist/sql-wasm.wasm',
+        destination: '/sql-wasm.wasm',
       },
     ];
   },

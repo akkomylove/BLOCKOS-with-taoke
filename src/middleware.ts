@@ -23,7 +23,7 @@ export function middleware(req: NextRequest) {
 
   const isLoggedIn = !!nextAuthToken || !!demoSession;
   
-  const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth');
+  const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth') || nextUrl.pathname === '/api/db-status';
   const isPublicRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/';
   const isApiRoute = nextUrl.pathname.startsWith('/api');
 
