@@ -264,12 +264,130 @@ function initSchema(database: Database) {
 
     CREATE INDEX IF NOT EXISTS idx_workflow_analyses_project ON workflow_analyses(project_id);
     CREATE INDEX IF NOT EXISTS idx_workflow_tasks_analysis ON workflow_tasks(analysis_id);
+
+    CREATE TABLE IF NOT EXISTS requirements (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      code TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      priority TEXT NOT NULL DEFAULT 'P1',
+      assignee_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      dod TEXT DEFAULT '[]',
+      source_block_id TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS semantic_relations (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      source_id TEXT NOT NULL,
+      source_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      relation_type TEXT NOT NULL,
+      description TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS project_invites (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      inviter_id TEXT NOT NULL REFERENCES users(id),
+      code TEXT UNIQUE NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member',
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS block_comments (
+      id TEXT PRIMARY KEY,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      block_id TEXT NOT NULL,
+      author_id TEXT NOT NULL REFERENCES users(id),
+      content TEXT NOT NULL,
+      mentions TEXT NOT NULL DEFAULT '[]',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_jobs (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      event_id TEXT UNIQUE NOT NULL,
+      job_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      payload TEXT NOT NULL,
+      result TEXT,
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      max_retries INTEGER NOT NULL DEFAULT 3,
+      error_message TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_executions (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      rule_id TEXT,
+      trigger_reason TEXT NOT NULL,
+      input_snapshot TEXT NOT NULL,
+      actions_taken TEXT NOT NULL,
+      affected_entities TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'success',
+      reverted_at INTEGER,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_rule_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      trigger_type TEXT NOT NULL,
+      trigger_condition TEXT NOT NULL,
+      actions TEXT NOT NULL,
+      is_default INTEGER NOT NULL DEFAULT 1
+    );
+
+    CREATE TABLE IF NOT EXISTS ai_modifications (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      source_model TEXT NOT NULL,
+      prompt_summary TEXT,
+      input_version INTEGER NOT NULL DEFAULT 1,
+      changes TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at INTEGER NOT NULL,
+      applied_at INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_requirements_project ON requirements(project_id);
+    CREATE INDEX IF NOT EXISTS idx_requirements_code ON requirements(code);
+    CREATE INDEX IF NOT EXISTS idx_semantic_relations_proj ON semantic_relations(project_id);
+    CREATE INDEX IF NOT EXISTS idx_semantic_relations_source ON semantic_relations(source_id);
+    CREATE INDEX IF NOT EXISTS idx_semantic_relations_target ON semantic_relations(target_id);
+    CREATE INDEX IF NOT EXISTS idx_block_comments_block ON block_comments(block_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_jobs_project ON agent_jobs(project_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_jobs_event ON agent_jobs(event_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_executions_proj ON agent_executions(project_id);
+    CREATE INDEX IF NOT EXISTS idx_ai_modifications_proj ON ai_modifications(project_id);
   `);
 
   const safeAddColumns = [
+    'ALTER TABLE projects ADD COLUMN agent_paused INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE tasks ADD COLUMN start_date INTEGER',
     'ALTER TABLE tasks ADD COLUMN deleted_at INTEGER',
     'ALTER TABLE tasks ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE tasks ADD COLUMN requirement_id TEXT',
+    'ALTER TABLE tasks ADD COLUMN deliverables TEXT DEFAULT "[]"',
+    'ALTER TABLE tasks ADD COLUMN reviewed_by TEXT',
+    'ALTER TABLE tasks ADD COLUMN reviewed_at INTEGER',
+    'ALTER TABLE tasks ADD COLUMN review_notes TEXT',
+    'ALTER TABLE tasks ADD COLUMN source_snippet TEXT',
     'ALTER TABLE pages ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
     'ALTER TABLE pages ADD COLUMN deleted_at INTEGER',
     'ALTER TABLE blocks ADD COLUMN title TEXT NOT NULL DEFAULT ""',
@@ -288,6 +406,59 @@ function initSchema(database: Database) {
     } catch {
       // Column may already exist, ignore error safely
     }
+  }
+
+  try {
+    const res = database.exec('SELECT COUNT(*) as cnt FROM agent_rule_templates');
+    const cnt = (res[0]?.values[0]?.[0] as number) || 0;
+    if (cnt === 0) {
+      const templates = [
+        [
+          'rule-req-update-notify',
+          '需求变更联动提醒',
+          '需求更新后自动分析影响链，通知下游实现与测试负责人',
+          'requirement_update',
+          'status == "in_dev" || version > 1',
+          JSON.stringify([
+            { type: 'ai_impact_analysis', config: { autoNotifyAssignees: true } },
+            { type: 'create_comment', config: { template: '📢 关联需求已发生版本更新，请核实交付物' } },
+          ]),
+          1,
+        ],
+        [
+          'rule-task-pending-review',
+          '任务待验收流转通知',
+          '任务状态流转至 pending_review 时，自动核验 DoD 并指派审核人',
+          'task_status_change',
+          'new_status == "pending_review"',
+          JSON.stringify([
+            { type: 'check_dod', config: { requireDeliverables: true } },
+            { type: 'notify_reviewer', config: { role: 'admin' } },
+          ]),
+          1,
+        ],
+        [
+          'rule-block-change-notify',
+          '核心 Block 协同广播',
+          '核心架构或接口 Block 更新后，自动记录快照并广播关注人',
+          'block_update',
+          'block.meta.tags.includes("核心架构") || block.type == "code"',
+          JSON.stringify([
+            { type: 'snapshot_audit', config: { saveHistory: true } },
+            { type: 'broadcast_update', config: { channel: 'team' } },
+          ]),
+          1,
+        ],
+      ];
+      for (const t of templates) {
+        database.run(
+          'INSERT INTO agent_rule_templates (id, name, description, trigger_type, trigger_condition, actions, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          t
+        );
+      }
+    }
+  } catch {
+    // Ignore seeding error safely
   }
 }
 

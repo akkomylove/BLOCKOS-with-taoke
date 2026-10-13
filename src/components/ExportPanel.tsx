@@ -1,7 +1,8 @@
 'use client';
 
-import { X, Download, FileCode, FileText, FileImage, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, Download, FileCode, FileText, FileImage, Loader2, CheckCircle2, FileCode2, Table } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
+import { useCollaborationStore } from '@/store/collaborationStore';
 import { useState } from 'react';
 
 interface ExportPanelProps {
@@ -12,6 +13,8 @@ interface ExportPanelProps {
 export default function ExportPanel({ isOpen, onClose }: ExportPanelProps) {
   const exportToMarkdown = useBlockStore((state) => state.exportToMarkdown);
   const exportToHtml = useBlockStore((state) => state.exportToHtml);
+  const exportToJson = useBlockStore((state) => state.exportToJson);
+  const exportToCsvTasks = useBlockStore((state) => state.exportToCsvTasks);
   const currentPageId = useBlockStore((state) => state.currentPageId);
   const pages = useBlockStore((state) => state.pages);
   const blocks = useBlockStore((state) => state.blocks);
@@ -127,7 +130,52 @@ li { margin: 0.25em 0; }
     }, 300);
   };
 
+  const handleExportJson = () => {
+    setExporting('json');
+    setTimeout(() => {
+      const json = exportToJson();
+      triggerDownload(new Blob([json], { type: 'application/json' }), `${title}.blockos.json`);
+      setExporting(null);
+      markDone('json');
+    }, 300);
+  };
+
+  const handleExportTasksCsv = () => {
+    setExporting('tasks_csv');
+    setTimeout(() => {
+      const tasks = useCollaborationStore.getState().tasks;
+      const csv = exportToCsvTasks(tasks);
+      triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${title}-tasks.csv`);
+      setExporting(null);
+      markDone('tasks_csv');
+    }, 300);
+  };
+
   const formats = [
+    {
+      key: 'json',
+      icon: FileCode2,
+      label: 'BlockOS JSON',
+      ext: '.json',
+      desc: '结构化画布快照与元数据，支持全量无损恢复',
+      gradient: 'from-purple-500/20 to-indigo-500/10',
+      border: 'border-purple-500/30 hover:border-purple-400/60',
+      iconBg: 'bg-purple-500/10',
+      iconColor: 'text-purple-400',
+      handler: handleExportJson,
+    },
+    {
+      key: 'tasks_csv',
+      icon: Table,
+      label: '任务清单 CSV',
+      ext: '.csv',
+      desc: '带 UTF-8 BOM 任务排期导出，Excel 打开不乱码',
+      gradient: 'from-emerald-500/20 to-teal-500/10',
+      border: 'border-emerald-500/30 hover:border-emerald-400/60',
+      iconBg: 'bg-emerald-500/10',
+      iconColor: 'text-emerald-400',
+      handler: handleExportTasksCsv,
+    },
     {
       key: 'md',
       icon: FileCode,

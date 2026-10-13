@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 import { useBlockStore } from '@/store/blockStore';
+import { useCollaborationStore } from '@/store/collaborationStore';
 import type { Block } from '@/types/block';
 
 interface TodoBlockProps {
@@ -39,9 +40,16 @@ export default function TodoBlock({ block, isSelected }: TodoBlockProps) {
   );
 
   const handleCheck = useCallback(() => {
+    const nextChecked = !block.meta.checked;
+    const nextStatus = nextChecked ? 'pending_review' : 'todo';
     updateBlock(block.id, {
-      meta: { ...block.meta, checked: !block.meta.checked },
+      meta: { ...block.meta, checked: nextChecked, status: nextStatus },
     });
+    if (block.meta.taskId) {
+      useCollaborationStore.getState().updateTask(block.meta.taskId, {
+        status: nextStatus,
+      }).catch(() => {});
+    }
   }, [block.id, block.meta, updateBlock]);
 
   return (

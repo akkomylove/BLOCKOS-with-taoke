@@ -20,6 +20,12 @@ export interface BlockMeta {
   agentGenerated?: boolean;
   sourceBlockId?: string;
   ruleRole?: 'audit-report' | 'ai-checklist' | string;
+  requirementId?: string;
+  taskId?: string;
+  status?: string;
+  priority?: string;
+  dod?: string;
+  assignee?: string;
 }
 
 export interface TableColumn {

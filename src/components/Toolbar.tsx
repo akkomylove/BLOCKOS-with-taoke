@@ -7,7 +7,7 @@ import {
   Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
   Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
   LogOut, UserCircle, LayoutGrid, BarChart3, BrainCircuit,
-  ClipboardCheck, Link2, MoreHorizontal, Loader2, Check, AlertCircle, MessageSquare
+  ClipboardCheck, Link2, MoreHorizontal, Loader2, Check, AlertCircle, MessageSquare, WifiOff
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useBlockStore } from '@/store/blockStore';
@@ -71,6 +71,30 @@ export default function Toolbar({
   const userBtnRef = useRef<HTMLButtonElement>(null);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      const pending = localStorage.getItem('block-os-offline-pending');
+      if (pending) {
+        retrySave();
+      }
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [retrySave]);
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -176,6 +200,15 @@ export default function Toolbar({
             <AlertCircle className="w-3 h-3" />
             <span>保存失败 (重试)</span>
           </button>
+        )}
+        {!isOnline && (
+          <span
+            className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/25 shrink-0"
+            title="网络已断开，修改已暂存本地队列，网络恢复后将自动同步"
+          >
+            <WifiOff className="w-3 h-3" />
+            <span className="hidden md:inline">离线保护</span>
+          </span>
         )}
       </div>
 

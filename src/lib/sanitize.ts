@@ -21,6 +21,10 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
+export function sanitizeText(str: string): string {
+  return escapeHtml(str);
+}
+
 /**
  * 安全清洗 HTML 字符串，保留基础展示样式标签，剥离任何脚本和危险属性
  */

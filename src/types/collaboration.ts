@@ -46,19 +46,107 @@ export interface Milestone {
   createdAt: number;
 }
 
+export type TaskStatus = 'todo' | 'in_progress' | 'pending_review' | 'done' | 'rejected';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
 export interface Task {
   id: string;
   projectId: string;
   parentId?: string;
   title: string;
   description?: string;
-  status: 'todo' | 'in_progress' | 'done';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: TaskStatus;
+  priority: TaskPriority;
   assigneeId?: string;
   startDate?: number;
   dueDate?: number;
   dod?: string;
   orderIndex: number;
+  requirementId?: string;
+  deliverables?: string[];
+  reviewedBy?: string;
+  reviewedAt?: number;
+  reviewNotes?: string;
+  sourceSnippet?: string;
+  version?: number;
+  deletedAt?: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type RequirementPriority = 'P0' | 'P1' | 'P2' | 'P3';
+export type RequirementStatus = 'draft' | 'reviewing' | 'approved' | 'in_dev' | 'delivered';
+
+export interface Requirement {
+  id: string;
+  projectId: string;
+  code: string; // 例如 REQ-2026-001
+  title: string;
+  description?: string;
+  status: RequirementStatus;
+  priority: RequirementPriority;
+  assigneeId?: string;
+  version: number;
+  dod: string[];
+  sourceBlockId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type RelationType = 'implements' | 'verifies' | 'depends_on' | 'references';
+
+export interface SemanticRelation {
+  id: string;
+  projectId: string;
+  sourceId: string;
+  sourceType: 'requirement' | 'task' | 'block';
+  targetId: string;
+  targetType: 'requirement' | 'task' | 'block';
+  relationType: RelationType;
+  description?: string;
+  createdAt: number;
+}
+
+export interface ChangeImpactResult {
+  requirementId: string;
+  requirementCode: string;
+  changeSummary: string;
+  directImpacts: {
+    id: string;
+    type: 'task' | 'block';
+    title: string;
+    relationType: RelationType;
+    assigneeId?: string;
+    actionRequired: string;
+  }[];
+  inferredImpacts: {
+    id: string;
+    type: 'task' | 'block';
+    title: string;
+    reason: string;
+    confidence: number;
+    riskLevel: 'high' | 'medium' | 'low';
+    suggestedAction: string;
+  }[];
+}
+
+export interface ProjectInvite {
+  id: string;
+  projectId: string;
+  inviterId: string;
+  code: string;
+  role: 'admin' | 'member' | 'viewer';
+  expiresAt: number;
+  createdAt: number;
+}
+
+export interface BlockComment {
+  id: string;
+  pageId: string;
+  blockId: string;
+  authorId: string;
+  content: string;
+  mentions: string[];
   createdAt: number;
   updatedAt: number;
 }

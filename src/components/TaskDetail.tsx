@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Task } from '@/types/collaboration';
 import { useCollaborationStore } from '@/store/collaborationStore';
+import { useBlockStore } from '@/store/blockStore';
 import { X, CheckCircle2, Flag, MessageSquare, Send, Calendar, AlignLeft, CheckSquare } from 'lucide-react';
 
 interface TaskDetailProps {
@@ -44,10 +45,12 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
     urgent: '紧急',
   };
 
-  const statusLabels = {
+  const statusLabels: Record<string, string> = {
     todo: '待办',
     in_progress: '进行中',
+    pending_review: '待验收',
     done: '已完成',
+    rejected: '已退回',
   };
 
   const handleSave = async () => {
@@ -61,6 +64,23 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
         dueDate: dueDate ? new Date(dueDate).getTime() : undefined,
         dod: dod || undefined,
       });
+
+      // 跨视图联动：若画布上有对应的 Block，同步更新其状态与属性
+      const blocks = useBlockStore.getState().blocks;
+      const targetBlock = blocks.find((b) => b.meta?.taskId === task.id || (b.type === 'todo' && b.content.includes(task.title)));
+      if (targetBlock) {
+        useBlockStore.getState().updateBlock(targetBlock.id, {
+          title,
+          meta: {
+            ...targetBlock.meta,
+            checked: status === 'done',
+            status,
+            priority,
+            dod,
+          },
+        });
+      }
+
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update task:', error);

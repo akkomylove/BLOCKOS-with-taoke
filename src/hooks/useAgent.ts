@@ -103,8 +103,8 @@ export function useAgent() {
                 if (action.type === 'createBlock') {
                   const timestamp = new Date().toLocaleString('zh-CN');
                   let rawTemplate = (action.config.contentTemplate as string) || '';
-                  if (!rawTemplate.includes('迭代发布报告') || rawTemplate.includes('顺利完成啦')) {
-                    rawTemplate = '### 📋 迭代发布报告（Agent 自动化归档）\n- **验收状态**：✅ 质量检查通过 · 准予发布上线\n- **执行动作**：Agent 规则引擎自驱动触发\n- **归档时间**：{timestamp}\n- **关联需求**：[P0需求交付] 完成用户中心与鉴权架构验证\n- **协作流转**：状态机已自动流转为「已交付」，变更审计日志已同步广播至团队协同看板。';
+                  if (!rawTemplate.includes('任务流转与待验收报告') || rawTemplate.includes('质量检查通过') || rawTemplate.includes('顺利完成啦')) {
+                    rawTemplate = '### 📋 任务流转报告（待验收 · Pending Review）\n- **流转状态**：🕒 执行完毕 · 进入待验收评审\n- **执行动作**：开发/执行人已标记完成，交付物待确认\n- **提交时间**：{timestamp}\n- **验收依据**：关联需求标准与 DoD 准则\n- **审批规则**：需审核人或测试负责人正式签署验收意见后方可准予发布。';
                   }
                   const content = rawTemplate.replace('{timestamp}', timestamp);
                   
@@ -117,23 +117,23 @@ export function useAgent() {
                   if (existingReport) {
                     reportBlockId = existingReport.id;
                     updateBlock(reportBlockId, {
-                      title: '📋 迭代发布报告（Agent 自动化归档）',
+                      title: '📋 任务流转报告（待验收 · Pending Review）',
                       content,
                       meta: {
                         ...existingReport.meta,
-                        tags: ['Agent自驱动', '发布归档'],
+                        tags: ['Agent自驱动', '待验收'],
                       },
                     });
                   } else {
                     reportBlockId = addBlock('text', block.id);
                     updateBlock(reportBlockId, {
-                      title: '📋 迭代发布报告（Agent 自动化归档）',
+                      title: '📋 任务流转报告（待验收 · Pending Review）',
                       content,
                       meta: {
                         agentGenerated: true,
                         sourceBlockId: block.id,
                         ruleRole: 'audit-report',
-                        tags: ['Agent自驱动', '发布归档'],
+                        tags: ['Agent自驱动', '待验收'],
                       },
                     });
                   }

@@ -4,6 +4,13 @@ import { getDb, query, run, saveDb } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 
 function normalizeTask(row: Record<string, unknown>) {
+  let deliverables: string[] = [];
+  try {
+    deliverables = typeof row.deliverables === 'string' ? JSON.parse(row.deliverables) : (row.deliverables as string[]) || [];
+  } catch {
+    deliverables = [];
+  }
+
   return {
     id: row.id,
     projectId: row.project_id,
@@ -17,6 +24,13 @@ function normalizeTask(row: Record<string, unknown>) {
     dueDate: row.due_date,
     dod: row.dod,
     orderIndex: row.order_index,
+    requirementId: row.requirement_id || null,
+    deliverables,
+    reviewedBy: row.reviewed_by || null,
+    reviewedAt: row.reviewed_at || null,
+    reviewNotes: row.review_notes || null,
+    sourceSnippet: row.source_snippet || null,
+    version: row.version ?? 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     assigneeName: row.assignee_name,
@@ -107,6 +121,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Forbidden: Read-only members cannot modify tasks' }, { status: 403 });
     }
 
+    const currentVersion = (task.version as number) || 1;
+    if (typeof body.version === 'number' && body.version !== currentVersion) {
+      return NextResponse.json(
+        { error: 'Conflict: Task has been modified concurrently', currentVersion },
+        { status: 409 }
+      );
+    }
+
     if ('parentId' in body && parentId !== task.parent_id) {
       const parentTask = query('SELECT * FROM tasks WHERE id = ? AND project_id = ?', [parentId, task.project_id]);
       if (parentTask.length === 0) {
@@ -144,12 +166,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updateParams.push(description);
     }
     if ('status' in body) {
-      const validStatuses = ['todo', 'in_progress', 'review', 'done'];
+      const validStatuses = ['todo', 'in_progress', 'review', 'pending_review', 'done', 'rejected'];
       if (typeof status !== 'string' || !validStatuses.includes(status)) {
-        return NextResponse.json({ error: 'Status must be one of: todo, in_progress, review, done' }, { status: 400 });
+        return NextResponse.json({ error: 'Status must be one of: todo, in_progress, review, pending_review, done, rejected' }, { status: 400 });
       }
       updates.push('status = ?');
       updateParams.push(status);
+
+      // 当状态流转为 done (验收通过) 或 rejected (验收退回) 时，记录审核人及时间
+      if (status === 'done' || status === 'rejected') {
+        updates.push('reviewed_by = ?');
+        updateParams.push(body.reviewedBy || userId);
+        updates.push('reviewed_at = ?');
+        updateParams.push(body.reviewedAt || Date.now());
+      }
     }
     if ('priority' in body) {
       const validPriorities = ['low', 'medium', 'high', 'urgent'];
@@ -181,6 +211,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updates.push('dod = ?');
       updateParams.push(dod);
     }
+    if ('deliverables' in body) {
+      updates.push('deliverables = ?');
+      updateParams.push(Array.isArray(body.deliverables) ? JSON.stringify(body.deliverables) : body.deliverables);
+    }
+    if ('reviewNotes' in body) {
+      updates.push('review_notes = ?');
+      updateParams.push(body.reviewNotes);
+    }
+    if ('requirementId' in body) {
+      updates.push('requirement_id = ?');
+      updateParams.push(body.requirementId);
+    }
     if ('orderIndex' in body) {
       updates.push('order_index = ?');
       updateParams.push(orderIndex);
@@ -191,9 +233,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     if (updates.length === 0) {
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, version: currentVersion });
     }
 
+    const nextVersion = currentVersion + 1;
+    updates.push('version = ?');
+    updateParams.push(nextVersion);
     updates.push('updated_at = ?');
     updateParams.push(Date.now());
     updateParams.push(id);
@@ -201,7 +246,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ?`, updateParams);
     saveDb();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, version: nextVersion });
   } catch (err) {
     console.error('PATCH /api/tasks/[id] error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

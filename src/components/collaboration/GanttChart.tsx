@@ -17,7 +17,9 @@ const priorityColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   todo: '待办',
   in_progress: '进行中',
+  pending_review: '待验收',
   done: '已完成',
+  rejected: '已退回',
 };
 
 function formatDateCN(date: number | Date): string {

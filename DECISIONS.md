@@ -25,6 +25,7 @@
 - [ADR-014: 视口漫游小地图 (Canvas Minimap) 与高度拉伸智能推移治理 (Viewport Minimap & Height Resize Push-down)](#adr-014-视口漫游小地图-canvas-minimap-与高度拉伸智能推移治理-viewport-minimap--height-resize-push-down)
 - [ADR-015: 系统首个稳定基准版本确立 (v1.0.0 Baseline Release Checkpoint)](#adr-015-系统首个稳定基准版本确立-v100-baseline-release-checkpoint)
 - [ADR-016: 第一阶段数据安全治理与保存链路闭环落地 (Data Persistence Pipeline, HMAC Auth, RBAC & Sandbox Isolation)](#adr-016-第一阶段数据安全治理与保存链路闭环落地-data-persistence-pipeline-hmac-auth-rbac--sandbox-isolation)
+- [ADR-017: 产研全链路语义闭环、持久化后台引擎、跨视图状态协同与离线自愈架构 (Semantic Requirements, Persistent Agent Jobs, Cross-View Sync & Resilient Offline Fallback)](#adr-017-产研全链路语义闭环持久化后台引擎跨视图状态协同与离线自愈架构-semantic-requirements-persistent-agent-jobs-cross-view-sync--resilient-offline-fallback)
 
 ---
 
@@ -525,3 +526,46 @@
 ### 3. 产出与验收度量（第 28 项）
 - **单元测试扩充**：新增 `pages-sync.test.ts`、`rbac.test.ts`、`run-code-sandbox.test.ts`、`sanitize.test.ts`，测试套件增加至 13 个，测试用例由 165 个增至 **185 个，100% 绿色通过**；
 - **生产构建验证**：Next.js 15 全量 38 个路由与中间件 `npm run build` 打包 **0 错误、0 警告阻断**。
+
+---
+
+## ADR-017: 产研全链路语义闭环、持久化后台引擎、跨视图状态协同与离线自愈架构 (Semantic Requirements, Persistent Agent Jobs, Cross-View Sync & Resilient Offline Fallback)
+
+### 1. 业务痛点与技术冲突
+在产研协同演进到真实团队使用阶段后，出现了一系列深层次交互与工程挑战：
+1. **需求与任务割裂**：任务无法准确反向追溯来源需求与版本确认人，缺乏客观拓扑关系支撑；
+2. **AI 行为缺乏可控性与审计闭环**：AI 变更缺乏可审查的 Diff 对比与逐项采纳能力，Agent 自动化仅在浏览器前端运行，页面关闭即丢失，且缺乏紧急暂停与执行级可逆回滚；
+3. **多视图事实源不一致**：画布（Canvas）、看板（Kanban）、甘特图（Gantt）状态各自为政，无法做到修改状态双向联动；
+4. **弱网与离线容错缺失**：偶发网络断连或 5xx 异常容易导致用户正在编辑的块数据丢失或页面崩溃；
+5. **导入导出格式脆弱**：超大文件无保护，CSV 中文在 Windows Excel 下出现乱码，缺少整画幅无损恢复的 JSON 结构规范。
+
+### 2. 架构设计与技术方案
+
+#### (1) 结构化需求与双向业务语义连线（第 9-11 项）
+- **自增编号与结构化实体**：创建 `requirements` 独立数据表，系统自动分配稳定唯一编号（如 `REQ-001`），支持绑定负责人、优先级、版本以及验收标准 (DoD) 数组；
+- **强类型业务关联图谱**：创建 `semantic_relations` 表，细分为 `implements` (实现)、`verifies` (验证)、`depends_on` (依赖)、`references` (引用)，支持双向图遍历与删除级联检查；
+- **变更影响客观分析算法**：实现 `src/app/api/projects/[id]/ai-impact/route.ts`，结合拓扑关联与中文 2-4 字符 n-gram 关键词提取算法，精准区分“直接关联任务”与“语义推测影响”。
+
+#### (2) 项目成员作用域限定与产研验收解耦（第 12-14 项）
+- **严格负责人推荐限定**：AI 任务拆解推荐负责人严格限定在当前项目成员集合 (`project_members`) 内，彻底杜绝分配给项目外无关人员；无法精准匹配时保留“未分配”；
+- **任务状态流转解耦**：将任务状态扩展为 `todo` (待办) -> `in_progress` (进行中) -> `pending_review` (待验收) -> `done` (已完成) / `rejected` (已退回)；
+- **真实评审依据**：勾选待办不再虚构“质检通过”，而是流转至 `pending_review`，必须关联 `deliverables` (交付物)、`reviewed_by` (验收人) 与 `review_notes` (评审依据)。
+
+#### (3) AI 变更可逆预览与持久化后台引擎（第 17-21 项）
+- **Diff 预览与分项采纳**：创建 `ai_modifications` 表，生成包含 `before`/`after` 快照的变更草案，支持整批或逐项接受，并提供一键原样撤销回滚；
+- **持久化后台任务与幂等防重**：创建 `agent_jobs` 表与 `agent_executions` 审计表，引入 `event_id` 唯一约束防止重复触发；页面关闭或刷新后后台任务依然在服务端完整持久化；
+- **紧急熔断与执行级反向回滚**：提供 `agent/toggle` 全局一键暂停/恢复制动开关，以及 `agent-executions/[execId]/rollback` 单次执行逆向还原能力。
+
+#### (4) 跨视图双向状态联动与健壮导入导出（第 22-27 项）
+- **跨视图双向响应式同步**：画布 `TodoBlock` 与看板 `ProjectBoard` / 任务详情 `TaskDetail` 建立双向监听；看板拖拽完成任务时自动同步更新画布对应 Block 勾选状态，画布勾选完成时自动同步流转看板任务；
+- **10MB 安全导入防护与 JSON 校验**：`ImportPanel` 引入 10MB 文件配额，提供“覆盖当前画布”与“追加导入”双模式，JSON 格式异常时显示清晰 Banner 提示；
+- **带 UTF-8 BOM 的任务 CSV 导出与 BlockOS JSON 快照**：`ExportPanel` 提供带 `\ufeff` 的任务清单 CSV 导出（Windows Excel 打开永不乱码）以及全量 BlockOS JSON 快照。
+
+#### (5) 优雅离线降级与断网保护（第 30 项）
+- **网络状态感知与离线保护**：顶部工具栏动态监听 `navigator.onLine` 与 window `online`/`offline` 事件，断网时显式展示“离线保护”状态；
+- **本地队列暂存与自愈重连**：网络异常或 5xx 故障时，自动将待同步数据写入 `localStorage('block-os-offline-pending')` 队列；网络恢复或重试时自动触发增量补偿同步。
+
+### 3. 产出与验收度量（第 31-32 项）
+- **全量测试套件通过**：累计新增 `requirements-relations.test.ts`、`ai-impact-invites.test.ts`、`batch3-agent-preview.test.ts`、`batch4-import-export.test.ts`，测试套件达到 **17 个**，测试用例达到 **206 个，100% 绿色通过**；
+- **全量生产环境构建**：Next.js 15 生产级打包 `npm run build` 完成全量 44 个路由与中间件编译，**0 编译错误、0 类型故障**；
+- **生产线上部署**：Vercel Production 验证 HTTP 200 OK，线上稳定运行。

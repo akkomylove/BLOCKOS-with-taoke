@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useCollaborationStore } from '@/store/collaborationStore';
-import { Task } from '@/types/collaboration';
+import { useBlockStore } from '@/store/blockStore';
+import { Task, TaskStatus } from '@/types/collaboration';
 import { Plus, Calendar, MoreHorizontal, Trash2, ChevronDown, ArrowLeft, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ProjectImportModal } from '@/components/collaboration/ProjectImportModal';
@@ -16,6 +17,7 @@ const PAGE_SIZE = 10;
 const columns = [
   { id: 'todo', title: '待办', color: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400' },
   { id: 'in_progress', title: '进行中', color: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' },
+  { id: 'pending_review', title: '待验收', color: 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400' },
   { id: 'done', title: '已完成', color: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400' },
 ];
 
@@ -104,8 +106,20 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
     }
   };
 
-  const handleUpdateStatus = (taskId: string, newStatus: 'todo' | 'in_progress' | 'done') => {
+  const handleUpdateStatus = (taskId: string, newStatus: TaskStatus) => {
     updateTask(taskId, { status: newStatus });
+    // 同步更新画布中对应的 Block 状态
+    const blocks = useBlockStore.getState().blocks;
+    const targetBlock = blocks.find((b) => b.meta?.taskId === taskId);
+    if (targetBlock) {
+      useBlockStore.getState().updateBlock(targetBlock.id, {
+        meta: {
+          ...targetBlock.meta,
+          checked: newStatus === 'done',
+          status: newStatus,
+        },
+      });
+    }
   };
 
   return (
@@ -131,7 +145,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {columns.map((column) => (
             <div key={column.id} className="flex flex-col">
               <div className="flex items-center justify-between mb-4">

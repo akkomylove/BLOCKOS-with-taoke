@@ -17,16 +17,20 @@ export default function TaskCard({ task, onSelect, onEdit, onDelete }: TaskCardP
   const [menuOpen, setMenuOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const statusIcons = {
+  const statusIcons: Record<string, React.ReactNode> = {
     todo: <Circle className="w-4 h-4" />,
     in_progress: <Clock className="w-4 h-4" />,
+    pending_review: <Clock className="w-4 h-4 text-amber-500" />,
     done: <CheckCircle2 className="w-4 h-4" />,
+    rejected: <Circle className="w-4 h-4 text-red-500" />,
   };
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     todo: 'text-gray-400',
     in_progress: 'text-blue-400',
+    pending_review: 'text-amber-500',
     done: 'text-green-400',
+    rejected: 'text-red-500',
   };
 
   const priorityColors = {

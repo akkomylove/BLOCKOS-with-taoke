@@ -4,6 +4,13 @@ import { getDb, query, run, saveDb } from '@/lib/db';
 import { nanoid } from 'nanoid';
 
 function normalizeTask(row: Record<string, unknown>) {
+  let deliverables: string[] = [];
+  try {
+    deliverables = typeof row.deliverables === 'string' ? JSON.parse(row.deliverables) : (row.deliverables as string[]) || [];
+  } catch {
+    deliverables = [];
+  }
+
   return {
     id: row.id,
     projectId: row.project_id,
@@ -17,6 +24,13 @@ function normalizeTask(row: Record<string, unknown>) {
     dueDate: row.due_date,
     dod: row.dod,
     orderIndex: row.order_index,
+    requirementId: row.requirement_id || null,
+    deliverables,
+    reviewedBy: row.reviewed_by || null,
+    reviewedAt: row.reviewed_at || null,
+    reviewNotes: row.review_notes || null,
+    sourceSnippet: row.source_snippet || null,
+    version: row.version ?? 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     assigneeName: row.assignee_name,

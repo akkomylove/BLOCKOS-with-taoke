@@ -76,9 +76,12 @@ interface BlockStore {
 
   exportToMarkdown: () => string;
   exportToHtml: () => string;
+  exportToJson: () => string;
+  exportToCsvTasks: (additionalTasks?: Array<{ id: string; title: string; status?: string; priority?: string; assigneeId?: string; dod?: string }>) => string;
 
   importFromMarkdown: (markdown: string) => void;
   importFromCsv: (csv: string) => void;
+  importFromJson: (jsonStr: string, mode?: 'replace' | 'append') => { success: boolean; count: number; error?: string };
   importImage: (base64: string, caption?: string) => void;
 
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
@@ -798,6 +801,75 @@ export const useBlockStore = create<BlockStore>()(
           .join('\n');
       },
 
+      exportToJson: () => {
+        const state = get();
+        const currentPage = state.pages.find((p) => p.id === state.currentPageId);
+        const data = {
+          version: '1.0.0',
+          exportedAt: new Date().toISOString(),
+          page: currentPage
+            ? {
+                id: currentPage.id,
+                title: currentPage.title,
+                icon: currentPage.icon,
+                folderId: currentPage.folderId,
+              }
+            : null,
+          blocks: state.blocks,
+          groups: state.groups,
+        };
+        return JSON.stringify(data, null, 2);
+      },
+
+      exportToCsvTasks: (additionalTasks?: Array<{ id: string; title: string; status?: string; priority?: string; assigneeId?: string; dod?: string }>) => {
+        const state = get();
+        const rows: { id: string; title: string; status: string; priority: string; assignee: string; dod: string }[] = [];
+
+        state.blocks.forEach((b) => {
+          if (b.type === 'todo') {
+            rows.push({
+              id: b.id.slice(0, 8),
+              title: (b.content || '').replace(/\r?\n/g, ' '),
+              status: b.meta?.checked ? '已完成' : (b.meta?.status === 'pending_review' ? '待验收' : '待办'),
+              priority: (b.meta?.priority as string) || '中',
+              assignee: (b.meta?.assignee as string) || '未指定',
+              dod: (b.meta?.dod as string) || '',
+            });
+          }
+        });
+
+        if (Array.isArray(additionalTasks)) {
+          additionalTasks.forEach((t) => {
+            if (!rows.some((r) => r.id === t.id)) {
+              rows.push({
+                id: t.id,
+                title: (t.title || '').replace(/\r?\n/g, ' '),
+                status: t.status === 'done' ? '已完成' : t.status === 'pending_review' ? '待验收' : t.status === 'in_progress' ? '进行中' : '待办',
+                priority: t.priority || 'medium',
+                assignee: t.assigneeId || '未分配',
+                dod: t.dod || '',
+              });
+            }
+          });
+        }
+
+        const headers = ['任务ID', '任务标题', '状态', '优先级', '负责人', '验收标准(DoD)'];
+        const csvLines = [headers.join(',')];
+        rows.forEach((r) => {
+          const escapeCsv = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
+          csvLines.push([
+            escapeCsv(r.id),
+            escapeCsv(r.title),
+            escapeCsv(r.status),
+            escapeCsv(r.priority),
+            escapeCsv(r.assignee),
+            escapeCsv(r.dod),
+          ].join(','));
+        });
+
+        return '\ufeff' + csvLines.join('\n');
+      },
+
       importFromMarkdown: (markdown) => {
         const lines = markdown.split('\n');
         const newBlocks: Block[] = [];
@@ -909,6 +981,56 @@ export const useBlockStore = create<BlockStore>()(
         get().saveHistory();
       },
 
+      importFromJson: (jsonStr, mode = 'replace') => {
+        try {
+          if (!jsonStr || typeof jsonStr !== 'string') {
+            return { success: false, count: 0, error: 'JSON 内容为空' };
+          }
+          const parsed = JSON.parse(jsonStr);
+          const blocksToLoad: unknown[] = Array.isArray(parsed)
+            ? parsed
+            : (parsed && typeof parsed === 'object' && 'blocks' in parsed && Array.isArray((parsed as Record<string, unknown>).blocks)
+              ? ((parsed as Record<string, unknown>).blocks as unknown[])
+              : []);
+          if (!Array.isArray(blocksToLoad) || blocksToLoad.length === 0) {
+            return { success: false, count: 0, error: 'JSON 中未包含有效的 blocks 数组' };
+          }
+
+          const validBlocks = blocksToLoad.filter((b): b is Block => !!b && typeof b === 'object' && 'type' in b);
+          if (validBlocks.length === 0) {
+            return { success: false, count: 0, error: '未找到符合规范的 Block 对象' };
+          }
+
+          const now = Date.now();
+          const normalizedBlocks: Block[] = validBlocks.map((b, index) => ({
+            ...b,
+            id: mode === 'append' ? nanoid() : (b.id || nanoid()),
+            title: b.title || '',
+            content: typeof b.content === 'string' ? b.content : '',
+            meta: b.meta || {},
+            order: index,
+            createdAt: b.createdAt || now,
+            updatedAt: now,
+          }));
+
+          set((state) => {
+            if (mode === 'append') {
+              state.blocks = [...state.blocks, ...normalizedBlocks];
+            } else {
+              state.blocks = normalizedBlocks;
+              state.selectedIds = [];
+            }
+          });
+
+          get().saveHistory();
+          return { success: true, count: normalizedBlocks.length };
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'JSON 解析失败';
+          console.error('importFromJson error:', e);
+          return { success: false, count: 0, error: msg };
+        }
+      },
+
       setCurrentUserId: (userId) => {
         const prevId = get().currentUserId;
         if (prevId === userId) return;
@@ -965,6 +1087,13 @@ export const useBlockStore = create<BlockStore>()(
             state.saveError = null;
           });
 
+          // 同步成功后清理离线队列
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.removeItem('block-os-offline-pending');
+            } catch {}
+          }
+
           // 用户隔离本地镜像持久化
           if (typeof window !== 'undefined' && currentUserId) {
             try {
@@ -991,6 +1120,20 @@ export const useBlockStore = create<BlockStore>()(
             state.saveStatus = 'error';
             state.saveError = msg;
           });
+
+          // 优雅降级：网络故障或服务端异常时，将待同步数据暂存至离线队列
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(
+                'block-os-offline-pending',
+                JSON.stringify({
+                  pageId: currentPageId,
+                  blocks: get().blocks,
+                  savedAt: Date.now(),
+                })
+              );
+            } catch {}
+          }
         }
       },
 
