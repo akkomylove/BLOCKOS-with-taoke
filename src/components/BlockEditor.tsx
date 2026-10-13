@@ -9,7 +9,7 @@ import AIResultCard from './AIResultCard';
 import AIActionMenu from './AIActionMenu';
 import CommandPalette from './CommandPalette';
 import RelationDrawer from './RelationDrawer';
-import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon } from 'lucide-react';
+import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon, Maximize2 } from 'lucide-react';
 import type { BlockType, Block } from '@/types/block';
 import TagWheelPicker, { getTagStyle } from './TagWheelPicker';
 
@@ -39,6 +39,7 @@ export default function BlockEditor({
   const duplicateBlock = useBlockStore((state) => state.duplicateBlock);
   const groupBlocks = useBlockStore((state) => state.groupBlocks);
   const ungroupBlocks = useBlockStore((state) => state.ungroupBlocks);
+  const currentPageId = useBlockStore((state) => state.currentPageId);
 
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const [aiResults, setAiResults] = useState<{ id: string; blockId: string; result: string; loading?: boolean; timestamp?: number }[]>([]);
@@ -47,6 +48,78 @@ export default function BlockEditor({
 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const userPannedRef = useRef(false);
+  const autoFittedPagesRef = useRef<Record<string, boolean>>({});
+
+  const autoFitView = useCallback(() => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const viewportW = rect.width;
+    const viewportH = rect.height;
+    if (viewportW <= 0 || viewportH <= 0) return;
+
+    const topBlocks = blocks.filter((b) => !b.parentId);
+    if (topBlocks.length === 0) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const b of topBlocks) {
+      const w = b.width || 460;
+      const h = b.type === 'todo' ? 80 : b.type === 'code' ? 280 : b.type === 'table' ? 260 : 220;
+      if (b.x < minX) minX = b.x;
+      if (b.y < minY) minY = b.y;
+      if (b.x + w > maxX) maxX = b.x + w;
+      if (b.y + h > maxY) maxY = b.y + h;
+    }
+
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    if (contentW <= 0 || contentH <= 0) return;
+
+    const padX = 36;
+    const padY = 32;
+    const scaleX = (viewportW - padX * 2) / contentW;
+    const scaleY = (viewportH - padY * 2) / contentH;
+
+    // 智能视口自适应：优先满足横向无截断，并在高分辨率下保持字号清晰可读
+    let targetZoom = Math.min(scaleX, Math.max(0.65, scaleY));
+    targetZoom = Math.min(1.0, Math.max(0.5, targetZoom));
+    targetZoom = Number(targetZoom.toFixed(2));
+
+    const targetPanX = Math.round((viewportW - contentW * targetZoom) / 2 - minX * targetZoom);
+    const targetPanY = Math.round(Math.max(24, Math.min(48, (viewportH - contentH * targetZoom) / 2 - minY * targetZoom)));
+
+    setZoom(targetZoom);
+    setPan({ x: targetPanX, y: targetPanY });
+  }, [blocks]);
+
+  // 页面切换时重置视口并自适应
+  useEffect(() => {
+    userPannedRef.current = false;
+    const timer = setTimeout(() => {
+      autoFitView();
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [currentPageId, autoFitView]);
+
+  // 监听容器尺寸变化（如侧边栏折叠、浏览器窗口拉伸）
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+          if (!userPannedRef.current) {
+            autoFitView();
+          }
+        }
+      }
+    });
+    observer.observe(canvasRef.current);
+    return () => observer.disconnect();
+  }, [autoFitView]);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [panOrigin, setPanOrigin] = useState({ x: 0, y: 0 });
@@ -233,6 +306,7 @@ export default function BlockEditor({
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
+      userPannedRef.current = true;
       setIsPanning(true);
       setPanStart({ x: e.clientX, y: e.clientY });
       setPanOrigin({ x: pan.x, y: pan.y });
@@ -345,6 +419,7 @@ export default function BlockEditor({
   }, [selectionBox, draggingId, resizingId, blocks, pan, zoom, setSelection]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
+    userPannedRef.current = true;
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -675,22 +750,47 @@ export default function BlockEditor({
 
       <div data-ui-control className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-3 py-1.5 z-20">
         <button
-          onClick={() => setZoom((z) => Math.max(0.3, z - 0.1))}
+          onClick={() => {
+            userPannedRef.current = true;
+            setZoom((z) => Math.max(0.3, z - 0.1));
+          }}
           className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
+          title="缩小"
         >
           −
         </button>
         <span className="text-xs text-gray-500 dark:text-zinc-400 font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
         <button
-          onClick={() => setZoom((z) => Math.min(2, z + 0.1))}
+          onClick={() => {
+            userPannedRef.current = true;
+            setZoom((z) => Math.min(2, z + 0.1));
+          }}
           className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
+          title="放大"
         >
           +
         </button>
         <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
         <button
-          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100"
+          onClick={() => {
+            userPannedRef.current = false;
+            autoFitView();
+          }}
+          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium px-1 transition-colors"
+          title="按屏幕与卡片内容自适应缩放与居中"
+        >
+          <Maximize2 className="w-3 h-3" />
+          自适应
+        </button>
+        <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+        <button
+          onClick={() => {
+            userPannedRef.current = true;
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+          }}
+          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
+          title="重置为 100% 原始比例"
         >
           Reset
         </button>

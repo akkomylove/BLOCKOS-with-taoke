@@ -19,6 +19,7 @@
 - [ADR-008: 生产级双层数据库混合持久化架构演进：WebAssembly SQLite (sql.js) 内存内核与 Vercel Neon Postgres 无服务云同步](#adr-008-生产级双层数据库混合持久化架构演进webassembly-sqlite-sqljs-内存内核与-vercel-neon-postgres-无服务云同步)
 - [ADR-009: 新手交互式引导重构与入门画布实验场落地 (Interactive Spotlight Onboarding & Playground Canvas)](#adr-009-新手交互式引导重构与入门画布实验场落地-interactive-spotlight-onboarding--playground-canvas)
 - [ADR-010: 飞书/钉钉风格官方新手入门系统重塑与 Agent 衍生卡片垂直避让排布治理 (Enterprise Onboarding & Vertical Avoidance Layout)](#adr-010-飞书钉钉风格官方新手入门系统重塑与-agent-衍生卡片垂直避让排布治理-enterprise-onboarding--vertical-avoidance-layout)
+- [ADR-011: 无遮挡交互导览 (Draggable & Minimizable) 与画布全分辨率自适应缩放引擎治理 (Zero-Occlusion Tour & Canvas Responsive Auto-Fit Engine)](#adr-011-无遮挡交互导览-draggable--minimizable-与画布全分辨率自适应缩放引擎治理-zero-occlusion-tour--canvas-responsive-auto-fit-engine)
 
 ---
 
@@ -247,3 +248,40 @@
 ### 3. 质量验证与基线
 - 运行 `npm run test:run`：9 个套件、165/165 测试 100% 绿色通过；
 - 运行 `npm run build`：全站 38 个路由页面 100% 编译通过，零语法与类型错误。
+
+---
+
+## ADR-011: 无遮挡交互导览 (Draggable & Minimizable) 与画布全分辨率自适应缩放引擎治理 (Zero-Occlusion Tour & Canvas Responsive Auto-Fit Engine)
+
+### 1. 业务痛点与用户实测反馈
+1. **引导卡片遮挡执行结果 ("结果别挡住了")**：
+   - 用户在运行代码沙箱（步骤 4）时，浮动引导卡片过大且悬浮在代码块下方，直接遮挡了沙箱控制台执行结果；
+   - 用户勾选待办任务（步骤 2）触发 Agent 时，原有向下排列的引导卡片亦容易阻挡下游自动衍生的发布报告与 Checklist 卡片；
+2. **画布视口未自适应与边缘截断 ("页面没有做自动适应，布局展示应该还需要做调整")**：
+   - 画布初始视口固定为 `zoom: 1, pan: {x: 0, y: 0}`，且预制卡片总宽度达 1030px+，在常见 1366px/1440px 笔记本或展开侧边栏（240px）后，右侧代码沙箱、数据表格出现 30%~40% 宽度被浏览器右边缘直接切断；缺乏自适应全景缩放与居中机制。
+
+### 2. 决策方案与架构落地
+1. **彻底消除遮挡的三维防御机制 (`OnboardingTour.tsx`)**：
+   - **智能避让排布算子 (Step-Aware Anti-Collision Placement)**：
+     - **步骤 4 (代码沙箱)**：控制台在下方展开，引导卡片强制向左侧或左下停靠，100% 腾出右列代码块与控制台输出；
+     - **步骤 2 (待办自驱动)**：衍生卡片向下生成，引导卡片强制停靠在右侧，杜绝任何纵向覆盖；
+     - **步骤 3 (单 Block AI)**：悬停 ✨ 菜单在右上展开，引导卡片向左侧避让；
+   - **极简折叠模式 (Minimizable Capsule Mode)**：
+     - 卡片顶栏提供一键收起按钮；点击后卡片瞬时收拢为右下角轻量小胶囊（`[💡 步骤 4/5: 代码沙箱即时运行 ↗ 展开] [下一步 >] [✕]`），整个画布 100% 裸露供用户操作与核验；
+   - **自由拖拽漫游 (Draggable Header)**：
+     - 增加 `handleHeaderMouseDown` 与 `cursor-grab` 交互，用户可随时随心拖动引导卡片至屏幕任意角落；
+   - **紧凑高精致尺寸**：卡片宽度由 440px 压缩精炼至 360px，内边距与字体排印更通透。
+2. **画布智能全分辨率自适应缩放引擎 (`BlockEditor.tsx`)**：
+   - **包围盒计算与最佳 Zoom 求解 (`autoFitView`)**：
+     - 实时探测顶层 Block 的最小/最大 X 和 Y 坐标，计算内容包围盒；
+     - 结合容器当前实际视口宽高，计算 `scaleX` 与 `scaleY`，在 `0.55 ~ 1.0` 舒适阅读区间内取最佳比例，并自动居中计算 `pan.x` 与 `pan.y`；
+   - **全生命周期响应 (ResizeObserver)**：
+     - 监听画布容器尺寸变化（侧边栏展开/折叠、窗口 Resize），在用户未手动平移缩放前始终保持自适应居中；
+   - **交互工具栏自适应按钮**：
+     - 在右下角缩放控制器新增 `Maximize2`「自适应」按钮，支持用户随时一键复位至最佳视口；
+3. **入门指南文档网格再压实 (`presetDocuments.ts`)**：
+   - 将卡片总布局包围盒由 1030px 进一步压缩至 934px（左列 450px，右列 460px，间隙 24px），即便在 1280px 标准分辨率下展开 240px 侧边栏，首屏宽度亦能 100% 完整容纳。
+
+### 3. 质量验证与基线
+- 运行 `npm run test:run`：9 个套件、165/165 测试 100% 绿色全通；
+- 运行 `npm run build`：Next.js 全站 38 个路由生产打包 100% 成功。

@@ -102,7 +102,11 @@ export function useAgent() {
               for (const action of rule.actions) {
                 if (action.type === 'createBlock') {
                   const timestamp = new Date().toLocaleString('zh-CN');
-                  const content = (action.config.contentTemplate as string).replace('{timestamp}', timestamp);
+                  let rawTemplate = (action.config.contentTemplate as string) || '';
+                  if (!rawTemplate.includes('迭代发布报告') || rawTemplate.includes('顺利完成啦')) {
+                    rawTemplate = '### 📋 迭代发布报告（Agent 自动化归档）\n- **验收状态**：✅ 质量检查通过 · 准予发布上线\n- **执行动作**：Agent 规则引擎自驱动触发\n- **归档时间**：{timestamp}\n- **关联需求**：[P0需求交付] 完成用户中心与鉴权架构验证\n- **协作流转**：状态机已自动流转为「已交付」，变更审计日志已同步广播至团队协同看板。';
+                  }
+                  const content = rawTemplate.replace('{timestamp}', timestamp);
                   
                   // 幂等防重：检查是否已有该待办关联的发布报告
                   const currentBlocks = useBlockStore.getState().blocks;
@@ -144,7 +148,10 @@ export function useAgent() {
                 }
 
                 if (action.type === 'callAI') {
-                  const prompt = action.config.prompt as string;
+                  let prompt = (action.config.prompt as string) || '';
+                  if (prompt.includes('鼓励语') || prompt.includes('祝贺')) {
+                    prompt = '作为产研交付 Agent，根据已验收交付的功能"[P0需求交付] 完成用户中心与鉴权架构验证"，生成一份专业的【下一步上线保障与测试 Checklist】（包含 3 个具体可执行的待办项，涵盖灰度放量、核心指标监控与应急预案，使用 Markdown 清单格式，语言严谨专业，符合飞书/钉钉企业级协同规范）';
+                  }
                   const currentBlocks = useBlockStore.getState().blocks;
                   const existingAiBlock = currentBlocks.find(
                     (b) => b.meta?.sourceBlockId === block.id && b.meta?.ruleRole === 'ai-checklist'
