@@ -21,6 +21,7 @@
 - [ADR-010: 飞书/钉钉风格官方新手入门系统重塑与 Agent 衍生卡片垂直避让排布治理 (Enterprise Onboarding & Vertical Avoidance Layout)](#adr-010-飞书钉钉风格官方新手入门系统重塑与-agent-衍生卡片垂直避让排布治理-enterprise-onboarding--vertical-avoidance-layout)
 - [ADR-011: 无遮挡交互导览 (Draggable & Minimizable) 与画布全分辨率自适应缩放引擎治理 (Zero-Occlusion Tour & Canvas Responsive Auto-Fit Engine)](#adr-011-无遮挡交互导览-draggable--minimizable-与画布全分辨率自适应缩放引擎治理-zero-occlusion-tour--canvas-responsive-auto-fit-engine)
 - [ADR-012: 废除激进自适应缩放引擎、全面转向单列垂直居中排布与三向拉伸治理 (Removal of Auto-Zoom Engine, Centered Vertical Layout & 3-Way Resize)](#adr-012-废除激进自适应缩放引擎全面转向单列垂直居中排布与三向拉伸治理-removal-of-auto-zoom-engine-centered-vertical-layout--3-way-resize)
+- [ADR-013: 顶层工具栏响应式弹性自适应重构与功能聚合收纳机制 (Responsive Adaptive Toolbar & Unified Overflow Menu)](#adr-013-顶层工具栏响应式弹性自适应重构与功能聚合收纳机制-responsive-adaptive-toolbar--unified-overflow-menu)
 
 ---
 
@@ -330,3 +331,42 @@
 - 单元测试：165 个测试用例（9 个套件）100% 通过；
 - 生产构建：全站 38 个路由生产构建成功，零类型与编译报错；
 - 界面实测：Light / Dark 双模下表格文字清晰可见，对比度符合 WCAG AA 标准。
+
+---
+
+## ADR-013: 顶层工具栏响应式弹性自适应重构与功能聚合收纳机制 (Responsive Adaptive Toolbar & Unified Overflow Menu)
+
+### 1. 业务痛点与用户实测真相反馈
+用户提供两张不同视口尺寸下的现场对比截屏（大窗口完整 vs 小窗口截断），并明确阐述其对“自适应”的真实定义：
+1. **“自适应”真实诉求对齐**：用户所指的自适应并非画布缩放分辨率（Canvas Zoom Auto-Fit），而是**系统 UI 顶栏及操作控件的响应式自适应布局 (Responsive UI Adaptive Layout)**；
+2. **顶栏功能严重截断溢出**：
+   - 顶层工具栏原先硬编码平铺了 19 个独立功能按钮与 4 组分隔线，总宽度占用超过 1050px；
+   - 在常见笔记本屏幕（如 1366px 且侧边栏展开占用 240px）、半屏分屏或缩放窗口时，由于缺乏响应式折叠设计与溢出保护，右侧核心功能区（团队协作、Agent 日志、主题切换、新手帮助、甚至个人中心用户头像）被硬生生挤出屏幕视口截断，导致用户在较小屏幕下无法触达右侧关键能力。
+
+### 2. 决策方案与架构重塑
+团队基于经典企业级 Web 协同产品（Linear / Notion / Figma）设计范式，落地**分层优先级弹性响应式工具栏与全量收纳引擎**：
+1. **右侧高频与状态控件永久锚定 (`Right Section`)**：
+   - 将原位于中央工具群中的「主题切换」抽离，与「用户中心」合并固定在最右侧（`shrink-0`）；
+   - 工具栏全局添加 `overflow-hidden`，无论屏幕尺寸多小，右侧的用户中心与主题切换永不被挤压溢出，始终 100% 悬停于视口右上角黄金交互区。
+2. **功能优先级与响应式断点折叠 (`Center Section`)**：
+   - **基础核心组（全尺寸常驻）**：`AI 助手`、`AI 对话`、`Agent 规则开关`、`撤销/重做`、`全局搜索`；
+   - **中屏/大屏展开组**：
+     - `md:flex`（≥768px）：敏捷协作看板、Agent 执行日志；
+     - `lg:flex`（≥1024px）：块级大纲导航、关系网图谱、版本历史、新手帮助；
+     - `xl:flex`（≥1280px）：AI Copilot、工作流分析、导出、导入；
+     - `2xl:flex`（≥1536px）：角色审阅、文档关联；
+   - **文档标题弹性收缩**：输入框宽度由固定的 `w-56` 改造为 `w-24 sm:w-36 md:w-44 lg:w-52 truncate`，优先腾出中心交互空间。
+3. **全量聚合收纳「更多功能」抽屉 (`MoreHorizontal Popover`)**：
+   - 在中小屏（`< 2xl`）下自动展示高集成度「··· 更多」操作入口；
+   - 打开后以清晰的三大板块层级展开所有进阶能力：
+     - **🤖 AI 进阶套件**：AI Copilot 画布规划、工作流产研分析、多角色透视审阅、双向文档拓扑关联；
+     - **📐 视图与图谱**：块级大纲导航、全局关系网图谱、历史版本留痕；
+     - **🛠️ 工具与协作**：导出 (PDF/MD)、导入、团队敏捷协作看板、Agent 执行流水审计、使用指南与引导重跑；
+   - 交互闭环：点击任意功能即时执行对应回调并自动关闭抽屉；弹层采用动态 Boundary 保护，保证视口边缘不越界。
+4. **快捷添加 Block 浮动栏自适应保护 (`BlockEditor.tsx`)**：
+   - 为白板中央浮动的 8 项快捷 Block 添加 `max-w-[calc(100vw-32px)] overflow-x-auto shadow-sm`，杜绝小屏下浮动栏横向超出视口。
+
+### 3. 质量验证与基线
+- 单元测试：165 个测试用例（9 个套件）100% 通过；
+- 生产构建：全站 38 个路由生产构建成功，零类型与编译报错；
+- 实机体验：在 800px、1024px、1280px、1440px 及 1920px 任意视口缩放与分屏下，工具栏 0 溢出、0 截断，右侧用户与主题永久在位，所有 19 项功能入口 100% 可触达。

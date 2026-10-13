@@ -787,7 +787,7 @@ export default function BlockEditor({
         右键空白处添加 Block · 滚轮缩放
       </div>
 
-      <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1 z-20">
+      <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1 z-20 max-w-[calc(100vw-32px)] overflow-x-auto shadow-sm">
         {([
           { type: 'text' as BlockType, label: '文本' },
           { type: 'todo' as BlockType, label: '待办' },

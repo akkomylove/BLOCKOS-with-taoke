@@ -7,7 +7,7 @@ import {
   Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
   Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
   LogOut, UserCircle, LayoutGrid, FileText, Command, BarChart3, BrainCircuit,
-  MessageSquare, ClipboardCheck, Link2
+  MessageSquare, ClipboardCheck, Link2, MoreHorizontal
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useBlockStore } from '@/store/blockStore';
@@ -65,6 +65,8 @@ export default function Toolbar({
   const [userName, setUserName] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userBtnRef = useRef<HTMLButtonElement>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -129,51 +131,52 @@ export default function Toolbar({
 
   return (
     <>
-      <div className="h-11 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between px-3 shrink-0">
-      {/* Left: Logo + Page Title */}
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="flex items-center gap-1.5">
+      <div className="h-11 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between px-2 sm:px-3 shrink-0 overflow-hidden">
+      {/* Left: Logo + Page Title (自适应弹性缩短) */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <Logo size={16} />
-          <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100 tracking-tight">BlockOS</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-zinc-100 tracking-tight hidden sm:inline">BlockOS</span>
         </div>
-        <div className="h-4 w-px bg-gray-300 dark:bg-zinc-700 mx-1" />
+        <div className="h-4 w-px bg-gray-300 dark:bg-zinc-700 mx-0.5 sm:mx-1 shrink-0" />
         {currentPage && (
           <input
-            className="bg-transparent text-sm text-gray-600 dark:text-zinc-300 outline-none hover:text-gray-900 dark:hover:text-zinc-100 focus:text-gray-900 dark:focus:text-zinc-100 transition-colors w-40 lg:w-56"
+            className="bg-transparent text-sm text-gray-600 dark:text-zinc-300 outline-none hover:text-gray-900 dark:hover:text-zinc-100 focus:text-gray-900 dark:focus:text-zinc-100 transition-colors w-24 sm:w-36 md:w-44 lg:w-52 truncate"
             value={currentPage.title}
             onChange={(e) => updatePageTitle(currentPage.id, e.target.value)}
+            title={currentPage.title}
           />
         )}
       </div>
 
-      {/* Center: Main Actions */}
-      <div className="flex items-center gap-0.5" data-tour="toolbar-actions">
-        {/* AI Group */}
+      {/* Center: Main Actions (响应式折叠，小屏自动收纳进「更多」) */}
+      <div className="flex items-center gap-0.5 min-w-0" data-tour="toolbar-actions">
+        {/* AI Group (核心常驻 + 进阶响应式) */}
         <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手">
           <Sparkles className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleCopilot} className={iconBtnBlue} title="AI Copilot">
-          <BrainCircuit className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleAnalyze} className={iconBtnBlue} title="工作流分析">
-          <BarChart3 className="w-4 h-4" />
         </button>
         <button onClick={onToggleChat} className={iconBtnBlue} title="AI 对话">
           <MessageSquare className="w-4 h-4" />
         </button>
-        <button onClick={onToggleReviewEnrich} className={iconBtnBlue} title="角色审阅">
-          <ClipboardCheck className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleDocRelations} className={iconBtnBlue} title="文档关联">
-          <Link2 className="w-4 h-4" />
-        </button>
-        <button onClick={toggleAgent} className={agentEnabled ? iconBtnActive : iconBtn} title="Agent">
+        <button onClick={toggleAgent} className={agentEnabled ? iconBtnActive : iconBtn} title="Agent 规则引擎">
           <Bot className="w-4 h-4" />
         </button>
+        <button onClick={onToggleCopilot} className={`${iconBtnBlue} hidden xl:flex`} title="AI Copilot">
+          <BrainCircuit className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleAnalyze} className={`${iconBtnBlue} hidden xl:flex`} title="工作流分析">
+          <BarChart3 className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleReviewEnrich} className={`${iconBtnBlue} hidden 2xl:flex`} title="角色审阅">
+          <ClipboardCheck className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleDocRelations} className={`${iconBtnBlue} hidden 2xl:flex`} title="文档关联">
+          <Link2 className="w-4 h-4" />
+        </button>
 
-        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
+        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-0.5 sm:mx-1 shrink-0" />
 
-        {/* Edit Group */}
+        {/* Edit Group (撤销 / 重做常驻) */}
         <button onClick={undo} disabled={!canUndo()} className={`${iconBtn} disabled:opacity-30`} title="撤销">
           <Undo2 className="w-4 h-4" />
         </button>
@@ -181,50 +184,59 @@ export default function Toolbar({
           <Redo2 className="w-4 h-4" />
         </button>
 
-        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
+        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-0.5 sm:mx-1 shrink-0 hidden sm:block" />
 
-        {/* View Group */}
-        <button onClick={onToggleGroupPanel} className={showGroupPanel ? iconBtnActive : iconBtn} title="导航">
-          <LayoutGrid className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleRelationDrawer} className={iconBtn} title="关系">
-          <GitBranch className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleSearch} className={iconBtn} title="搜索">
+        {/* View Group (搜索常驻，导航/关系/历史响应式展示) */}
+        <button onClick={onToggleSearch} className={iconBtn} title="全局搜索 (Cmd+K)">
           <Search className="w-4 h-4" />
         </button>
-        <button onClick={onToggleHistory} className={iconBtn} title="历史">
+        <button onClick={onToggleGroupPanel} className={`${showGroupPanel ? iconBtnActive : iconBtn} hidden lg:flex`} title="块级导航">
+          <LayoutGrid className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleRelationDrawer} className={`${iconBtn} hidden lg:flex`} title="关系图谱">
+          <GitBranch className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleHistory} className={`${iconBtn} hidden lg:flex`} title="历史版本">
           <History className="w-4 h-4" />
         </button>
 
-        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
+        <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-0.5 sm:mx-1 shrink-0 hidden md:block" />
 
-        {/* Tools Group */}
-        <button onClick={onToggleExport} className={iconBtn} title="导出">
-          <Download className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleImport} className={iconBtn} title="导入">
-          <Upload className="w-4 h-4" />
-        </button>
-        <button onClick={() => router.push('/teams')} className={iconBtn} title="协作">
+        {/* Tools Group (协作与日志中屏展开，导入/导出宽屏展开) */}
+        <button onClick={() => router.push('/teams')} className={`${iconBtn} hidden md:flex`} title="协作看板">
           <Users className="w-4 h-4" />
         </button>
-        <button onClick={onToggleLogs} className={showLogs ? iconBtnActive : iconBtn} title="日志">
+        <button onClick={onToggleLogs} className={`${showLogs ? iconBtnActive : iconBtn} hidden md:flex`} title="执行日志">
           <Activity className="w-4 h-4" />
         </button>
-        <button onClick={toggleTheme} className={iconBtn} title="切换主题">
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        <button onClick={onToggleExport} className={`${iconBtn} hidden xl:flex`} title="导出">
+          <Download className="w-4 h-4" />
         </button>
-        <button onClick={onToggleHelp} className={iconBtn} title="帮助">
+        <button onClick={onToggleImport} className={`${iconBtn} hidden xl:flex`} title="导入">
+          <Upload className="w-4 h-4" />
+        </button>
+        <button onClick={onToggleHelp} className={`${iconBtn} hidden lg:flex`} title="帮助">
           <HelpCircle className="w-4 h-4" />
         </button>
+
+        {/* 响应式「更多」菜单：小屏与中屏自适应展开，全量容纳所有工具 */}
+        <div className="relative 2xl:hidden">
+          <button
+            ref={moreBtnRef}
+            onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+            className={`${moreMenuOpen ? iconBtnActive : iconBtn} ${moreMenuOpen ? '!bg-blue-500/15 !text-blue-600 dark:!text-blue-300' : ''}`}
+            title="更多工具与功能"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+        </div>
 
         {/* Selected Count + Actions */}
         {selectedIds.length > 0 && (
           <>
-            <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-1" />
-            <div className="flex items-center gap-0.5 px-2 py-1 bg-blue-500/10 dark:bg-blue-500/15 rounded-lg">
-              <span className="text-blue-600 dark:text-blue-300 font-mono text-[11px] min-w-[16px] text-center">{selectedIds.length}</span>
+            <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-0.5 sm:mx-1 shrink-0" />
+            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-500/10 dark:bg-blue-500/15 rounded-lg shrink-0">
+              <span className="text-blue-600 dark:text-blue-300 font-mono text-[11px] min-w-[14px] text-center">{selectedIds.length}</span>
               <button onClick={handleDuplicateSelected} className={`${iconBtn} !w-6 !h-6`} title="复制">
                 <CopyPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
               </button>
@@ -236,22 +248,27 @@ export default function Toolbar({
         )}
 
         {isTextSelected && (
-          <button onClick={handleFormatDocument} disabled={formatting} className={iconBtnBlue} title="AI 格式化">
+          <button onClick={handleFormatDocument} disabled={formatting} className={`${iconBtnBlue} shrink-0`} title="AI 格式化">
             <Wand2 className={`w-4 h-4 ${formatting ? 'animate-spin' : ''}`} />
           </button>
         )}
       </div>
 
-      {/* Right: User */}
+      {/* Right: Theme + User (右侧常驻，永不被挤压溢出) */}
       <div className="flex items-center gap-1 shrink-0">
+        <button onClick={toggleTheme} className={iconBtn} title="切换主题">
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+
         <div className="relative">
           <button
             ref={userBtnRef}
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className={`${iconBtn} gap-1 px-2 w-auto`}
+            className={`${iconBtn} gap-1 px-1.5 sm:px-2 w-auto`}
+            title="个人中心"
           >
             <UserCircle className="w-4 h-4" />
-            <span className="hidden lg:inline text-xs max-w-[80px] truncate">
+            <span className="hidden sm:inline text-xs max-w-[60px] md:max-w-[80px] truncate">
               {userName || '用户'}
             </span>
           </button>
@@ -263,10 +280,10 @@ export default function Toolbar({
                 onClick={() => setUserMenuOpen(false)}
               />
               <div
-                className="fixed z-[210] bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg min-w-[140px]"
+                className="fixed z-[210] bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
                 style={{
                   top: (userBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-                  right: window.innerWidth - (userBtnRef.current?.getBoundingClientRect().right ?? 0),
+                  right: Math.max(8, window.innerWidth - (userBtnRef.current?.getBoundingClientRect().right ?? 0)),
                 }}
               >
                 <div className="p-1.5">
@@ -292,6 +309,138 @@ export default function Toolbar({
         </div>
       </div>
     </div>
+
+    {/* 更多功能响应式弹出层 */}
+    {moreMenuOpen && typeof document !== 'undefined' && createPortal(
+      <>
+        <div
+          className="fixed inset-0 z-[200]"
+          onClick={() => setMoreMenuOpen(false)}
+        />
+        <div
+          className="fixed z-[210] bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-2xl p-2.5 w-60 animate-in fade-in zoom-in-95 duration-100"
+          style={{
+            top: (moreBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 6,
+            left: Math.max(8, Math.min(
+              (typeof window !== 'undefined' ? window.innerWidth : 1200) - 250,
+              (moreBtnRef.current?.getBoundingClientRect().left ?? 0) - 100
+            )),
+          }}
+        >
+          <div className="space-y-2 text-xs">
+            {/* AI 进阶能力 */}
+            <div>
+              <div className="px-2 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">AI 进阶套件</div>
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleCopilot(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <BrainCircuit className="w-4 h-4 text-blue-500 shrink-0" />
+                  <span>AI Copilot 画布规划</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleAnalyze(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <BarChart3 className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <span>工作流产研分析</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleReviewEnrich(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <ClipboardCheck className="w-4 h-4 text-purple-500 shrink-0" />
+                  <span>多角色透视审阅</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleDocRelations(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <Link2 className="w-4 h-4 text-cyan-500 shrink-0" />
+                  <span>双向文档拓扑关联</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100 dark:bg-zinc-800" />
+
+            {/* 视图与图谱 */}
+            <div>
+              <div className="px-2 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">视图与图谱</div>
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleGroupPanel(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <LayoutGrid className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>块级大纲导航</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleRelationDrawer(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <GitBranch className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>全局关系网图谱</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleHistory(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <History className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <span>历史版本留痕</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100 dark:bg-zinc-800" />
+
+            {/* 工具与协作 */}
+            <div>
+              <div className="px-2 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">工具与协作</div>
+              <div className="space-y-0.5">
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleExport(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <Download className="w-4 h-4 text-gray-600 dark:text-zinc-400 shrink-0" />
+                  <span>导出文档 (PDF/MD)</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleImport(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <Upload className="w-4 h-4 text-gray-600 dark:text-zinc-400 shrink-0" />
+                  <span>导入外部文档</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); router.push('/teams'); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span>团队敏捷协作看板</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleLogs(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <Activity className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>Agent 执行流水审计</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleHelp(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <HelpCircle className="w-4 h-4 text-sky-500 shrink-0" />
+                  <span>使用指南与引导重跑</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>,
+      document.body
+    )}
     </>
   );
 }
