@@ -12,6 +12,7 @@ import RelationDrawer from './RelationDrawer';
 import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon } from 'lucide-react';
 import type { BlockType, Block } from '@/types/block';
 import TagWheelPicker, { getTagStyle } from './TagWheelPicker';
+import CanvasMinimap from './CanvasMinimap';
 
 interface BlockEditorProps {
   commandPaletteOpen: boolean;
@@ -63,10 +64,21 @@ export default function BlockEditor({
       if (!blockId) return;
       const targetBlock = blocks.find((b) => b.id === blockId);
       if (targetBlock) {
-        setPan((prev) => ({
-          x: prev.x,
-          y: Math.round(50 - targetBlock.y * zoom),
-        }));
+        const containerW = canvasRef.current?.clientWidth || window.innerWidth;
+        // 确保目标 Block 处于左侧偏中位置，且右侧稳定留出 380px 空间容纳导览卡片，彻底根除横向跳跃与遮挡
+        const targetW = (targetBlock.width || 760) * zoom;
+        const totalContentWidth = targetW + 380;
+        let idealPanX = 0;
+        if (containerW >= 1200) {
+          idealPanX = Math.round(Math.max(40, (containerW - totalContentWidth) / 2) - targetBlock.x * zoom);
+        } else {
+          idealPanX = Math.round(Math.max(20, (containerW - targetW) / 2) - targetBlock.x * zoom);
+        }
+
+        setPan({
+          x: idealPanX,
+          y: Math.round(60 - targetBlock.y * zoom),
+        });
       }
     };
     window.addEventListener('blockos-scroll-to-block', handleScrollTo);
@@ -754,6 +766,15 @@ export default function BlockEditor({
         {visibleBlocks.filter((b) => !b.parentId).map((b) => renderBlockTree(b))}
       </div>
 
+      {/* 缩略图导航 (Minimap 鹰眼) */}
+      <CanvasMinimap
+        blocks={blocks}
+        pan={pan}
+        zoom={zoom}
+        onPanChange={setPan}
+        containerRef={canvasRef}
+      />
+
       <div data-ui-control className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-3 py-1.5 z-20">
         <button
           onClick={() => setZoom((z) => Math.max(0.3, Number((z - 0.1).toFixed(1))))}
@@ -784,7 +805,7 @@ export default function BlockEditor({
       </div>
 
       <div data-ui-control className="absolute bottom-4 left-4 text-xs text-gray-400 dark:text-zinc-500 z-20">
-        右键空白处添加 Block · 滚轮缩放
+        右键空白处添加 Block · 滚轮上下平移 · Ctrl+滚轮缩放
       </div>
 
       <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1 z-20 max-w-[calc(100vw-32px)] overflow-x-auto shadow-sm">

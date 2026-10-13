@@ -370,3 +370,50 @@
 - 单元测试：165 个测试用例（9 个套件）100% 通过；
 - 生产构建：全站 38 个路由生产构建成功，零类型与编译报错；
 - 实机体验：在 800px、1024px、1280px、1440px 及 1920px 任意视口缩放与分屏下，工具栏 0 溢出、0 截断，右侧用户与主题永久在位，所有 19 项功能入口 100% 可触达。
+
+---
+
+## 🏛️ ADR-014：视口鹰眼导航（Minimap）、新手导览平滑跟随与预置卡片三组重叠根除
+
+- **日期**：2026-10-13
+- **决策状态**：已落地实施并通过全量自动化测试与构建校验
+- **关联文件**：
+  - [CanvasMinimap.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/CanvasMinimap.tsx)
+  - [BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
+  - [OnboardingTour.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/OnboardingTour.tsx)
+  - [presetDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/config/presetDocuments.ts)
+  - [BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
+
+### 1. 痛点根因与物理事实证伪 (Evidence & Root Cause)
+1. **导览框步骤 3 跳步骤 4 巨大位移跳跃**：
+   - 查验代码发现：[OnboardingTour.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/OnboardingTour.tsx) 对 `currentStep === 3`（步骤 4）硬编码了 `nextLeft = 24; nextTop = window.innerHeight - estimatedCardHeight - 24;`（左下角停靠），而步骤 3 位于屏幕居中。点击“下一步”时卡片从屏幕中央横跨全屏飞向左下角，体验极突兀。
+2. **预置卡片 1~6 分三组相互重叠遮挡**：
+   - 数据事实：Block 1 高 360px (底 400)，但 Block 2 设在 `y: 320`（逆向重叠 80px）；Block 3 高 280px (底 1080)，但 Block 4 设在 `y: 1060`（重叠 20px）；Block 5 表格高 340px (底 1720)，但 Block 6 设在 `y: 1680`（重叠 40px）。三组均存在明确的数学碰撞重叠。
+3. **滚轮提示与画布交互预期冲突**：
+   - 画布实际交互为“常规滚轮 = 上下平移画幅，Ctrl+滚轮 = 缩放”，但左下角提示文案写为“滚轮缩放”，导致用户直接滑动滚轮时误以为缩放失效。同时用户需要全局全览与自由漫游画幅各角落的能力，但坚决拒绝“拖拽改变分辨率”的自适应失真设计。
+
+### 2. 核心架构与工程决策 (Architectural Decisions)
+1. **打造鹰眼缩略图导航器（Canvas Minimap）**：
+   - 创建专用组件 `CanvasMinimap.tsx`，动态计算所有 Block 的包围盒，以等比微缩模型渲染所有卡片（依 Block 类型赋予辨识度配色）；
+   - 将主视口当前可视区域计算映射为半透明蓝框指示器，支持按住小视口框自由拖拽漫游画幅各个角落（实时双向更新画布 `pan`）；
+   - 支持点击小地图任意位置瞬间将视口居中于该点；提供“居中全览（Crosshair）”快捷按钮与展开/收起浮动胶囊。
+2. **统一步骤 1~4 导览定位逻辑，消除跳跃**：
+   - 废除步骤 4 的硬编码左下角分支。步骤 1~4 统一采用“右侧优先对齐”策略（`rect.right + 20`，与 Block 顶部平齐）；
+   - 在 `BlockEditor.tsx` 的 `handleScrollTo` 中引入智能水平居中：计算 `targetBlock.width + 380px` 导览卡片总宽度并在屏幕中居中，确保屏幕右侧始终保留 380px 舒适阅读区；步骤 1 到 4 在纵向平滑滑动，水平坐标稳定无跳跃。
+3. **数学安全间隔重排（彻底根除三组重叠）**：
+   - Block 1 (Welcome): `y: 40` (底 400)
+   - Block 2 (Todo): `y: 460` (底 550；留 460~1040 达 580px 充裕空间供 Agent 自驱动衍生卡片与 Checklist 展开)
+   - Block 3 (AI): `y: 1040` (底 1320)
+   - Block 4 (Code): `y: 1400` (底 1760，含控制台输出)
+   - Block 5 (Table): `y: 1840` (底 2160)
+   - Block 6 (Collab): `y: 2260` (底 2520)
+   - 组间均保留 60px~100px 干净间距，彻底消除重叠。
+4. **交互提示纠偏**：
+   - 更新左下角提示为：“`右键空白处添加 Block · 滚轮上下平移 · Ctrl+滚轮缩放`”，与真实交互行为 100% 吻合。
+5. **升级水合版本号**：
+   - 将 `GUIDE_VERSION_KEY` 升级为 `blockos-guide-v8-anti-overlap-minimap`，保证现有浏览器刷新时无缝加载最新防重叠布局。
+
+### 3. 验证与工程闭环 (Verification)
+- 单元测试：Vitest 165 个测试全部通过（100% Green）。
+- 生产构建：Next.js 全量 38 个路由生产构建通过，无任何语法或编译错误。
+- 事实闭环：三组 Block 物理重叠彻底消解，步骤 3->4 平滑无跳跃，鹰眼小地图即时可用。

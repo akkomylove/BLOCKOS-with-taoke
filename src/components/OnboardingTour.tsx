@@ -135,56 +135,31 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
 
     const gap = 20;
     const estimatedCardHeight = 360;
-    let nextTop = rect.top;
-    let nextLeft = rect.right + gap;
+    let nextTop: number;
+    let nextLeft: number;
 
-    if (currentStep === 1) {
-      // 步骤 2: Todo 待办自驱动。任务正下方会衍生报告与 Checklist，必须放置在右侧或右上避让
-      nextLeft = rect.right + gap;
-      nextTop = Math.max(20, rect.top);
-      if (nextLeft + cardWidth > window.innerWidth - 16) {
-        if (rect.left - gap - cardWidth >= 16) {
-          nextLeft = rect.left - gap - cardWidth;
-        } else {
-          nextLeft = Math.max(16, window.innerWidth - cardWidth - 20);
-          nextTop = 70;
-        }
-      }
-    } else if (currentStep === 2) {
-      // 步骤 3: 单 Block AI。✨ 按钮在卡片右上角，AI 菜单向下弹出，引导放置在左侧避让
-      if (rect.left - gap - cardWidth >= 16) {
-        nextLeft = rect.left - gap - cardWidth;
-        nextTop = Math.max(20, rect.top);
-      } else {
-        nextLeft = Math.max(16, (window.innerWidth - cardWidth) / 2);
-        nextTop = Math.max(20, rect.bottom + gap);
-      }
-    } else if (currentStep === 3) {
-      // 步骤 4: 代码沙箱。控制台输出在代码块正下方，引导放置在左侧或屏幕左下侧，完全避开代码块和控制台！
-      if (rect.left - gap - cardWidth >= 16) {
-        nextLeft = rect.left - gap - cardWidth;
-        nextTop = Math.max(20, Math.min(rect.top, window.innerHeight - estimatedCardHeight - 20));
-      } else {
-        // 停靠在屏幕左下角，100% 露出右侧的代码沙箱与控制台输出
-        nextLeft = 24;
-        nextTop = Math.max(20, window.innerHeight - estimatedCardHeight - 24);
-      }
-    } else if (currentStep === 4) {
-      // 步骤 5: 顶部工具栏。放置在工具栏下方靠右
+    if (currentStep === 4) {
+      // 步骤 5: 顶部全局中枢工具栏，放置在工具栏下方靠右
       nextTop = rect.bottom + gap;
       nextLeft = Math.max(16, Math.min(rect.right - cardWidth, window.innerWidth - cardWidth - 20));
     } else {
-      // 步骤 1: 欢迎卡片。默认放置在右侧
+      // 步骤 1~4: 针对画布中的原子 Block 卡片，统一采用一致且平滑的定位策略，彻底根除跨步位移跳跃！
+      // 首选策略：贴靠在 Block 右侧，垂直对齐 Block 顶部
       if (rect.right + gap + cardWidth <= window.innerWidth - 16) {
         nextLeft = rect.right + gap;
-        nextTop = Math.max(20, rect.top);
+        nextTop = rect.top;
+      } else if (rect.left - gap - cardWidth >= 16) {
+        // 次选策略：右侧不足时平移至 Block 左侧
+        nextLeft = rect.left - gap - cardWidth;
+        nextTop = rect.top;
       } else {
+        // 保底策略：两侧均不足时水平居中放置在 Block 下方
         nextLeft = Math.max(16, (window.innerWidth - cardWidth) / 2);
-        nextTop = Math.max(20, rect.bottom + gap);
+        nextTop = Math.min(rect.bottom + gap, window.innerHeight - estimatedCardHeight - 20);
       }
     }
 
-    // 边界安全校验
+    // 边界安全校验，绝不超出当前窗口视口
     nextTop = Math.max(16, Math.min(nextTop, window.innerHeight - estimatedCardHeight - 16));
     nextLeft = Math.max(16, Math.min(nextLeft, window.innerWidth - cardWidth - 16));
 
