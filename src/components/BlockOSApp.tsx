@@ -6,7 +6,6 @@ import Toolbar from '@/components/Toolbar';
 import AgentLogPanel from '@/components/AgentLogPanel';
 import { Sidebar } from '@/components/Sidebar';
 import OnboardingTour from '@/components/OnboardingTour';
-import PdfNoticeModal from '@/components/PdfNoticeModal';
 import HelpPanel from '@/components/HelpPanel';
 import SearchPanel from '@/components/SearchPanel';
 import GroupPanel from '@/components/GroupPanel';
@@ -30,7 +29,6 @@ export default function BlockOSApp() {
   const [showRelationDrawer, setShowRelationDrawer] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showPdfNotice, setShowPdfNotice] = useState(false);
   const [showGroupPanel, setShowGroupPanel] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -64,14 +62,15 @@ export default function BlockOSApp() {
     };
     loadServerData();
 
-    const completed = localStorage.getItem('blockos-onboarding-completed');
+    const completed = localStorage.getItem('blockos-onboarding-completed-v2');
     if (!completed) {
       setShowOnboarding(true);
-    }
-
-    const pdfDismissed = localStorage.getItem('blockos-pdf-notice-dismissed');
-    if (!pdfDismissed) {
-      setShowPdfNotice(true);
+      // 切换到新手引导文档（若存在）
+      const state = useBlockStore.getState();
+      const guidePage = state.pages.find((p) => p.title.includes('新手') || p.id === 'doc-guide');
+      if (guidePage && state.currentPageId !== guidePage.id) {
+        state.setCurrentPage(guidePage.id);
+      }
     }
   }, [hydrate, syncPages, loadFromServer]);
 
@@ -116,11 +115,19 @@ export default function BlockOSApp() {
           />
         )}
 
-        {showPdfNotice && (
-          <PdfNoticeModal onClose={() => setShowPdfNotice(false)} />
-        )}
-
-        <HelpPanel isOpen={showHelp} onClose={() => setShowHelp(false)} />
+        <HelpPanel
+          isOpen={showHelp}
+          onClose={() => setShowHelp(false)}
+          onRestartTour={() => {
+            setShowHelp(false);
+            const state = useBlockStore.getState();
+            const guidePage = state.pages.find((p) => p.title.includes('新手') || p.id === 'doc-guide');
+            if (guidePage && state.currentPageId !== guidePage.id) {
+              state.setCurrentPage(guidePage.id);
+            }
+            setShowOnboarding(true);
+          }}
+        />
         <SearchPanel isOpen={showSearch} onClose={() => setShowSearch(false)} />
         <GroupPanel isOpen={showGroupPanel} onClose={() => setShowGroupPanel(false)} />
         <ImportPanel isOpen={showImport} onClose={() => setShowImport(false)} />

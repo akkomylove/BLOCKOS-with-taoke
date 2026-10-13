@@ -459,6 +459,7 @@ export default function BlockEditor({
         className={`${depth === 0 ? 'absolute group/block' : 'relative group/block'}`}
         style={depth === 0 ? { left: block.x, top: block.y, width: block.width } : { width: block.width }}
         data-block-id={block.id}
+        data-tour={block.id}
       >
         <div className={depth > 0 ? 'ml-4 mt-1' : ''}>
           <div

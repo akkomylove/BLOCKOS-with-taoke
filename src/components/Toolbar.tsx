@@ -147,7 +147,7 @@ export default function Toolbar({
       </div>
 
       {/* Center: Main Actions */}
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-0.5" data-tour="toolbar-actions">
         {/* AI Group */}
         <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手">
           <Sparkles className="w-4 h-4" />

@@ -12,6 +12,7 @@ import {
 interface HelpPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  onRestartTour?: () => void;
 }
 
 const TABS = [
@@ -61,7 +62,7 @@ function AccordionItem({ icon: Icon, title, children }: { icon: React.ElementTyp
   );
 }
 
-export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
+export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelProps) {
   const [activeTab, setActiveTab] = useState('guide');
   const [apiKey, setApiKey] = useState('');
   const [baseURL, setBaseURL] = useState('');
@@ -134,13 +135,24 @@ export default function HelpPanel({ isOpen, onClose }: HelpPanelProps) {
           {activeTab === 'guide' && (
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/10">
-                <div className="flex items-center gap-2 mb-2">
-                  <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">快速开始</h3>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">快速开始</h3>
+                  </div>
+                  {onRestartTour && (
+                    <button
+                      onClick={onRestartTour}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      重新启动新手交互引导
+                    </button>
+                  )}
                 </div>
                 <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed">
-                  BlockOS 是一个 AI 原生的知识操作系统。在画布上创建不同类型的 Block 来组织信息，所有数据自动保存到本地。
-                  点击任意 Block 左侧的拖拽手柄可排序，点击右侧 Sparkles 按钮可使用 AI 功能。
+                  BlockOS 是一个 AI 原生的知识操作系统。在画布上创建不同类型的 Block 来自由组织想法，所有数据自动保存到本地。
+                  点击任意 Block 顶部标题栏可自由移动，悬停点击右侧 Sparkles (✨) 按钮可使用 AI 功能。
                 </p>
               </div>
 

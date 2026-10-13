@@ -1,4 +1,4 @@
-import type { Block, BlockType } from '@/types/block';
+import type { Block } from '@/types/block';
 import { nanoid } from 'nanoid';
 
 interface PresetDocument {
@@ -6,20 +6,114 @@ interface PresetDocument {
   title: string;
   icon: string;
   description: string;
-  blocks: Omit<Block, 'id' | 'createdAt' | 'updatedAt'>[];
+  blocks: (Omit<Block, 'id' | 'createdAt' | 'updatedAt'> & { id?: string })[];
 }
 
-function createBlocks(blocks: Omit<Block, 'id' | 'createdAt' | 'updatedAt'>[]): Block[] {
+function createBlocks(blocks: (Omit<Block, 'id' | 'createdAt' | 'updatedAt'> & { id?: string })[]): Block[] {
   const now = Date.now();
   return blocks.map((b, i) => ({
     ...b,
-    id: nanoid(),
+    id: b.id || nanoid(),
     createdAt: now + i,
     updatedAt: now + i,
   }));
 }
 
 export const PRESET_DOCUMENTS: PresetDocument[] = [
+  {
+    id: 'doc-guide',
+    title: '🚀 新手起航：无界文档交互实验场',
+    icon: '🚀',
+    description: '探索 BlockOS 核心交互哲学与四大能力：结构自由、自主行动、代码沙箱与 AI 深度融合',
+    blocks: [
+      {
+        id: 'guide-block-welcome',
+        type: 'text',
+        title: '1. 🌌 欢迎来到 BlockOS',
+        content: '# 欢迎来到 BlockOS 🌌\n\n> **核心哲学**：`(agent + md) × ai + html`\n> 这里不再有被囚禁在页面里的传统长文，每一个信息都是**可自由编排的原子 Block（块）**。\n\n### 🎯 体验结构自由：\n- **自由移动**：按住上方标题栏 `Move` 图标，在画布任意位置拖拽卡片；\n- **调整尺寸**：鼠标移到卡片右边缘，拖动即可自适应缩放宽度；\n- **无限漫游**：按住画布空白处拖动画布漫游，使用滚轮缩放视图。',
+        meta: { tags: ['新手必读', '无界画布'] },
+        parentId: null,
+        order: 0,
+        x: 40,
+        y: 40,
+        width: 500,
+        collapsed: false,
+      },
+      {
+        id: 'guide-block-todo',
+        type: 'todo',
+        title: '2. ⚡ 体验 Agent 自主行动（立即点击测试）',
+        content: '点击勾选这个待办任务，见证文档的自主行动！',
+        meta: { checked: false, tags: ['Agent实操'] },
+        parentId: null,
+        order: 1,
+        x: 40,
+        y: 350,
+        width: 500,
+        collapsed: false,
+      },
+      {
+        id: 'guide-block-ai',
+        type: 'text',
+        title: '3. 🧠 单 Block 专属 AI（悬停测试）',
+        content: '### 💡 体验单 Block 专属 AI 能力\n\n将鼠标悬停在当前卡片右侧，点击出现的 **✨ (Sparkles)** 按钮：\n- **总结**：AI 将提炼当前 Block 的核心要点；\n- **生成思维导图**：AI 会自动解析并生成层级大纲分支；\n- **扩写 / 改写**：智谱 GLM 4 大模型极速流式响应，赋能你的思考！',
+        meta: { tags: ['AI赋能', '产品经理'] },
+        parentId: null,
+        order: 2,
+        x: 40,
+        y: 480,
+        width: 500,
+        collapsed: false,
+      },
+      {
+        id: 'guide-block-code',
+        type: 'code',
+        title: '4. 💻 代码沙箱即时运行',
+        content: '// 点击右上角【运行】按钮，即时在安全沙箱中执行\nconst coreFormula = ["Agent", "Markdown", "AI", "HTML"];\nconsole.log("🚀 启动 BlockOS 智能运行时...");\ncoreFormula.forEach((item, index) => {\n  console.log(`[模块 ${index + 1}] 挂载能力: ${item}`);\n});\nconsole.log("✨ 运行就绪！享受你的无界知识探索！");',
+        meta: { language: 'javascript', tags: ['代码沙箱'] },
+        parentId: null,
+        order: 3,
+        x: 570,
+        y: 40,
+        width: 520,
+        collapsed: false,
+      },
+      {
+        id: 'guide-block-table',
+        type: 'table',
+        title: '5. 📊 结构化数据与功能矩阵',
+        content: JSON.stringify({
+          headers: ['维度', '传统文档 (Files)', 'BlockOS (Blocks)'],
+          rows: [
+            ['信息形态', '线性固化的单页长文', '自由拖拽布局的原子 Block'],
+            ['AI 定位', '外挂式侧边栏聊天框', '乘入每个 Block 的底层驱动引擎'],
+            ['行动能力', '被动等待人类编辑', 'Agent 规则自驱动完成自动化操作'],
+            ['扩展边界', '封闭的私有软件格式', '开放 Web 原生、多语言代码沙箱'],
+          ],
+        }),
+        meta: { tags: ['功能对比'] },
+        parentId: null,
+        order: 4,
+        x: 570,
+        y: 350,
+        width: 520,
+        collapsed: false,
+      },
+      {
+        id: 'guide-block-collab',
+        type: 'text',
+        title: '6. 👥 角色透视与团队协同',
+        content: '### 👥 角色透视与协同看板\n\n- **角色折叠**：点击顶部「角色折叠」或「折叠规划」，按岗位（如产品经理/前端开发）一键过滤与折叠视图；\n- **Agent 日志**：点击顶部「日志」图标，实时观察刚才 Agent 执行的所有自主操作记录；\n- **协作看板**：点击顶部协作按钮，切换至团队任务看板，双向流转无缝协同。',
+        meta: { tags: ['角色透视', '前端开发'] },
+        parentId: null,
+        order: 5,
+        x: 570,
+        y: 580,
+        width: 520,
+        collapsed: false,
+      },
+    ],
+  },
   {
     id: 'doc-prd',
     title: '产品需求文档（PRD）',

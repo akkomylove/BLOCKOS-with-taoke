@@ -48,6 +48,7 @@ export default function TodoBlock({ block, isSelected }: TodoBlockProps) {
     <div className="flex items-start gap-3">
       <button
         onClick={handleCheck}
+        data-tour="todo-checkbox"
         className={`mt-0.5 flex-shrink-0 w-[18px] h-[18px] rounded border-2 flex items-center justify-center transition-all duration-200 ${
           isChecked
             ? 'bg-blue-500 border-blue-500 animate-check-pop'

@@ -296,6 +296,7 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
           {(language === 'javascript' || language === 'python') && (
             <button
               onClick={executeCode}
+              data-tour="code-run-btn"
               disabled={isRunning}
               className="flex items-center gap-1 px-2 py-1 text-[11px] bg-emerald-500/10 dark:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 rounded hover:bg-emerald-500/20 dark:hover:bg-emerald-600/30 transition-colors disabled:opacity-50"
             >

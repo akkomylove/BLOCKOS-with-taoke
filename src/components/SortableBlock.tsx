@@ -86,6 +86,8 @@ export default function SortableBlock({
 
       <button
         onClick={handleAIButtonClick}
+        data-tour="block-ai-btn"
+        title="调用 AI"
         className="mt-1.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-zinc-500 hover:text-blue-400 transition-all duration-150"
       >
         <Sparkles className="w-3.5 h-3.5" />
