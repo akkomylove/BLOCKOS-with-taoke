@@ -319,11 +319,14 @@
      - **底边缘**（`cursor: ns-resize`）：纵向高度调节；
      - **右下角**（`cursor: nwse-resize`）：对角线宽高双向调节；
    - **杜绝文字全选 Bug**：拉伸期间主动调用 `e.preventDefault()`、`window.getSelection()?.removeAllRanges()`，并向 `document.body.style.userSelect = 'none'` 施加全局文本选区抑制，松手时无缝还原。
-4. **多维表格长文本自适应呈现 (`TableBlock.tsx`)**：
-   - 将只读与默认渲染态由单行 `<input>` 升级为带 `whitespace-pre-wrap` 的动态 `div`；编辑态切换为多行 `<textarea>`，彻底解决文字被硬性切断。
+4. **多维表格长文本自适应呈现与 Light 模式高对比度对比度治理 (`TableBlock.tsx`)**：
+   - 将只读与默认渲染态由单行 `<input>` 升级为带 `whitespace-pre-wrap` 的动态 `div`；编辑态切换为多行 `<textarea>`，彻底解决文字被硬性切断；
+   - **全面修复 Light 模式字体浅淡失真**：彻底剔除单元格硬编码的 `text-zinc-200`，重构为具备清晰层次的高对比色彩语义 `text-gray-900 dark:text-zinc-100`；首列（对比维度）追加轻量底色与字重加粗；表头统一为加粗黑体（`font-semibold text-gray-900 dark:text-zinc-100`）配合清爽浅灰底色（`bg-gray-100/90 dark:bg-zinc-800/90`）；
+   - **向下兼容与预设纠正**：在 `TableBlock` 中实现 `columns` 与 `headers` 属性双向解构兼容，并在 `presetDocuments.ts` 中规范化结构化能力矩阵定义；水合版本自增至 `blockos-guide-v7-table-contrast`。
 5. **视口平滑定位引导 (`OnboardingTour.tsx`)**：
    - 适配单列布局，每一步导览通过自定义事件 `blockos-scroll-to-block` 平滑驱动画布平移（`pan.y`），确保聚焦的目标卡片始终在视口黄金阅读区。
 
 ### 3. 质量验证与基线
 - 单元测试：165 个测试用例（9 个套件）100% 通过；
-- 生产构建：全站 38 个路由生产构建成功，零类型与编译报错。
+- 生产构建：全站 38 个路由生产构建成功，零类型与编译报错；
+- 界面实测：Light / Dark 双模下表格文字清晰可见，对比度符合 WCAG AA 标准。
