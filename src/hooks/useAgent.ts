@@ -25,10 +25,12 @@ export function useAgent() {
 
   useEffect(() => {
     isMountedRef.current = true;
+    const processedChanges = processedChangesRef.current;
+    const taskQueue = taskQueueRef.current;
     return () => {
       isMountedRef.current = false;
-      processedChangesRef.current.clear();
-      taskQueueRef.current = [];
+      processedChanges.clear();
+      taskQueue.length = 0;
     };
   }, []);
 
@@ -50,11 +52,14 @@ export function useAgent() {
         if (!rule.enabled) return;
 
         if (rule.id === 'todo-complete') {
-          const wasUnchecked = !prevBlock.meta.checked;
-          const isChecked = !!block.meta.checked;
-          const changeKey = `${block.id}-${isChecked}`;
+          const wasUnchecked = !prevBlock.meta?.checked;
+          const isChecked = !!block.meta?.checked;
 
-          if (block.type === 'todo' && wasUnchecked && isChecked) {
+          if (!isChecked) {
+            // 用户取消勾选，清除标记以允许再次勾选时触发刷新
+            processedChangesRef.current.delete(`${block.id}-true`);
+          } else if (block.type === 'todo' && wasUnchecked && isChecked) {
+            const changeKey = `${block.id}-true`;
             if (processedChangesRef.current.has(changeKey)) return;
             newTasks.push({ block, prevBlock });
           }
@@ -69,7 +74,7 @@ export function useAgent() {
 
     taskQueueRef.current.push(...newTasks);
     newTasks.forEach(({ block }) => {
-      const changeKey = `${block.id}-${!!block.meta.checked}`;
+      const changeKey = `${block.id}-${!!block.meta?.checked}`;
       processedChangesRef.current.add(changeKey);
     });
 
@@ -92,29 +97,80 @@ export function useAgent() {
             if (!rule.enabled) continue;
 
             if (rule.id === 'todo-complete') {
+              let reportBlockId: string | null = null;
+
               for (const action of rule.actions) {
                 if (action.type === 'createBlock') {
                   const timestamp = new Date().toLocaleString('zh-CN');
                   const content = (action.config.contentTemplate as string).replace('{timestamp}', timestamp);
-                  const newBlockId = addBlock('text', block.id);
+                  
+                  // 幂等防重：检查是否已有该待办关联的发布报告
+                  const currentBlocks = useBlockStore.getState().blocks;
+                  const existingReport = currentBlocks.find(
+                    (b) => b.meta?.sourceBlockId === block.id && b.meta?.ruleRole === 'audit-report'
+                  );
 
-                  setTimeout(() => {
-                    if (isMountedRef.current) {
-                      updateBlock(newBlockId, { content });
-                    }
-                  }, 50);
+                  if (existingReport) {
+                    reportBlockId = existingReport.id;
+                    updateBlock(reportBlockId, {
+                      title: '📋 迭代发布报告（Agent 自动化归档）',
+                      content,
+                      meta: {
+                        ...existingReport.meta,
+                        tags: ['Agent自驱动', '发布归档'],
+                      },
+                    });
+                  } else {
+                    reportBlockId = addBlock('text', block.id);
+                    updateBlock(reportBlockId, {
+                      title: '📋 迭代发布报告（Agent 自动化归档）',
+                      content,
+                      meta: {
+                        agentGenerated: true,
+                        sourceBlockId: block.id,
+                        ruleRole: 'audit-report',
+                        tags: ['Agent自驱动', '发布归档'],
+                      },
+                    });
+                  }
 
                   if (isMountedRef.current) {
                     addAgentLog({
                       ruleId: rule.id,
                       blockId: block.id,
-                      result: `创建完成日志: ${content}`,
+                      result: `自动化归档发布报告: ${timestamp}`,
                     });
                   }
                 }
 
                 if (action.type === 'callAI') {
                   const prompt = action.config.prompt as string;
+                  const currentBlocks = useBlockStore.getState().blocks;
+                  const existingAiBlock = currentBlocks.find(
+                    (b) => b.meta?.sourceBlockId === block.id && b.meta?.ruleRole === 'ai-checklist'
+                  );
+
+                  let aiBlockId = existingAiBlock ? existingAiBlock.id : null;
+                  if (!aiBlockId) {
+                    // 排布在报告下方，通过 addBlock 智能避让计算，杜绝重叠坐标
+                    aiBlockId = addBlock('text', reportBlockId || block.id);
+                    updateBlock(aiBlockId, {
+                      title: '🚀 下一步上线保障与测试 Checklist（智谱 GLM 4.7 Flash）',
+                      content: '⏳ 正在调用智谱 GLM 4.7 Flash 大模型规划上线保障清单...',
+                      meta: {
+                        agentGenerated: true,
+                        sourceBlockId: block.id,
+                        ruleRole: 'ai-checklist',
+                        tags: ['智谱AI', '上线Checklist'],
+                      },
+                    });
+                  } else {
+                    updateBlock(aiBlockId, {
+                      title: '🚀 下一步上线保障与测试 Checklist（智谱 GLM 4.7 Flash）',
+                      content: '⏳ 正在重新生成上线保障清单...',
+                    });
+                  }
+
                   try {
                     const response = await fetch('/api/ai/generate', {
                       method: 'POST',
@@ -132,22 +188,27 @@ export function useAgent() {
                         text += decoder.decode(value, { stream: true });
                       }
                       const cleanText = text.trim();
-                      if (cleanText && isMountedRef.current) {
-                        const newBlockId = addBlock('text', block.id);
-                        setTimeout(() => {
-                          if (isMountedRef.current) {
-                            updateBlock(newBlockId, { content: `🎉 ${cleanText}` });
-                          }
-                        }, 50);
+                      if (cleanText && isMountedRef.current && aiBlockId) {
+                        updateBlock(aiBlockId, {
+                          title: '🚀 下一步上线保障与测试 Checklist（智谱 GLM 4.7 Flash）',
+                          content: cleanText,
+                          meta: {
+                            agentGenerated: true,
+                            sourceBlockId: block.id,
+                            ruleRole: 'ai-checklist',
+                            tags: ['智谱AI', '上线Checklist'],
+                          },
+                        });
 
                         addAgentLog({
                           ruleId: rule.id,
                           blockId: block.id,
-                          result: '生成鼓励语',
+                          result: '智谱 GLM 4.7 Flash 成功生成上线保障 Checklist',
                         });
                       }
                     }
-                  } catch {
+                  } catch (aiErr) {
+                    console.error('Agent AI generate error:', aiErr);
                   }
                 }
               }

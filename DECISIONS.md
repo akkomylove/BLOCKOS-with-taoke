@@ -16,6 +16,9 @@
 - [ADR-005: 商业 ROI 与算力防御：分层调度与按需推理的成本控制机制](#adr-005-商业-roi-与算力防御分层调度与按需推理的成本控制机制)
 - [ADR-006: 产研全链路咬合架构 (Notion × Jira × Linear)：从 PRD 到任务看板与自研 SVG 甘特图的无缝流转](#adr-006-产研全链路咬合架构-notion--jira--linear从-prd-到任务看板与自研-svg-甘特图的无缝流转)
 - [ADR-007: 工程质量基线治理与单基准滚动版本管理规范](#adr-007-工程质量基线治理与单基准滚动版本管理规范)
+- [ADR-008: 生产级双层数据库混合持久化架构演进：WebAssembly SQLite (sql.js) 内存内核与 Vercel Neon Postgres 无服务云同步](#adr-008-生产级双层数据库混合持久化架构演进webassembly-sqlite-sqljs-内存内核与-vercel-neon-postgres-无服务云同步)
+- [ADR-009: 新手交互式引导重构与入门画布实验场落地 (Interactive Spotlight Onboarding & Playground Canvas)](#adr-009-新手交互式引导重构与入门画布实验场落地-interactive-spotlight-onboarding--playground-canvas)
+- [ADR-010: 飞书/钉钉风格官方新手入门系统重塑与 Agent 衍生卡片垂直避让排布治理 (Enterprise Onboarding & Vertical Avoidance Layout)](#adr-010-飞书钉钉风格官方新手入门系统重塑与-agent-衍生卡片垂直避让排布治理-enterprise-onboarding--vertical-avoidance-layout)
 
 ---
 
@@ -208,4 +211,39 @@
 
 ### 3. 质量验证与基线
 - 运行 `npm run test:run`：9 个套件、165/165 测试 100% 绿色全通；
+- 运行 `npm run build`：全站 38 个路由页面 100% 编译通过，零语法与类型错误。
+
+---
+
+## ADR-010: 飞书/钉钉风格官方新手入门系统重塑与 Agent 衍生卡片垂直避让排布治理 (Enterprise Onboarding & Vertical Avoidance Layout)
+
+### 1. 业务痛点与用户反馈
+1. **默认首篇文档认知割裂**：
+   - 客户端打开后仍呈现旧版“产品需求文档（PRD）”，缺乏飞书、钉钉官方风格的开箱新手沉浸指南；
+2. **待办任务演示业务价值弱**：
+   - 原 Agent 待办演示为“生成祝贺语”，业务价值偏弱且视觉表现不够严肃专业；用户要求替换为更具实际产研价值的流转演示；
+3. **衍生子卡片严重坐标叠放 Bug**：
+   - 用户明确指出：“运行 Agent 规则自驱动，生成的卡片会不停叠加在同一个位置。拖开它之后，会有好几个；没脱开之前，它们是重复在一个位置的”。
+   - **根因推演**：
+     - Action 1（创建日志）与 Action 2（调用 AI）均传入目标待办 ID（`afterId`）；`addBlock` 粗暴计算 `y = target.y + 60`，导致两个衍生 Block 物理坐标 100% 像素级重叠；
+     - 取消勾选再勾选时，缺乏关联源防重机制，重复创建堆叠，形成多层隐蔽重叠卡片。
+
+### 2. 决策方案与架构落地
+1. **飞书/钉钉风格官方新手入门指南 (`doc-guide`) 重塑**：
+   - 标题命名为 `👋 欢迎使用 BlockOS ｜ 新手快速入门指南`，图标设为 `👋`；
+   - 模块划分为 6 大企业级核心区域：欢迎开篇、[P0需求交付] Agent 自主交付实操区、单 Block 专属 AI 助手、多语言安全代码沙箱、结构化对比矩阵（多维表格体感）、角色透视与协同看板；
+   - 在客户端水合 (`BlockOSApp.tsx`) 中加入强制升级置顶机制，检测并保障首篇默认文档激活为该入门指南，彻底告别老 PRD 遮蔽。
+2. **Agent 业务动作升级为真实产研交付流转**：
+   - 彻底废除“祝贺语”，升级为企业级敏捷交付流转：
+     - **Action 1**：自动归档生成【📋 迭代发布报告】，含质量验收状态、执行时间戳与协同状态机流转；
+     - **Action 2**：联动智谱 GLM 4.7 Flash 大模型流式规划【🚀 下一步上线保障与测试 Checklist】（灰度放量、监控指标与应急预案）。
+3. **卡片智能垂直避让排布算法 (`estimateBlockHeight` + `addBlock`)**：
+   - 引入高度估算器 `estimateBlockHeight`，根据 Block 类型与行数自适应计算卡片包围盒；
+   - `addBlock` 在同列检索所有已存在卡片底部边界，计算 `targetY = max(afterBottom + 20, columnBottom + 20)`，保证每一个衍生 Block 无论先后顺序均排布在下方的非重叠安全区域。
+4. **基于源块指纹的防重与就地幂等更新机制 (`useAgent.ts`)**：
+   - 为衍生卡片注入 `sourceBlockId` 与 `ruleRole`（`audit-report` / `ai-checklist`）元数据；
+   - 重复勾选时就地刷新已有卡片内容与时间戳，取消勾选时重置触发锁，彻底根除“拖开后底下叠了一大堆重复卡片”的视觉缺陷。
+
+### 3. 质量验证与基线
+- 运行 `npm run test:run`：9 个套件、165/165 测试 100% 绿色通过；
 - 运行 `npm run build`：全站 38 个路由页面 100% 编译通过，零语法与类型错误。

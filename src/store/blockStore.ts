@@ -123,12 +123,25 @@ function createDefaultPage(): Page {
   };
 }
 
+export function estimateBlockHeight(block: Block): number {
+  if (block.collapsed) return 36;
+  const contentLen = block.content ? block.content.length : 0;
+  if (block.type === 'todo') return 72;
+  if (block.type === 'code') return Math.max(120, Math.min(320, 80 + (block.content.split('\n').length * 20)));
+  if (block.type === 'table') return 240;
+  if (block.type === 'media') return 240;
+  const lines = block.content ? block.content.split('\n').length : 1;
+  const lineEstimate = lines * 22;
+  const charEstimate = Math.ceil(contentLen / 35) * 20;
+  return Math.max(88, Math.min(480, 52 + Math.max(lineEstimate, charEstimate)));
+}
+
 export const BLOCK_TEMPLATES: BlockTemplate[] = [
   {
     id: 'onboarding-guide',
-    name: '新手实验场',
-    icon: '🚀',
-    description: 'BlockOS 核心交互体验：无界画布、Agent 自主行动、沙箱运行与 AI 增强',
+    name: '👋 欢迎使用 BlockOS ｜ 新手快速入门指南',
+    icon: '👋',
+    description: '3 分钟掌握 BlockOS：无界画布、Agent 规则自驱动、代码沙箱与单 Block 专属 AI',
     blocks: PRESET_DOCUMENTS[0]?.blocks || [],
   },
   {
@@ -201,7 +214,7 @@ export const BLOCK_TEMPLATES: BlockTemplate[] = [
 const defaultAgentRules: AgentRule[] = [
   {
     id: 'todo-complete',
-    name: '任务完成日志',
+    name: '需求验收与交付自动化',
     enabled: true,
     triggerType: 'blockUpdate',
     triggerCondition: "block.type === 'todo' && !prevBlock.meta?.checked && block.meta?.checked",
@@ -210,14 +223,14 @@ const defaultAgentRules: AgentRule[] = [
         type: 'createBlock',
         config: {
           type: 'text',
-          contentTemplate: '✅ 任务完成于 {timestamp}',
+          contentTemplate: '### 📋 迭代发布报告（Agent 自动化归档）\n- **验收状态**：✅ 质量检查通过 · 准予发布上线\n- **执行动作**：Agent 规则引擎自驱动触发\n- **归档时间**：{timestamp}\n- **关联需求**：[P0需求交付] 完成用户中心与鉴权架构验证\n- **协作流转**：状态机已自动流转为「已交付」，变更审计日志已同步广播至团队协同看板。',
           position: 'after',
         },
       },
       {
         type: 'callAI',
         config: {
-          prompt: '生成一句简短的鼓励语，庆祝任务完成',
+          prompt: '作为产研交付 Agent，根据已验收交付的功能"[P0需求交付] 完成用户中心与鉴权架构验证"，生成一份专业的【下一步上线保障与测试 Checklist】（包含 3 个具体可执行的待办项，涵盖灰度放量、核心指标监控与应急预案，使用 Markdown 清单格式，语言严谨专业，符合飞书/钉钉企业级协同规范）',
         },
       },
     ],
@@ -450,15 +463,39 @@ export const useBlockStore = create<BlockStore>()(
           newBlock.y = position.y;
         }
         set((state) => {
-          if (afterId) {
+          if (afterId && !position) {
             const idx = state.blocks.findIndex((b) => b.id === afterId);
             if (idx >= 0) {
-              newBlock.order = state.blocks[idx].order + 1;
-              newBlock.x = state.blocks[idx].x;
-              newBlock.y = state.blocks[idx].y + 60;
+              const afterBlock = state.blocks[idx];
+              newBlock.order = afterBlock.order + 1;
+              newBlock.x = afterBlock.x;
+              newBlock.width = afterBlock.width || 520;
+
+              // 智能垂直避让排布：基于估算高度和同列卡片，保证永远不会重叠在相同坐标
+              let targetY = afterBlock.y + estimateBlockHeight(afterBlock) + 20;
+              const columnBlocks = state.blocks
+                .filter((b) => b.id !== afterBlock.id && Math.abs(b.x - afterBlock.x) < 80)
+                .sort((a, b) => a.y - b.y);
+
+              for (const b of columnBlocks) {
+                const bHeight = estimateBlockHeight(b);
+                const bBottom = b.y + bHeight;
+                if (targetY >= b.y - 12 && targetY < bBottom + 16) {
+                  targetY = bBottom + 20;
+                }
+              }
+              newBlock.y = targetY;
             }
-          } else {
+          } else if (!position) {
             newBlock.order = state.blocks.length;
+            const lastBlock = state.blocks[state.blocks.length - 1];
+            if (lastBlock) {
+              newBlock.x = lastBlock.x;
+              newBlock.y = lastBlock.y + estimateBlockHeight(lastBlock) + 24;
+            } else {
+              newBlock.x = 40;
+              newBlock.y = 40;
+            }
           }
           state.blocks.push(newBlock);
         });
@@ -849,12 +886,14 @@ export const useBlockStore = create<BlockStore>()(
           const res = await fetch(`/api/pages/${pageId}/blocks`);
           if (res.ok) {
             const data = await res.json();
-            set((state) => {
-              state.pageBlocks[pageId] = data.blocks || [];
-              if (state.currentPageId === pageId) {
-                state.blocks = data.blocks || [];
-              }
-            });
+            if (Array.isArray(data.blocks) && data.blocks.length > 0) {
+              set((state) => {
+                state.pageBlocks[pageId] = data.blocks;
+                if (state.currentPageId === pageId) {
+                  state.blocks = data.blocks;
+                }
+              });
+            }
           }
         } catch (err) {
           console.error('Load failed:', err);

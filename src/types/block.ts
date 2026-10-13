@@ -16,6 +16,10 @@ export interface BlockMeta {
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
   textDecoration?: 'none' | 'underline' | 'line-through';
+
+  agentGenerated?: boolean;
+  sourceBlockId?: string;
+  ruleRole?: 'audit-report' | 'ai-checklist' | string;
 }
 
 export interface TableColumn {

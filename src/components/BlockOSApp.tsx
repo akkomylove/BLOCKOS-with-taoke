@@ -22,6 +22,7 @@ import { ProfilePanel } from '@/components/collaboration/ProfilePanel';
 import { useAgent } from '@/hooks/useAgent';
 import { useBlockStore } from '@/store/blockStore';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { getPresetDocumentBlocks } from '@/config/presetDocuments';
 
 export default function BlockOSApp() {
   const [showLogs, setShowLogs] = useState(false);
@@ -53,25 +54,77 @@ export default function BlockOSApp() {
     useBlockStore.persist.rehydrate();
     hydrate();
 
+    // 飞书/钉钉风格官方新手入门系统保障与激活机制
+    const GUIDE_ID = 'doc-guide';
+    const GUIDE_TITLE = '👋 欢迎使用 BlockOS ｜ 新手快速入门指南';
+    const GUIDE_VERSION_KEY = 'blockos-guide-v3-dingtalk';
+    const hasUpgraded = localStorage.getItem(GUIDE_VERSION_KEY);
+
+    const state = useBlockStore.getState();
+    const freshGuideBlocks = getPresetDocumentBlocks('doc-guide');
+
+    if (!hasUpgraded) {
+      const existingGuide = state.pages.find(
+        (p) => p.id === GUIDE_ID || p.title.includes('新手') || p.title.includes('入门')
+      );
+
+      if (!existingGuide) {
+        // 创建新指南页面并置顶
+        const newGuidePage = {
+          id: GUIDE_ID,
+          title: GUIDE_TITLE,
+          icon: '👋',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        useBlockStore.setState((prev) => ({
+          pages: [newGuidePage, ...prev.pages],
+          pageBlocks: {
+            ...prev.pageBlocks,
+            [GUIDE_ID]: freshGuideBlocks,
+          },
+          currentPageId: GUIDE_ID,
+          blocks: freshGuideBlocks,
+        }));
+      } else {
+        const guideId = existingGuide.id;
+        useBlockStore.setState((prev) => {
+          const otherPages = prev.pages.filter((p) => p.id !== guideId);
+          const updatedGuidePage = { ...existingGuide, title: GUIDE_TITLE, icon: '👋', updatedAt: Date.now() };
+          return {
+            pages: [updatedGuidePage, ...otherPages],
+            pageBlocks: {
+              ...prev.pageBlocks,
+              [guideId]: freshGuideBlocks,
+            },
+            currentPageId: guideId,
+            blocks: freshGuideBlocks,
+          };
+        });
+      }
+      localStorage.setItem(GUIDE_VERSION_KEY, 'true');
+      setShowOnboarding(true);
+    } else {
+      // 检查当前是否仍停留在旧的“产品需求文档”上，若是则切到新手指南
+      const guidePage = state.pages.find(
+        (p) => p.id === GUIDE_ID || p.title.includes('新手') || p.title.includes('入门')
+      );
+      if (guidePage && state.currentPageId !== guidePage.id) {
+        const curPage = state.pages.find((p) => p.id === state.currentPageId);
+        if (curPage && (curPage.title.includes('需求') || curPage.title.includes('PRD'))) {
+          state.setCurrentPage(guidePage.id);
+        }
+      }
+    }
+
     const loadServerData = async () => {
       await syncPages();
-      const state = useBlockStore.getState();
-      if (state.currentPageId) {
-        await loadFromServer(state.currentPageId);
+      const st = useBlockStore.getState();
+      if (st.currentPageId) {
+        await loadFromServer(st.currentPageId);
       }
     };
     loadServerData();
-
-    const completed = localStorage.getItem('blockos-onboarding-completed-v2');
-    if (!completed) {
-      setShowOnboarding(true);
-      // 切换到新手引导文档（若存在）
-      const state = useBlockStore.getState();
-      const guidePage = state.pages.find((p) => p.title.includes('新手') || p.id === 'doc-guide');
-      if (guidePage && state.currentPageId !== guidePage.id) {
-        state.setCurrentPage(guidePage.id);
-      }
-    }
   }, [hydrate, syncPages, loadFromServer]);
 
   return (
