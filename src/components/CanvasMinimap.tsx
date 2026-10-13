@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Map, Crosshair, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { Map, Crosshair, ChevronDown } from 'lucide-react';
 import type { Block } from '@/types/block';
 
 interface CanvasMinimapProps {

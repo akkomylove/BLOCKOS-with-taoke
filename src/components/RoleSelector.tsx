@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { X, GripVertical, Plus, Star } from 'lucide-react';
+import { X, GripVertical, Plus } from 'lucide-react';
 
 export interface PresetRole {
   id: string;

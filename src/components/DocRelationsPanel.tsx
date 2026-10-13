@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Link2, Loader2, ShieldCheck, ShieldAlert, Shield, Pencil, FileText, ChevronRight, BookOpen, ListChecks, ExternalLink } from 'lucide-react';
+import { X, Link2, Loader2, ShieldCheck, ShieldAlert, Shield, Pencil, FileText, BookOpen, ListChecks, ExternalLink } from 'lucide-react';
 import { useDocRelations } from '@/hooks/useTaokeAI';
 import { useBlockStore } from '@/store/blockStore';
 import type { DocRelationsResponse } from '@/lib/ai';

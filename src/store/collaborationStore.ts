@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Team, TeamMember, TeamWithMembers, Project, ProjectMember, ProjectWithDetails, Milestone, Task, TaskComment, UserProfile, UserTaskSummary } from '@/types/collaboration';
+import { persist } from 'zustand/middleware';
+import type { Team, Project, Milestone, Task, UserProfile, UserTaskSummary } from '@/types/collaboration';
 
 interface CollaborationState {
   teams: Team[];

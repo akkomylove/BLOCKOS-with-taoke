@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
   Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
-  LogOut, UserCircle, LayoutGrid, FileText, Command, BarChart3, BrainCircuit,
-  MessageSquare, ClipboardCheck, Link2, MoreHorizontal
+  LogOut, UserCircle, LayoutGrid, BarChart3, BrainCircuit,
+  ClipboardCheck, Link2, MoreHorizontal
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useBlockStore } from '@/store/blockStore';
@@ -359,6 +359,13 @@ export default function Toolbar({
                 >
                   <Link2 className="w-4 h-4 text-cyan-500 shrink-0" />
                   <span>双向文档拓扑关联</span>
+                </button>
+                <button
+                  onClick={() => { setMoreMenuOpen(false); onToggleFoldPlan(); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                >
+                  <Layers className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>产研智能折叠规划</span>
                 </button>
               </div>
             </div>
