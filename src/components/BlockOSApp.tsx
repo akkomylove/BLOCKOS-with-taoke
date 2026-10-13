@@ -57,7 +57,7 @@ export default function BlockOSApp() {
     // 飞书/钉钉风格官方新手入门系统保障与激活机制
     const GUIDE_ID = 'doc-guide';
     const GUIDE_TITLE = '👋 欢迎使用 BlockOS ｜ 新手快速入门指南';
-    const GUIDE_VERSION_KEY = 'blockos-guide-v6-vertical-centered';
+    const GUIDE_VERSION_KEY = 'blockos-guide-v7-table-contrast';
     const hasUpgraded = localStorage.getItem(GUIDE_VERSION_KEY);
 
     const state = useBlockStore.getState();

@@ -83,7 +83,12 @@ export const PRESET_DOCUMENTS: PresetDocument[] = [
         type: 'table',
         title: '5. 📊 结构化数据矩阵与产品能力对比',
         content: JSON.stringify({
-          headers: ['对比维度', '传统协作文档 (如 Word/Docs)', 'BlockOS 智能画布'],
+          columns: ['对比维度', '传统协作文档 (如 Word/Docs)', 'BlockOS 智能画布'],
+          columnTypes: [
+            { name: '对比维度', type: 'text' },
+            { name: '传统协作文档 (如 Word/Docs)', type: 'text' },
+            { name: 'BlockOS 智能画布', type: 'text' },
+          ],
           rows: [
             ['信息形态', '线性死板的长文档，信息割裂', '自由编排排布的原子化卡片'],
             ['AI 融合度', '外挂侧边栏对话框，无法直接操作内容', '乘入每个 Block，支持单卡片扩写/总结/生图'],
