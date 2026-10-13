@@ -102,6 +102,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Not a project member' }, { status: 403 });
     }
 
+    const role = (membership[0].role as string) || 'member';
+    if (role === 'viewer') {
+      return NextResponse.json({ error: 'Forbidden: Read-only members cannot modify tasks' }, { status: 403 });
+    }
+
     if ('parentId' in body && parentId !== task.parent_id) {
       const parentTask = query('SELECT * FROM tasks WHERE id = ? AND project_id = ?', [parentId, task.project_id]);
       if (parentTask.length === 0) {
@@ -229,10 +234,22 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Not a project member' }, { status: 403 });
     }
 
-    run('DELETE FROM tasks WHERE id = ?', [id]);
+    const role = (membership[0].role as string) || 'member';
+    if (role === 'viewer') {
+      return NextResponse.json({ error: 'Forbidden: Read-only members cannot delete tasks' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const permanent = searchParams.get('permanent') === 'true';
+
+    if (permanent) {
+      run('DELETE FROM tasks WHERE id = ?', [id]);
+    } else {
+      run('UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE id = ?', [Date.now(), Date.now(), id]);
+    }
     saveDb();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, softDeleted: !permanent });
   } catch (err) {
     console.error('DELETE /api/tasks/[id] error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

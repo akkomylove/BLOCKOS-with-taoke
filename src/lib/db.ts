@@ -110,6 +110,8 @@ function initSchema(database: Database) {
       title TEXT NOT NULL DEFAULT '无标题',
       icon TEXT,
       order_index INTEGER NOT NULL DEFAULT 0,
+      version INTEGER NOT NULL DEFAULT 1,
+      deleted_at INTEGER DEFAULT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -118,10 +120,18 @@ function initSchema(database: Database) {
       id TEXT PRIMARY KEY,
       page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
       type TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL DEFAULT '',
       meta TEXT NOT NULL DEFAULT '{}',
       parent_id TEXT,
+      group_id TEXT,
       order_index INTEGER NOT NULL DEFAULT 0,
+      x REAL NOT NULL DEFAULT 0,
+      y REAL NOT NULL DEFAULT 0,
+      width REAL NOT NULL DEFAULT 320,
+      height REAL NOT NULL DEFAULT 200,
+      collapsed INTEGER NOT NULL DEFAULT 0,
+      version INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -256,10 +266,28 @@ function initSchema(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_workflow_tasks_analysis ON workflow_tasks(analysis_id);
   `);
 
-  try {
-    database.run(`ALTER TABLE tasks ADD COLUMN start_date INTEGER`);
-  } catch {
-    // Column may already exist, ignore error
+  const safeAddColumns = [
+    'ALTER TABLE tasks ADD COLUMN start_date INTEGER',
+    'ALTER TABLE tasks ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE tasks ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE pages ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+    'ALTER TABLE pages ADD COLUMN deleted_at INTEGER',
+    'ALTER TABLE blocks ADD COLUMN title TEXT NOT NULL DEFAULT ""',
+    'ALTER TABLE blocks ADD COLUMN group_id TEXT',
+    'ALTER TABLE blocks ADD COLUMN x REAL NOT NULL DEFAULT 0',
+    'ALTER TABLE blocks ADD COLUMN y REAL NOT NULL DEFAULT 0',
+    'ALTER TABLE blocks ADD COLUMN width REAL NOT NULL DEFAULT 320',
+    'ALTER TABLE blocks ADD COLUMN height REAL NOT NULL DEFAULT 200',
+    'ALTER TABLE blocks ADD COLUMN collapsed INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE blocks ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+  ];
+
+  for (const sql of safeAddColumns) {
+    try {
+      database.run(sql);
+    } catch {
+      // Column may already exist, ignore error safely
+    }
   }
 }
 

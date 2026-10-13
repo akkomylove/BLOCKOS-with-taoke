@@ -161,6 +161,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not a project member' }, { status: 403 });
     }
 
+    const userRole = (membership[0].role as string) || 'member';
+    if (userRole === 'viewer') {
+      return NextResponse.json({ error: 'Forbidden: Read-only members cannot create tasks' }, { status: 403 });
+    }
+
     if (parentId) {
       const parentTask = query('SELECT * FROM tasks WHERE id = ? AND project_id = ?', [parentId, projectId]);
       if (parentTask.length === 0) {

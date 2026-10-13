@@ -22,6 +22,9 @@
 - [ADR-011: 无遮挡交互导览 (Draggable & Minimizable) 与画布全分辨率自适应缩放引擎治理 (Zero-Occlusion Tour & Canvas Responsive Auto-Fit Engine)](#adr-011-无遮挡交互导览-draggable--minimizable-与画布全分辨率自适应缩放引擎治理-zero-occlusion-tour--canvas-responsive-auto-fit-engine)
 - [ADR-012: 废除激进自适应缩放引擎、全面转向单列垂直居中排布与三向拉伸治理 (Removal of Auto-Zoom Engine, Centered Vertical Layout & 3-Way Resize)](#adr-012-废除激进自适应缩放引擎全面转向单列垂直居中排布与三向拉伸治理-removal-of-auto-zoom-engine-centered-vertical-layout--3-way-resize)
 - [ADR-013: 顶层工具栏响应式弹性自适应重构与功能聚合收纳机制 (Responsive Adaptive Toolbar & Unified Overflow Menu)](#adr-013-顶层工具栏响应式弹性自适应重构与功能聚合收纳机制-responsive-adaptive-toolbar--unified-overflow-menu)
+- [ADR-014: 视口漫游小地图 (Canvas Minimap) 与高度拉伸智能推移治理 (Viewport Minimap & Height Resize Push-down)](#adr-014-视口漫游小地图-canvas-minimap-与高度拉伸智能推移治理-viewport-minimap--height-resize-push-down)
+- [ADR-015: 系统首个稳定基准版本确立 (v1.0.0 Baseline Release Checkpoint)](#adr-015-系统首个稳定基准版本确立-v100-baseline-release-checkpoint)
+- [ADR-016: 第一阶段数据安全治理与保存链路闭环落地 (Data Persistence Pipeline, HMAC Auth, RBAC & Sandbox Isolation)](#adr-016-第一阶段数据安全治理与保存链路闭环落地-data-persistence-pipeline-hmac-auth-rbac--sandbox-isolation)
 
 ---
 
@@ -454,3 +457,71 @@
 - **单元测试**：Vitest 9 套测试套件、165 项用例 100% 绿色通过；
 - **生产构建**：Next.js 全量 38 个路由（含 API 与页面）编译打包 0 错误；
 - **视觉对比**：Light/Dark 双主题经过对比度矫正，文字与线框清晰锐利。
+
+---
+
+## 🏛️ ADR-016：第一阶段数据安全治理与保存链路闭环落地 (Data Persistence Pipeline, HMAC Auth, RBAC & Sandbox Isolation)
+
+- **日期**：2026-10-13
+- **决策状态**：已全面落地、验证通过并沉淀为工程宪法
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **对应规划项**：全盘 32 项产品优化规划中第 1—8 项（核心数据安全与保存基础），配合第 28 项（自动化测试用例）、第 29 项（架构与决策文档同步）。
+
+### 1. 背景与核心问题诊断
+在确立 v1.0.0 交互基准后，系统在实际生产与团队使用场景下面临底层数据链路与安全隐患：
+1. **保存链路 405 阻塞**：前端调用 `PUT /api/pages` 和 `PUT /api/pages/[id]/blocks` 时，服务端仅实现了 GET/POST，导致静默报错 405 Method Not Allowed；
+2. **PostgreSQL 全量覆盖隐患**：整份二进制 SQLite 文件 Base64 单字段覆盖存储，无法支持多人并发更新合并与细粒度版本检查；
+3. **身份伪造漏洞**：非生产/简单登录接口直接信任客户端明文 Cookie `demo-session: userId`，攻击者修改 Cookie 即可冒充任意管理员；
+4. **项目权限缺失**：接口层仅检查“是否为项目成员”，未区分 Owner、Admin、Member 与 Viewer，导致只读访客可随意增删改任务，普通成员可随意提权；
+5. **代码沙箱环境变量泄露**：代码执行接口直接以子进程运行外部代码，继承宿主所有系统环境变量，导致应用生产密钥面临泄露风险；
+6. **XSS 注入隐患**：ToggleBlock 直接使用 `dangerouslySetInnerHTML` 渲染用户输入，缺少 HTML 过滤机制；
+7. **多用户本地存储冲突**：Canvas 本地缓存固定使用单一名空间 `block-os-storage`，同一浏览器切换账号导致数据穿透；
+8. **缺乏数据恢复机制**：页面与任务物理硬删除，缺少软删除与回收站恢复能力。
+
+### 2. 架构设计与技术方案
+
+#### (1) 打通保存链路与前端状态感知（第 1 项）
+- **路由补齐**：`src/app/api/pages/route.ts` 与 `src/app/api/pages/[id]/blocks/route.ts` 完整导出 `PUT` 与 `POST` 方法，支持原子批量更新；
+- **Block 结构全量持久化**：统一映射 `id, pageId, type, title, content, meta, parentId, groupId, orderIndex, x, y, width, height, collapsed, version`，SQLite 表结构补齐相应字段并支持幂等迁移；
+- **前端状态指示与重试机制**：Zustand store 引入 `saveStatus: 'idle' | 'saving' | 'saved' | 'error'` 与 `retrySave()`，顶部工具栏显式渲染“保存中 / 已保存 / 保存失败(重试)”状态胶囊。
+
+#### (2) 乐观锁版本并发控制与实体保存（第 2 项）
+- 表结构增加 `version INTEGER NOT NULL DEFAULT 1`；
+- 更新接口支持并发冲突检测：若客户端提交过期版本，服务端返回 `409 Conflict` 并携带最新服务端版本号，拒绝覆盖他人的并发修改。
+
+#### (3) HMAC-SHA256 会话防篡改签名体系（第 3 项）
+- 设计 `createSignedSessionToken(userId)` 与 `verifySignedSessionToken(token)`；
+- 令牌格式采用 `userId.expiry.hmacSignature`，由服务端私钥 `AUTH_SECRET` 进行签名；
+- 客户端私自篡改 Cookie 或伪造用户 ID 将直接触发签名失效，服务端拦截并返回 `401 Unauthorized`；
+- 生产环境关闭任意 ID 快捷登录，Cookie 设置 `httpOnly: true, secure: true, sameSite: 'lax'`。
+
+#### (4) 统一 RBAC 项目权限矩阵（第 4 项）
+- 确立清晰的角色能力矩阵：
+  - **Owner**：拥有项目所有管理权限（删除项目、管理成员、全量读写任务）；
+  - **Admin**：管理成员与全量读写任务；
+  - **Member**：创建与修改任务，禁止邀请成员或调整角色；
+  - **Viewer**：严格只读，禁止创建、修改、删除任务或邀请成员；
+- 接口层（`tasks/route.ts`, `tasks/[id]/route.ts`, `projects/[id]/members/route.ts`）严格拦截越权操作并返回 `403 Forbidden`。
+
+#### (5) 代码执行沙箱安全隔离（第 5 项）
+- 改造 `src/app/api/run-code/route.ts`，彻底剥离宿主环境变量；
+- 仅向执行子进程注入严格白名单变量（`PATH, LANG, NODE_ENV, PYTHONUNBUFFERED, TMPDIR`），绝不传递 `ZHIPU_API_KEY`、`POSTGRES_URL` 等密钥；
+- 引入 3 秒看门狗超时中断机制（检测到死循环即时 SIGTERM 熔断）与 10KB 代码配额、50KB 缓冲区限制。
+
+#### (6) 全局 XSS 净化与输入校验（第 6 项）
+- 编写 `src/lib/sanitize.ts`，剥离 `<script>`, `<style>`, `<iframe>`, `onerror=`, `javascript:` 等所有执行标签与事件属性；
+- 移除 `ToggleBlock.tsx` 中的 `dangerouslySetInnerHTML`，使用受控纯文本输入；
+- 表格 CSV 限制 2MB、图片上传限制 5MB、Markdown 限制 2MB，防止超大异常数据撑爆内存。
+
+#### (7) 本地存储多账号隔离（第 7 项）
+- 前端 localStorage 引入 `block-os-storage-${userId}` 动态命名空间隔离；
+- `useBlockStore` 增加 `setCurrentUserId(userId)`，账号切换时加载对应的独立镜像，杜绝跨用户数据污染。
+
+#### (8) 软删除与回收站恢复能力（第 8 项）
+- `pages` 与 `tasks` 表增加 `deleted_at INTEGER DEFAULT NULL`；
+- DELETE 接口默认执行软删除，查询接口默认过滤已删除记录；
+- 提供 `POST /api/pages/[id]/restore` 与 `POST /api/tasks/[id]/restore` 实现一键恢复。
+
+### 3. 产出与验收度量（第 28 项）
+- **单元测试扩充**：新增 `pages-sync.test.ts`、`rbac.test.ts`、`run-code-sandbox.test.ts`、`sanitize.test.ts`，测试套件增加至 13 个，测试用例由 165 个增至 **185 个，100% 绿色通过**；
+- **生产构建验证**：Next.js 15 全量 38 个路由与中间件 `npm run build` 打包 **0 错误、0 警告阻断**。

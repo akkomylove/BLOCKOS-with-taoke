@@ -81,6 +81,12 @@ interface BlockStore {
   importFromCsv: (csv: string) => void;
   importImage: (base64: string, caption?: string) => void;
 
+  saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  saveError: string | null;
+  lastSavedAt: number | null;
+  currentUserId: string | null;
+  setCurrentUserId: (userId: string | null) => void;
+  retrySave: () => Promise<void>;
   syncToServer: () => Promise<void>;
   loadFromServer: (pageId: string) => Promise<void>;
   syncPages: () => Promise<void>;
@@ -291,6 +297,10 @@ export const useBlockStore = create<BlockStore>()(
       _hydrated: false,
       history: [],
       historyIndex: -1,
+      saveStatus: 'idle',
+      saveError: null,
+      lastSavedAt: null,
+      currentUserId: null,
 
       saveCurrentPageBlocks: () => {
         set((state) => {
@@ -849,11 +859,16 @@ export const useBlockStore = create<BlockStore>()(
       },
 
       importFromCsv: (csv) => {
+        if (!csv || typeof csv !== 'string') return;
+        if (csv.length > 2 * 1024 * 1024) {
+          console.warn('CSV 文件过大（超过 2MB 限制）');
+          return;
+        }
         const lines = csv.split('\n').filter((l) => l.trim());
         if (lines.length < 2) return;
 
         const headers = lines[0].split(',').map((h) => h.trim());
-        const rows = lines.slice(1).map((line) => {
+        const rows = lines.slice(1, 1000).map((line) => {
           const cells: string[] = [];
           let cell = '';
           let inQuotes = false;
@@ -880,6 +895,11 @@ export const useBlockStore = create<BlockStore>()(
       },
 
       importImage: (base64, caption) => {
+        if (!base64 || typeof base64 !== 'string') return;
+        if (base64.length > 7 * 1024 * 1024) {
+          console.warn('图片数据过大（超过 5MB 限制）');
+          return;
+        }
         const block = createEmptyBlock('media');
         block.content = base64;
         block.meta.caption = caption;
@@ -889,17 +909,93 @@ export const useBlockStore = create<BlockStore>()(
         get().saveHistory();
       },
 
+      setCurrentUserId: (userId) => {
+        const prevId = get().currentUserId;
+        if (prevId === userId) return;
+        set((state) => {
+          state.currentUserId = userId;
+        });
+        if (typeof window !== 'undefined' && userId) {
+          try {
+            const userStoreKey = `block-os-storage-${userId}`;
+            const cached = localStorage.getItem(userStoreKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed?.state?.pages) {
+                set((state) => {
+                  state.pages = parsed.state.pages || [];
+                  state.folders = parsed.state.folders || [];
+                  state.groups = parsed.state.groups || [];
+                  state.currentPageId = parsed.state.currentPageId || state.currentPageId;
+                  state.pageBlocks = parsed.state.pageBlocks || {};
+                  state.blocks = parsed.state.pageBlocks?.[state.currentPageId] || [];
+                });
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to load user-isolated storage:', e);
+          }
+        }
+      },
+
       syncToServer: async () => {
-        const { currentPageId, blocks } = get();
+        const { currentPageId, blocks, currentUserId } = get();
+        if (!currentPageId) return;
+
+        set((state) => {
+          state.saveStatus = 'saving';
+          state.saveError = null;
+        });
+
         try {
-          await fetch(`/api/pages/${currentPageId}/blocks`, {
+          const res = await fetch(`/api/pages/${currentPageId}/blocks`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ blocks }),
           });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `保存失败 HTTP ${res.status}`);
+          }
+
+          set((state) => {
+            state.saveStatus = 'saved';
+            state.lastSavedAt = Date.now();
+            state.saveError = null;
+          });
+
+          // 用户隔离本地镜像持久化
+          if (typeof window !== 'undefined' && currentUserId) {
+            try {
+              localStorage.setItem(
+                `block-os-storage-${currentUserId}`,
+                JSON.stringify({
+                  state: {
+                    pages: get().pages,
+                    folders: get().folders,
+                    groups: get().groups,
+                    currentPageId,
+                    pageBlocks: get().pageBlocks,
+                  },
+                })
+              );
+            } catch {
+              // Ignore localStorage quota errors
+            }
+          }
         } catch (err) {
-          console.error('Sync failed:', err);
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error('Sync failed:', msg);
+          set((state) => {
+            state.saveStatus = 'error';
+            state.saveError = msg;
+          });
         }
+      },
+
+      retrySave: async () => {
+        await get().syncToServer();
       },
 
       loadFromServer: async (pageId) => {
@@ -907,7 +1003,7 @@ export const useBlockStore = create<BlockStore>()(
           const res = await fetch(`/api/pages/${pageId}/blocks`);
           if (res.ok) {
             const data = await res.json();
-            if (Array.isArray(data.blocks) && data.blocks.length > 0) {
+            if (Array.isArray(data.blocks)) {
               set((state) => {
                 state.pageBlocks[pageId] = data.blocks;
                 if (state.currentPageId === pageId) {
@@ -924,11 +1020,14 @@ export const useBlockStore = create<BlockStore>()(
       syncPages: async () => {
         const { pages } = get();
         try {
-          await fetch('/api/pages', {
+          const res = await fetch('/api/pages', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pages }),
           });
+          if (!res.ok) {
+            console.error('Pages sync failed HTTP', res.status);
+          }
         } catch (err) {
           console.error('Pages sync failed:', err);
         }

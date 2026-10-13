@@ -8,22 +8,26 @@
 
 ## 🎯 一、 基准版本里程碑与系统基线 (Baseline Release Status)
 
-当前版本已被项目决策者正式拍板定位为**稳定基准版本**：
-- **测试基准**：Vitest 9 套测试套件、165 项单元测试 100% 绿色通过；
-- **构建基准**：Next.js 全量 38 个路由（含 API、服务端渲染与静态页面）编译打包 0 错误；
-- **大模型基准**：智谱 `GLM-4.7-Flash` 原生 Key 流式对接调通，支持毫秒级流式吐字；
-- **布局基准**：彻底消除预置文档三组 Block 重叠，贯通 DOM 高度继承，支持智能下推避让；
-- **交互基准**：配备鹰眼小地图（Canvas Minimap）、平滑新手导览与自适应折叠顶栏。
+当前版本已完成第一批（第 1—8 项，配合 28、29 项）核心数据安全与保存链路重构：
+- **测试基准**：Vitest 13 套测试套件、**185 项单元与集成测试 100% 绿色通过**（新增 20 项核心测试用例）；
+- **构建基准**：Next.js 15 全量 38 个路由与中间件生产构建 `npm run build` 0 错误通过；
+- **保存链路打通**：服务端补齐 `PUT /api/pages` 与 `PUT /api/pages/[id]/blocks`，支持 Block 全量布局属性（x/y/w/h/collapsed/title/groupId）持久化；前端工具栏显式提供“保存中/已保存/失败重试”状态气泡；
+- **并发乐观锁**：页面与 Block 表结构支持 `version` 自动递增与冲突检测，并发旧版本覆盖自动返回 409 Conflict；
+- **认证安全加固**：会话全面采用 HMAC-SHA256 服务端签名，篡改 Cookie 强制 401 拦截；生产环境阻断未授权快捷登录；
+- **RBAC 统一落权**：Owner/Admin/Member/Viewer 四级权限矩阵落实，Viewer 只读成员强拦截增删改任务，普通 Member 强拦截提权与邀请；
+- **代码沙箱隔离**：彻底剥离子进程系统环境变量，绝不暴露应用敏感密钥；引入 3 秒看门狗超时熔断与配额保护；
+- **XSS 防护与清洗**：移除 ToggleBlock 内联 HTML 渲染；引入通用 `sanitizeHtml` 库剥离脚本；加入大文件保护拦截；
+- **缓存隔离与软删除**：画布 localStorage 按用户 ID 隔离；补齐页面/任务软删除与回收站一键恢复接口。
 
 ---
 
 ## 🏗️ 二、 核心架构与技术栈拓扑 (Architecture Topology)
 
 - **前端技术栈**：Next.js 15 (App Router), React 19, Tailwind CSS 3, Lucide Icons, dnd-kit (拖拽系统);
-- **全局状态管理**：Zustand 5 (`src/store/blockStore.ts` 结合 localStorage 持久化与水合版本控制);
+- **全局状态管理**：Zustand 5 (`src/store/blockStore.ts` 按用户隔离命名空间存储，集成同步保存感知与重试);
 - **AI 智能体引擎**：Vercel AI SDK (`ai`), 智谱开放平台 API (`glm-4.7-flash` 模型);
-- **代码执行沙箱**：内置前端安全沙箱运行环境，支持 JavaScript / TypeScript / Python 模拟执行与控制台捕获;
-- **数据持久化与契约**：Prisma ORM, SQLite/PostgreSQL 数据模型向下兼容。
+- **代码执行沙箱**：Node.js 安全隔离子进程，剥离系统环境变量，3秒超时熔断看门狗;
+- **数据持久化与安全**：Hybrid WebAssembly SQLite (sql.js) + Neon Postgres 双向同步，HMAC-SHA256 签名会话，RBAC 细粒度拦截。
 
 ---
 
@@ -34,25 +38,24 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── ai/                # AI 接口集群 (block-action, copilot, analyze, chat, 等)
-│   │   ├── pages/             # 页面与 Block CRUD API
-│   │   └── teams/             # 团队与协同任务 API
+│   │   ├── auth/              # 会话鉴权 (HMAC-SHA256 签名、登出、用户信息)
+│   │   ├── pages/             # 页面与 Block 实体级同步 API (支持 PUT、版本乐观锁、软删除与恢复)
+│   │   ├── run-code/          # 安全隔离代码沙箱 (剥离环境变量、3s超时看门狗)
+│   │   └── tasks/             # 任务与协同 API (RBAC 权限守卫、软删除与恢复)
 │   ├── page.tsx               # 画布主应用入口
 │   └── layout.tsx             # 全局根布局
 ├── components/
 │   ├── BlockEditor.tsx        # 无界画布主引擎 (平移漫游、框选、拖拽拉伸、事件分发)
 │   ├── CanvasMinimap.tsx      # 鹰眼缩略图导航器 (包围盒计算、微缩渲染、拖拽漫游、全览居中)
 │   ├── SortableBlock.tsx      # 单卡片骨架、拖拽手柄、AI 专属菜单触发器
-│   ├── OnboardingTour.tsx     # 沉浸式新手引导系统 (平滑定位、聚光灯镂空、快捷键、最小化胶囊)
-│   ├── Toolbar.tsx            # 响应式全局指挥顶栏 (更多下拉收纳、角色透视、审计日志入口)
-│   ├── BlockOSApp.tsx         # 应用主编排中枢 (状态水合、抽屉管理、全局快捷键)
-│   └── blocks/                # 原子 Block 渲染器 (TextBlock, TodoBlock, CodeBlock, TableBlock 等)
-├── config/
-│   └── presetDocuments.ts     # 预置官方模板库 (新手指南 doc-guide, PRD, 技术方案等)
+│   ├── Toolbar.tsx            # 响应式全局指挥顶栏 (显式保存状态胶囊、更多下拉收纳、用户状态)
+│   └── blocks/                # 原子 Block 渲染器 (纯文本受控渲染、无 XSS 隐患)
 ├── store/
-│   └── blockStore.ts          # 画布原子状态树、页面树、Agent 规则引擎与历史撤销重做
+│   └── blockStore.ts          # 画布原子状态树、用户隔离存储、保存状态感知与重试
 └── lib/
-    ├── ai-provider.ts         # 智谱 GLM 模型 Provider 适配层
-    └── db.ts                  # 本地/服务端持久化驱动
+    ├── auth-utils.ts          # HMAC 会话签名验证、统一 RBAC checkProjectPermission 守卫
+    ├── db.ts                  # SQLite 幂等结构迁移 (version, deleted_at, 完整 Block 列)
+    └── sanitize.ts            # 全局 XSS 净化与输入安全防御库
 ```
 
 ---
@@ -61,32 +64,28 @@ src/
 
 在本项目开发与调优中沉淀的典型疑难问题与跨项目通用解法：
 
-### 1. Chrome 远程调试 (Remote Debugging) 404 阻断机制
-- **踩坑现象**：在 `chrome://inspect/#remote-debugging` 勾选了“Allow remote debugging”，端口 9222 也能查到 Chrome 在监听，但外部工具请求 `/json/version` 持续返回 404，IDE 频繁弹窗提示重试。
-- **解法备忘**：Chrome 128+ 引入了二次确认安全气泡。勾选后必须在**右上角扩展栏旁边点击紫色的「允许远程调试吗？」气泡并确认**，端点才会真正对外放行。若需彻底免确认，需在启动 Chrome 时注入 `--remote-debugging-port=9222 --user-data-dir="C:\ChromeDebug"` 参数。
+### 1. HTTP 405 Method Not Allowed 静默失败治理
+- **踩坑现象**：前端发起了 `PUT /api/pages` 或 `PUT /api/pages/[id]/blocks`，但服务端 Route Handler 仅导出了 `GET` 和 `POST`，导致网络面板返回 405，前端静默失败未报错但数据永久丢失。
+- **解法备忘**：前后端契约必须严格 1:1 对齐。在 Route Handler 中显式导出 `PUT` 与 `POST`，并在 store 中维护显式 `saveStatus: 'idle' | 'saving' | 'saved' | 'error'`，失败时在 UI 呈现错误胶囊与重试按钮。
 
-### 2. 画布绝对定位体系下的多层 DOM 高度继承 (Height Inheritance)
-- **踩坑现象**：外层容器设置了拉伸高度，把手跑到了底部，但内层卡片依然缩在自然内容高度，导致把手悬空形成“虚拟标”。
-- **解法备忘**：绝对定位或弹性布局下的拉伸，必须自顶向下贯通 `h-full min-h-0 flex-1 flex flex-col`；同时在 store 更新高度时，引入**智能推移（Smart Push-down）**，检测下方垂直重叠的同列卡片并平移避让 60px，避免大卡片压顶。
+### 2. Node.js 子进程环境变量泄露漏洞
+- **踩坑现象**：`child_process.exec()` 默认会把应用进程的所有 `process.env`（包括大模型 API Key、数据库连接串、Session Secret）透传给外部执行代码，导致恶意用户通过打印环境变量即可盗取全站秘钥。
+- **解法备忘**：调用子进程时必须显式指定白名单 `env: { PATH, LANG, NODE_ENV, TMPDIR }`，且在 Windows 下需通过 `err.killed` / `SIGTERM` / `ETIMEDOUT` 准确检测超时状态。
 
-### 3. Next.js 15 Turbopack 编译缓存与 build 冲突
-- **踩坑现象**：在 `next dev --turbopack` 运行期间如果在同一目录执行 `npm run build`，生产构建会重写 `.next`，导致 dev 进程抛出 `build-manifest.json ENOENT` 500 报错。
-- **解法备忘**：执行 production build 前先终止 dev 守护进程，或者构建完成后优雅重启 dev 进程。
-
-### 4. 智谱大模型接入契约规范
-- **踩坑现象**：智谱开放平台 API Key 格式为 `id.secret`，对接 Vercel AI SDK 的 OpenAI 兼容层时，Base URL 需标准对齐 `https://open.bigmodel.cn/api/paas/v4`，模型推荐使用免费且响应极速的 `glm-4.7-flash`。
+### 3. 多账号同一浏览器数据穿透
+- **踩坑现象**：Zustand persist 使用固定 key `blockos-storage`，用户登出或切换账号时，旧账号的数据仍在本地展示。
+- **解法备忘**：缓存 key 采用动态命名空间 `block-os-storage-${userId}`，在用户登录及初始化时根据当前会话载入独立缓存镜像。
 
 ---
 
 ## 🚀 五、 后续演进路线建议 (Next Phase Roadmap)
 
-在确立当前基准版本后，推荐的后续功能迭代方向：
-1. **多模态 Block 深度扩充**：
-   - 增强白板（Excalidraw 矢量绘图嵌入）与脑图（Markmap 节点动态双向编辑）；
-   - 增加图表 Block（Chart.js / ECharts 结构化数据一键可视化）；
-2. **Agent 规则引擎可视化编排器**：
-   - 目前规则在 `agentRules` 中以条件执行，后续可提供可视化“触发器 ➔ 动作流 (If-This-Then-That)”编排面板；
-3. **多人协同与实时光标 (CRDT / WebSocket)**：
-   - 支持多用户多人同屏在线协作，显示多方彩色鼠标光标与选区锁定；
-4. **离线优先与云端多端同步**：
-   - 强化 IndexedDB 离线缓存与服务端定期增量同步。
+第二批（第 9—16 项）核心产品价值路线：
+1. **结构化需求对象与业务级连线（第 9、10 项）**：
+   - 需求稳定编号（REQ-001）、负责人、优先级与验收标准，让连线具备“实现/验证/依赖”语义；
+2. **需求变更影响分析与高质量 AI 拆解（第 11、12 项）**：
+   - 修改需求后自动沿拓扑链路高亮受影响的下游任务；拆解任务附带交付物与验收条件；
+3. **团队角色匹配与交付状态流转（第 13、14 项）**：
+   - 将“完成/验收/交付”状态解耦，引入“待验收、验收通过、退回”机制，杜绝简单勾选伪装交付；
+4. **统一多视角数据源与团队邀请协同（第 15、16 项）**：
+   - 文档、画布、看板、甘特图共享同一批领域对象；完善邀请链接与对象级讨论。

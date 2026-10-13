@@ -35,9 +35,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
+    const isOwner = project[0].owner_id === currentUserId;
     const projectMembership = query('SELECT * FROM project_members WHERE project_id = ? AND user_id = ?', [id, currentUserId]);
-    if (projectMembership.length === 0) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const callerRole = projectMembership.length > 0 ? (projectMembership[0].role as string) : null;
+
+    if (!isOwner && callerRole !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Only project owner or admin can add members' }, { status: 403 });
     }
 
     const teamMembership = query('SELECT * FROM team_members WHERE team_id = ? AND user_id = ?', [project[0].team_id as string, userId]);
@@ -80,9 +83,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Valid userId is required' }, { status: 400 });
     }
 
-    const validRoles = ['owner', 'admin', 'member'];
+    const validRoles = ['owner', 'admin', 'member', 'viewer'];
     if (typeof role !== 'string' || !validRoles.includes(role)) {
-      return NextResponse.json({ error: 'Role must be one of: owner, admin, member' }, { status: 400 });
+      return NextResponse.json({ error: 'Role must be one of: owner, admin, member, viewer' }, { status: 400 });
     }
 
     await getDb();

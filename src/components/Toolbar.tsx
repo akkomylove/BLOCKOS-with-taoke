@@ -7,7 +7,7 @@ import {
   Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
   Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
   LogOut, UserCircle, LayoutGrid, BarChart3, BrainCircuit,
-  ClipboardCheck, Link2, MoreHorizontal
+  ClipboardCheck, Link2, MoreHorizontal, Loader2, Check, AlertCircle, MessageSquare
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useBlockStore } from '@/store/blockStore';
@@ -58,6 +58,10 @@ export default function Toolbar({
   const updatePageTitle = useBlockStore((state) => state.updatePageTitle);
   const blocks = useBlockStore((state) => state.blocks);
   const updateBlock = useBlockStore((state) => state.updateBlock);
+  const saveStatus = useBlockStore((state) => state.saveStatus);
+  const saveError = useBlockStore((state) => state.saveError);
+  const retrySave = useBlockStore((state) => state.retrySave);
+  const setCurrentUserId = useBlockStore((state) => state.setCurrentUserId);
   const { theme, toggleTheme } = useTheme();
 
   const currentPage = pages.find((p) => p.id === currentPageId);
@@ -75,13 +79,16 @@ export default function Toolbar({
         if (res.ok) {
           const data = await res.json();
           setUserName(data.name || '用户');
+          if (data.id) {
+            setCurrentUserId(data.id);
+          }
         }
       } catch (err) {
         console.error('Failed to load user info:', err);
       }
     };
     loadUserInfo();
-  }, []);
+  }, [setCurrentUserId]);
 
   const handleLogout = async () => {
     try {
@@ -146,6 +153,29 @@ export default function Toolbar({
             onChange={(e) => updatePageTitle(currentPage.id, e.target.value)}
             title={currentPage.title}
           />
+        )}
+        {/* 保存状态胶囊 */}
+        {saveStatus === 'saving' && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span className="hidden md:inline">保存中</span>
+          </span>
+        )}
+        {saveStatus === 'saved' && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0" title="已同步至云端">
+            <Check className="w-3 h-3" />
+            <span className="hidden md:inline">已保存</span>
+          </span>
+        )}
+        {saveStatus === 'error' && (
+          <button
+            onClick={() => retrySave()}
+            className="inline-flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 px-1.5 py-0.5 rounded border border-rose-500/30 shrink-0 transition-colors cursor-pointer"
+            title={saveError || '云端同步失败，点击重新同步'}
+          >
+            <AlertCircle className="w-3 h-3" />
+            <span>保存失败 (重试)</span>
+          </button>
         )}
       </div>
 

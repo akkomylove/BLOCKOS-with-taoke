@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     await getDb();
 
-    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
+    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
     if (pages.length === 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -26,7 +26,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [id]);
 
     return NextResponse.json({
-      page: pages[0],
+      page: {
+        id: pages[0].id,
+        userId: pages[0].user_id,
+        title: pages[0].title || '无标题',
+        icon: pages[0].icon || '📄',
+        orderIndex: pages[0].order_index ?? 0,
+        version: pages[0].version ?? 1,
+        deletedAt: pages[0].deleted_at || null,
+        createdAt: pages[0].created_at,
+        updatedAt: pages[0].updated_at,
+      },
       blocks: blocks.map((b) => ({
         id: b.id,
         type: b.type,
@@ -34,11 +44,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         content: b.content || '',
         meta: JSON.parse((b.meta as string) || '{}'),
         parentId: b.parent_id || null,
+        groupId: b.group_id || null,
         order: b.order_index ?? 0,
         x: (b.x as number) ?? 0,
         y: (b.y as number) ?? 0,
         width: (b.width as number) ?? 320,
+        height: (b.height as number) ?? 200,
         collapsed: b.collapsed === 1,
+        version: b.version ?? 1,
         createdAt: b.created_at,
         updatedAt: b.updated_at,
       })),
@@ -59,19 +72,37 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
-    const { title, icon } = await req.json();
+    const body = await req.json();
+    const { title, icon, version } = body;
 
     if (!isValidNanoid(id)) {
       return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
     }
     await getDb();
+
+    const existing = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
+    if (existing.length === 0) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    const currentVersion = (existing[0].version as number) || 1;
+    if (typeof version === 'number' && version !== currentVersion) {
+      return NextResponse.json(
+        { error: 'Conflict: Page has been modified by another operation', currentVersion },
+        { status: 409 }
+      );
+    }
+
+    const nextVersion = currentVersion + 1;
+    const now = Date.now();
+
     run(
-      'UPDATE pages SET title = ?, icon = ?, updated_at = ? WHERE id = ? AND user_id = ?',
-      [title, icon || '📄', Date.now(), id, userId]
+      'UPDATE pages SET title = ?, icon = ?, version = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+      [title ?? existing[0].title, icon ?? existing[0].icon, nextVersion, now, id, userId]
     );
     saveDb();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, version: nextVersion });
   } catch (err) {
     console.error('PUT /api/pages/[id] error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -88,15 +119,23 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const permanent = searchParams.get('permanent') === 'true';
 
     if (!isValidNanoid(id)) {
       return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
     }
     await getDb();
-    run('DELETE FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
+
+    if (permanent) {
+      run('DELETE FROM blocks WHERE page_id = ?', [id]);
+      run('DELETE FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
+    } else {
+      run('UPDATE pages SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?', [Date.now(), Date.now(), id, userId]);
+    }
     saveDb();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, softDeleted: !permanent });
   } catch (err) {
     console.error('DELETE /api/pages/[id] error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

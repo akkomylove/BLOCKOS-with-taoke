@@ -5,6 +5,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { Edit3, Eye, Sigma, FunctionSquare, Grid3X3 } from 'lucide-react';
 import { TbMathIntegral } from 'react-icons/tb';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface MathBlockProps {
   content: string;
@@ -121,7 +122,7 @@ export default function MathBlock({ content, onChange, readOnly }: MathBlockProp
         <div className="w-full min-h-[60px] flex items-center justify-center bg-gray-100/50 dark:bg-zinc-900/50 rounded-lg border border-gray-200/50 dark:border-zinc-800/50 px-4 py-3">
           {latex.trim() ? (
             rendered ? (
-              <div className="text-gray-800 dark:text-zinc-200" dangerouslySetInnerHTML={{ __html: rendered }} />
+              <div className="text-gray-800 dark:text-zinc-200" dangerouslySetInnerHTML={{ __html: sanitizeHtml(rendered) }} />
             ) : (
               <span className="text-xs text-red-400">{error || '渲染失败'}</span>
             )
