@@ -52,7 +52,7 @@ export default function SortableBlock({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative flex items-start gap-1.5 px-3 py-2 rounded-lg transition-all duration-150 ${
+      className={`group relative flex items-start gap-1.5 px-3 py-2 rounded-lg transition-all duration-150 h-full ${
         isSelected
           ? 'bg-gray-200/60 dark:bg-zinc-700/60 border-l-2 border-blue-400'
           : 'hover:bg-gray-100/60 dark:hover:bg-zinc-800/60 border-l-2 border-transparent'
@@ -72,7 +72,7 @@ export default function SortableBlock({
         <GripVertical className="w-3.5 h-3.5" />
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col h-full">
         <BlockRenderer block={block} isSelected={isSelected} />
         {block.meta.links && block.meta.links.length > 0 && (
           <div className="flex items-center gap-1.5 mt-1.5">

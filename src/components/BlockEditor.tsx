@@ -525,22 +525,22 @@ export default function BlockEditor({
     return (
       <div
         key={block.id}
-        className={`${depth === 0 ? 'absolute group/block' : 'relative group/block'}`}
+        className={`${depth === 0 ? 'absolute group/block' : 'relative group/block'} flex flex-col`}
         style={depth === 0 ? {
           left: block.x,
           top: block.y,
           width: block.width,
-          ...(block.height ? { minHeight: `${block.height}px` } : {}),
+          ...(block.height ? { height: `${block.height}px` } : {}),
         } : {
           width: block.width,
-          ...(block.height ? { minHeight: `${block.height}px` } : {}),
+          ...(block.height ? { height: `${block.height}px` } : {}),
         }}
         data-block-id={block.id}
         data-tour={block.id}
       >
-        <div className={depth > 0 ? 'ml-4 mt-1' : ''}>
+        <div className={`h-full flex-1 flex flex-col min-h-0 ${depth > 0 ? 'ml-4 mt-1' : ''}`}>
           <div
-            className={`rounded-lg border transition-all ${
+            className={`h-full flex-1 flex flex-col min-h-0 rounded-lg border transition-all ${
               selectedIds.includes(block.id)
                 ? 'border-blue-400/60 shadow-lg shadow-blue-500/10'
                 : isChild
@@ -549,7 +549,7 @@ export default function BlockEditor({
             } bg-white dark:bg-zinc-900 backdrop-blur-sm`}
           >
             <div
-              className={`flex items-center gap-1 h-7 px-2 cursor-grab active:cursor-grabbing border-b ${
+              className={`shrink-0 flex items-center gap-1 h-7 px-2 cursor-grab active:cursor-grabbing border-b ${
                 isChild ? 'border-blue-300/40 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/25' : 'border-gray-200/40 dark:border-zinc-700/40'
               }`}
               onMouseDown={(e) => startDragBlock(block.id, e)}
@@ -623,20 +623,20 @@ export default function BlockEditor({
             </div>
 
             {!block.collapsed && (
-              <div className="px-3 py-2">
+              <div className="flex-1 min-h-0 px-3 py-2 overflow-auto flex flex-col">
                 <SortableBlock
-                      block={block}
-                      isSelected={selectedIds.includes(block.id)}
-                      onSelect={handleSelect}
-                      onOpenAIMenu={handleOpenAIMenu}
-                      isLinkTarget={linkMode && linkSource !== block.id}
-                      isLinkSource={linkMode && linkSource === block.id}
-                    />
+                  block={block}
+                  isSelected={selectedIds.includes(block.id)}
+                  onSelect={handleSelect}
+                  onOpenAIMenu={handleOpenAIMenu}
+                  isLinkTarget={linkMode && linkSource !== block.id}
+                  isLinkSource={linkMode && linkSource === block.id}
+                />
               </div>
             )}
 
             {!block.collapsed && children.length > 0 && (
-              <div className="pb-2">
+              <div className="shrink-0 pb-2">
                 {children.map((child) => renderBlockTree(child, depth + 1))}
               </div>
             )}

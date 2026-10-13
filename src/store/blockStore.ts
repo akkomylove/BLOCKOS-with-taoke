@@ -573,9 +573,23 @@ export const useBlockStore = create<BlockStore>()(
         set((state) => {
           const block = state.blocks.find((b) => b.id === id);
           if (block) {
+            const oldHeight = block.height || 200;
             block.width = width;
             if (height !== undefined) {
               block.height = height;
+              // 智能避让与推移：若拉伸高度变大且底部推挤了下方处于同一垂直投影列的 Block，自动将下方 Block 平滑向下推开
+              if (height > oldHeight) {
+                const blockBottom = block.y + height;
+                state.blocks.forEach((other) => {
+                  if (other.id !== id && !other.parentId) {
+                    const hOverlap = !(other.x + (other.width || 760) < block.x || other.x > block.x + (block.width || 760));
+                    if (hOverlap && other.y > block.y && other.y < blockBottom + 50) {
+                      other.y = Math.round(blockBottom + 60);
+                      other.updatedAt = Date.now();
+                    }
+                  }
+                });
+              }
             }
             block.updatedAt = Date.now();
           }
