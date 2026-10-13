@@ -195,21 +195,20 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
     });
   }, [currentStep, step]);
 
-  // 当步骤切换时，重置用户手动拖拽标志，自动平滑滚动目标到可视区域并重新计算非遮挡位置
   useEffect(() => {
     hasUserDraggedRef.current = false;
-    const el = document.querySelector(step.targetSelector) as HTMLElement | null;
-    if (el) {
-      try {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-      } catch {
-        // ignore scroll error
-      }
+    const targetBlockMatch = step.targetSelector.match(/guide-block-[a-z]+/);
+    if (targetBlockMatch) {
+      window.dispatchEvent(
+        new CustomEvent('blockos-scroll-to-block', { detail: { blockId: targetBlockMatch[0] } })
+      );
     }
-
-    updateTargetAndCardPos();
-    const timer = setTimeout(updateTargetAndCardPos, 150);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(updateTargetAndCardPos, 80);
+    const timer2 = setTimeout(updateTargetAndCardPos, 220);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(timer2);
+    };
   }, [currentStep, step, updateTargetAndCardPos]);
 
   // 监听窗口 resize 与滚动

@@ -20,6 +20,7 @@
 - [ADR-009: 新手交互式引导重构与入门画布实验场落地 (Interactive Spotlight Onboarding & Playground Canvas)](#adr-009-新手交互式引导重构与入门画布实验场落地-interactive-spotlight-onboarding--playground-canvas)
 - [ADR-010: 飞书/钉钉风格官方新手入门系统重塑与 Agent 衍生卡片垂直避让排布治理 (Enterprise Onboarding & Vertical Avoidance Layout)](#adr-010-飞书钉钉风格官方新手入门系统重塑与-agent-衍生卡片垂直避让排布治理-enterprise-onboarding--vertical-avoidance-layout)
 - [ADR-011: 无遮挡交互导览 (Draggable & Minimizable) 与画布全分辨率自适应缩放引擎治理 (Zero-Occlusion Tour & Canvas Responsive Auto-Fit Engine)](#adr-011-无遮挡交互导览-draggable--minimizable-与画布全分辨率自适应缩放引擎治理-zero-occlusion-tour--canvas-responsive-auto-fit-engine)
+- [ADR-012: 废除激进自适应缩放引擎、全面转向单列垂直居中排布与三向拉伸治理 (Removal of Auto-Zoom Engine, Centered Vertical Layout & 3-Way Resize)](#adr-012-废除激进自适应缩放引擎全面转向单列垂直居中排布与三向拉伸治理-removal-of-auto-zoom-engine-centered-vertical-layout--3-way-resize)
 
 ---
 
@@ -285,3 +286,44 @@
 ### 3. 质量验证与基线
 - 运行 `npm run test:run`：9 个套件、165/165 测试 100% 绿色全通；
 - 运行 `npm run build`：Next.js 全站 38 个路由生产打包 100% 成功。
+
+---
+
+## ADR-012: 废除激进自适应缩放引擎、全面转向单列垂直居中排布与三向拉伸治理 (Removal of Auto-Zoom Engine, Centered Vertical Layout & 3-Way Resize)
+
+### 1. 业务痛点与用户实测推翻
+在落地 ADR-011 的“画布全分辨率自适应缩放引擎”后，用户实机体验遭遇严重交互挫败，明确下达决策指令推倒重做：
+1. **自动缩放突兀与阅读崩塌**：拖动或渲染时画布突兀缩小（自动缩放至 59%），字号过小导致无法看清内容；拖拽到边界时体验极差；
+2. **Block 拉伸维度单一且表格文字截断**：原系统 Block 仅支持左右拉伸，不支持上下垂直拉伸，导致长文本和表格无法完整展示；表格单元格受单行 input 限制出现文字硬截断；
+3. **右向拉伸全局文字被意外选中**：拉伸手柄未做 `user-select: none` 和事件默认阻断，鼠标右向拖拽时直接触发浏览器全局文本选区高亮；
+4. **左右双列依然存在纵向物理碰撞**：在双列布局下，Block 3（单块 AI，高约 280px）与 Block 4（代码沙箱，y: 260）在物理坐标上重叠。用户明确指示：“建议先全部竖着往下展示，居中排列，整个 Block 一个一个往下展示，不用左右两排分”。
+
+### 2. 决策方案与架构重构
+1. **彻底废除自适应缩放引擎，回归 100% 原始比例白板**：
+   - 彻底移除 `autoFitView`、`ResizeObserver` 及自动动态计算 `scale/pan` 的逻辑；
+   - 画布初始视口稳定锁定在 100% 原始缩放（`zoom: 1, pan: { x: 0, y: 0 }`），杜绝任何自动跳变和突兀缩小；
+   - 仅保留底栏原生的手动 `+ / − / Reset (100%)` 缩放控制。
+2. **全面重构为单列垂直居中排布 (`presetDocuments.ts`)**：
+   - 入门指引文档（`doc-guide`）全面废弃双列，改为统一定宽（760px）、居中排布（`x: 100`）的单列自上而下瀑布流：
+     - Block 1 (欢迎与核心概念): `y: 40, width: 760`
+     - Block 2 (Agent 待办任务自驱动): `y: 320, width: 760`（保留纵向缓冲带供 Agent 衍生报告与 Checklist 排布）
+     - Block 3 (单 Block AI 智能重塑): `y: 800, width: 760`
+     - Block 4 (交互式代码沙箱): `y: 1060, width: 760`
+     - Block 5 (多维结构化表格): `y: 1380, width: 760`
+     - Block 6 (角色透视与看板视图): `y: 1680, width: 760`
+   - 从物理坐标拓扑上彻底根除 Block 3 与 Block 4 叠放冲突。
+3. **支持 Block 三向自由拉伸与全向尺寸控制 (`BlockEditor.tsx`)**：
+   - 在 `Block` 接口增加可选属性 `height?: number`，`resizeBlock` 支持宽与高的双向调整；
+   - 为 Block 增加三处微交互拉伸把手：
+     - **右边缘**（`cursor: ew-resize`）：横向宽度调节；
+     - **底边缘**（`cursor: ns-resize`）：纵向高度调节；
+     - **右下角**（`cursor: nwse-resize`）：对角线宽高双向调节；
+   - **杜绝文字全选 Bug**：拉伸期间主动调用 `e.preventDefault()`、`window.getSelection()?.removeAllRanges()`，并向 `document.body.style.userSelect = 'none'` 施加全局文本选区抑制，松手时无缝还原。
+4. **多维表格长文本自适应呈现 (`TableBlock.tsx`)**：
+   - 将只读与默认渲染态由单行 `<input>` 升级为带 `whitespace-pre-wrap` 的动态 `div`；编辑态切换为多行 `<textarea>`，彻底解决文字被硬性切断。
+5. **视口平滑定位引导 (`OnboardingTour.tsx`)**：
+   - 适配单列布局，每一步导览通过自定义事件 `blockos-scroll-to-block` 平滑驱动画布平移（`pan.y`），确保聚焦的目标卡片始终在视口黄金阅读区。
+
+### 3. 质量验证与基线
+- 单元测试：165 个测试用例（9 个套件）100% 通过；
+- 生产构建：全站 38 个路由生产构建成功，零类型与编译报错。

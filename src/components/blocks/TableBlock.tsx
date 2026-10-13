@@ -143,13 +143,16 @@ export default function TableBlock({ data, onChange, readOnly }: TableBlockProps
           />
         );
       default:
-        return (
-          <input
-            type="text"
+        return readOnly ? (
+          <div className="w-full text-xs text-gray-800 dark:text-zinc-200 whitespace-normal break-words py-1 leading-relaxed">
+            {value}
+          </div>
+        ) : (
+          <textarea
             value={value}
             onChange={(e) => updateCell(rowIndex, colIndex, e.target.value)}
-            className="w-full bg-transparent text-center text-sm text-zinc-200 outline-none"
-            readOnly={readOnly}
+            rows={Math.max(1, Math.min(4, Math.ceil((value?.length || 0) / 20)))}
+            className="w-full bg-transparent text-xs text-gray-800 dark:text-zinc-200 outline-none resize-none leading-relaxed py-0.5"
           />
         );
     }

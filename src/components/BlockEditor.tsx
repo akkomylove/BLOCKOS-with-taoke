@@ -9,7 +9,7 @@ import AIResultCard from './AIResultCard';
 import AIActionMenu from './AIActionMenu';
 import CommandPalette from './CommandPalette';
 import RelationDrawer from './RelationDrawer';
-import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon, Maximize2 } from 'lucide-react';
+import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon } from 'lucide-react';
 import type { BlockType, Block } from '@/types/block';
 import TagWheelPicker, { getTagStyle } from './TagWheelPicker';
 
@@ -48,78 +48,31 @@ export default function BlockEditor({
 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const userPannedRef = useRef(false);
-  const autoFittedPagesRef = useRef<Record<string, boolean>>({});
 
-  const autoFitView = useCallback(() => {
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const viewportW = rect.width;
-    const viewportH = rect.height;
-    if (viewportW <= 0 || viewportH <= 0) return;
-
-    const topBlocks = blocks.filter((b) => !b.parentId);
-    if (topBlocks.length === 0) return;
-
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const b of topBlocks) {
-      const w = b.width || 460;
-      const h = b.type === 'todo' ? 80 : b.type === 'code' ? 280 : b.type === 'table' ? 260 : 220;
-      if (b.x < minX) minX = b.x;
-      if (b.y < minY) minY = b.y;
-      if (b.x + w > maxX) maxX = b.x + w;
-      if (b.y + h > maxY) maxY = b.y + h;
-    }
-
-    const contentW = maxX - minX;
-    const contentH = maxY - minY;
-    if (contentW <= 0 || contentH <= 0) return;
-
-    const padX = 36;
-    const padY = 32;
-    const scaleX = (viewportW - padX * 2) / contentW;
-    const scaleY = (viewportH - padY * 2) / contentH;
-
-    // 智能视口自适应：优先满足横向无截断，并在高分辨率下保持字号清晰可读
-    let targetZoom = Math.min(scaleX, Math.max(0.65, scaleY));
-    targetZoom = Math.min(1.0, Math.max(0.5, targetZoom));
-    targetZoom = Number(targetZoom.toFixed(2));
-
-    const targetPanX = Math.round((viewportW - contentW * targetZoom) / 2 - minX * targetZoom);
-    const targetPanY = Math.round(Math.max(24, Math.min(48, (viewportH - contentH * targetZoom) / 2 - minY * targetZoom)));
-
-    setZoom(targetZoom);
-    setPan({ x: targetPanX, y: targetPanY });
-  }, [blocks]);
-
-  // 页面切换时重置视口并自适应
+  // 页面切换时重置视口到原始比例
   useEffect(() => {
-    userPannedRef.current = false;
-    const timer = setTimeout(() => {
-      autoFitView();
-    }, 60);
-    return () => clearTimeout(timer);
-  }, [currentPageId, autoFitView]);
+    setPan({ x: 0, y: 0 });
+    setZoom(1);
+  }, [currentPageId]);
 
-  // 监听容器尺寸变化（如侧边栏折叠、浏览器窗口拉伸）
+  // 监听定位特定 Block 居中平移事件（用于教程定位与跳转）
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-          if (!userPannedRef.current) {
-            autoFitView();
-          }
-        }
+    const handleScrollTo = (e: Event) => {
+      const customEvent = e as CustomEvent<{ blockId: string }>;
+      const blockId = customEvent.detail?.blockId;
+      if (!blockId) return;
+      const targetBlock = blocks.find((b) => b.id === blockId);
+      if (targetBlock) {
+        setPan((prev) => ({
+          x: prev.x,
+          y: Math.round(50 - targetBlock.y * zoom),
+        }));
       }
-    });
-    observer.observe(canvasRef.current);
-    return () => observer.disconnect();
-  }, [autoFitView]);
+    };
+    window.addEventListener('blockos-scroll-to-block', handleScrollTo);
+    return () => window.removeEventListener('blockos-scroll-to-block', handleScrollTo);
+  }, [blocks, zoom]);
+
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [panOrigin, setPanOrigin] = useState({ x: 0, y: 0 });
@@ -127,7 +80,14 @@ export default function BlockEditor({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const dragGroupMembers = useRef<Array<{ id: string; ox: number; oy: number }>>([]);
-  const [resizingId, setResizingId] = useState<string | null>(null);
+  const [resizeState, setResizeState] = useState<{
+    id: string;
+    direction: 'ew' | 'ns' | 'nwse';
+    startW: number;
+    startH: number;
+    startX: number;
+    startY: number;
+  } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [contextTargetId, setContextTargetId] = useState<string | null>(null);
@@ -306,7 +266,6 @@ export default function BlockEditor({
 
   const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
-      userPannedRef.current = true;
       setIsPanning(true);
       setPanStart({ x: e.clientX, y: e.clientY });
       setPanOrigin({ x: pan.x, y: pan.y });
@@ -369,14 +328,22 @@ export default function BlockEditor({
         }
       }
     }
-    if (resizingId) {
-      const blockEl = document.querySelector(`[data-block-id="${resizingId}"]`);
-      if (blockEl) {
-        const rect = blockEl.getBoundingClientRect();
-        resizeBlock(resizingId, Math.max(160, Math.round(e.clientX - rect.left)));
+    if (resizeState) {
+      const dx = (e.clientX - resizeState.startX) / zoom;
+      const dy = (e.clientY - resizeState.startY) / zoom;
+      let newW = resizeState.startW;
+      let newH = resizeState.startH;
+
+      if (resizeState.direction === 'ew' || resizeState.direction === 'nwse') {
+        newW = Math.max(280, Math.round(resizeState.startW + dx));
       }
+      if (resizeState.direction === 'ns' || resizeState.direction === 'nwse') {
+        newH = Math.max(80, Math.round(resizeState.startH + dy));
+      }
+
+      resizeBlock(resizeState.id, newW, newH);
     }
-  }, [isPanning, panStart, panOrigin, selectionBox, draggingId, dragOffset, resizingId, blocks, pan, zoom, moveBlockTo, resizeBlock]);
+  }, [isPanning, panStart, panOrigin, selectionBox, draggingId, dragOffset, resizeState, blocks, pan, zoom, moveBlockTo, resizeBlock]);
 
   const handleCanvasMouseUp = useCallback(() => {
     setIsPanning(false);
@@ -412,18 +379,19 @@ export default function BlockEditor({
       setDraggingId(null);
       useBlockStore.getState().saveHistory();
     }
-    if (resizingId) {
-      setResizingId(null);
+    if (resizeState) {
+      setResizeState(null);
+      document.body.style.userSelect = '';
+      window.getSelection()?.removeAllRanges();
       useBlockStore.getState().saveHistory();
     }
-  }, [selectionBox, draggingId, resizingId, blocks, pan, zoom, setSelection]);
+  }, [selectionBox, draggingId, resizeState, blocks, pan, zoom, setSelection]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    userPannedRef.current = true;
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoom((z) => Math.min(2, Math.max(0.3, z + delta)));
+      setZoom((z) => Math.min(2, Math.max(0.3, Number((z + delta).toFixed(1)))));
     } else {
       setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
     }
@@ -449,10 +417,24 @@ export default function BlockEditor({
     }
   }, [blocks, zoom, pan, setSelection]);
 
-  const startResizeBlock = useCallback((id: string, e: React.MouseEvent) => {
+  const startResizeBlock = useCallback((id: string, direction: 'ew' | 'ns' | 'nwse', e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    setResizingId(id);
-  }, []);
+    const block = blocks.find((b) => b.id === id);
+    if (!block) return;
+    const blockEl = document.querySelector(`[data-block-id="${id}"]`) as HTMLElement | null;
+    const currentHeight = block.height || (blockEl ? blockEl.offsetHeight : 200);
+    setResizeState({
+      id,
+      direction,
+      startW: block.width || 760,
+      startH: currentHeight,
+      startX: e.clientX,
+      startY: e.clientY,
+    });
+    document.body.style.userSelect = 'none';
+    window.getSelection()?.removeAllRanges();
+  }, [blocks]);
 
   const handleCommandSelect = useCallback(
     (type: BlockType) => {
@@ -532,7 +514,15 @@ export default function BlockEditor({
       <div
         key={block.id}
         className={`${depth === 0 ? 'absolute group/block' : 'relative group/block'}`}
-        style={depth === 0 ? { left: block.x, top: block.y, width: block.width } : { width: block.width }}
+        style={depth === 0 ? {
+          left: block.x,
+          top: block.y,
+          width: block.width,
+          ...(block.height ? { minHeight: `${block.height}px` } : {}),
+        } : {
+          width: block.width,
+          ...(block.height ? { minHeight: `${block.height}px` } : {}),
+        }}
         data-block-id={block.id}
         data-tour={block.id}
       >
@@ -642,10 +632,26 @@ export default function BlockEditor({
         </div>
 
         {!block.collapsed && (
-          <div
-            className="absolute right-0 top-0 bottom-0 w-2.5 cursor-ew-resize opacity-0 group-hover/block:opacity-100 transition-opacity hover:bg-blue-400/30 rounded-r-lg z-10"
-            onMouseDown={(e) => startResizeBlock(block.id, e)}
-          />
+          <>
+            {/* 右边缘宽度拉伸 */}
+            <div
+              className="absolute right-0 top-0 bottom-3 w-2.5 cursor-ew-resize opacity-0 group-hover/block:opacity-100 transition-opacity hover:bg-blue-400/40 rounded-r-lg z-10"
+              onMouseDown={(e) => startResizeBlock(block.id, 'ew', e)}
+              title="左右拉伸宽度"
+            />
+            {/* 下边缘高度拉伸 */}
+            <div
+              className="absolute left-0 right-3 bottom-0 h-2.5 cursor-ns-resize opacity-0 group-hover/block:opacity-100 transition-opacity hover:bg-blue-400/40 rounded-b-lg z-10"
+              onMouseDown={(e) => startResizeBlock(block.id, 'ns', e)}
+              title="上下拉伸高度"
+            />
+            {/* 右下角对角线双向拉伸 */}
+            <div
+              className="absolute right-0 bottom-0 w-3.5 h-3.5 cursor-nwse-resize opacity-0 group-hover/block:opacity-100 transition-opacity hover:bg-blue-500 rounded-br-lg z-20"
+              onMouseDown={(e) => startResizeBlock(block.id, 'nwse', e)}
+              title="自由拉伸尺寸"
+            />
+          </>
         )}
       </div>
     );
@@ -750,10 +756,7 @@ export default function BlockEditor({
 
       <div data-ui-control className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-3 py-1.5 z-20">
         <button
-          onClick={() => {
-            userPannedRef.current = true;
-            setZoom((z) => Math.max(0.3, z - 0.1));
-          }}
+          onClick={() => setZoom((z) => Math.max(0.3, Number((z - 0.1).toFixed(1))))}
           className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
           title="缩小"
         >
@@ -761,10 +764,7 @@ export default function BlockEditor({
         </button>
         <span className="text-xs text-gray-500 dark:text-zinc-400 font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
         <button
-          onClick={() => {
-            userPannedRef.current = true;
-            setZoom((z) => Math.min(2, z + 0.1));
-          }}
+          onClick={() => setZoom((z) => Math.min(2, Number((z + 0.1).toFixed(1))))}
           className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
           title="放大"
         >
@@ -773,24 +773,11 @@ export default function BlockEditor({
         <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
         <button
           onClick={() => {
-            userPannedRef.current = false;
-            autoFitView();
-          }}
-          className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium px-1 transition-colors"
-          title="按屏幕与卡片内容自适应缩放与居中"
-        >
-          <Maximize2 className="w-3 h-3" />
-          自适应
-        </button>
-        <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
-        <button
-          onClick={() => {
-            userPannedRef.current = true;
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
           className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
-          title="重置为 100% 原始比例"
+          title="重置为 100% 原始比例与原点"
         >
           Reset
         </button>

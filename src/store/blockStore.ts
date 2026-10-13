@@ -55,7 +55,7 @@ interface BlockStore {
   deleteBlock: (id: string) => void;
   moveBlock: (activeId: string, overId: string) => void;
   moveBlockTo: (id: string, x: number, y: number) => void;
-  resizeBlock: (id: string, width: number) => void;
+  resizeBlock: (id: string, width: number, height?: number) => void;
   setSelection: (ids: string[]) => void;
   toggleSelection: (id: string) => void;
   clearSelection: () => void;
@@ -473,6 +473,7 @@ export const useBlockStore = create<BlockStore>()(
 
               // 智能垂直避让排布：基于估算高度和同列卡片，保证永远不会重叠在相同坐标
               let targetY = afterBlock.y + estimateBlockHeight(afterBlock) + 20;
+              const newEstimatedHeight = estimateBlockHeight(newBlock);
               const columnBlocks = state.blocks
                 .filter((b) => b.id !== afterBlock.id && Math.abs(b.x - afterBlock.x) < 80)
                 .sort((a, b) => a.y - b.y);
@@ -482,6 +483,9 @@ export const useBlockStore = create<BlockStore>()(
                 const bBottom = b.y + bHeight;
                 if (targetY >= b.y - 12 && targetY < bBottom + 16) {
                   targetY = bBottom + 20;
+                } else if (b.y >= targetY && b.y < targetY + newEstimatedHeight + 20) {
+                  // 下方卡片与新卡片产生交叠，将下方所有卡片顺延下移
+                  b.y = targetY + newEstimatedHeight + 24;
                 }
               }
               newBlock.y = targetY;
@@ -565,11 +569,14 @@ export const useBlockStore = create<BlockStore>()(
         });
       },
 
-      resizeBlock: (id, width) => {
+      resizeBlock: (id, width, height) => {
         set((state) => {
           const block = state.blocks.find((b) => b.id === id);
           if (block) {
             block.width = width;
+            if (height !== undefined) {
+              block.height = height;
+            }
             block.updatedAt = Date.now();
           }
         });

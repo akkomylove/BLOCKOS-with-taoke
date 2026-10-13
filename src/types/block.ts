@@ -46,6 +46,7 @@ export interface Block {
   x: number;
   y: number;
   width: number;
+  height?: number;
   collapsed: boolean;
   createdAt: number;
   updatedAt: number;
