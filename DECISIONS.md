@@ -905,3 +905,67 @@
 - **单元测试**：Vitest 206 项自动化测试全量通过；
 - **构建校验**：Next.js 38 条路由生产构建通过；
 - **线上闭环**：新老用户无论何时进入系统，首屏《欢迎使用》必有 6 张完整原子 Block 卡片（需求 PRD、Agent 触发待办、专属 AI、代码沙箱、数据表格、AI 进阶协同）及新手漫游导览。
+
+---
+
+## ADR-025: 租户与多账号强隔离架构、动态名空间存储与全系统工程隐患消减治理 (Enterprise Multi-Tenant Isolation & Codebase Defect Remediation)
+
+- **日期**：2026-10-14
+- **决策状态**：方案已正式确立并制定系统化排查与实施基线
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
+  - [src/lib/db.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/db.ts)
+  - [src/app/api/pages/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/route.ts)
+  - [src/app/api/pages/[id]/blocks/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/%5Bid%5D/blocks/route.ts)
+  - [src/app/api/pages/[id]/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/%5Bid%5D/route.ts)
+  - [src/components/Toolbar.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/Toolbar.tsx)
+  - [src/components/ProjectBoard.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/ProjectBoard.tsx)
+  - [src/components/collaboration/TeamDetailPanel.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/collaboration/TeamDetailPanel.tsx)
+
+### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
+1. **客户端 LocalStorage 全局键污染 (`blockStore.ts:1231`)**：
+   - Zustand 持久化配置使用固定键 `name: 'block-os-storage'`；
+   - 用户登出时（`Toolbar.tsx:117-124`）仅向服务端请求 `/api/auth/logout` 并重定向，完全未清理本地存储；
+   - 切换不同测试账号（Admin -> Dev）登录后，客户端优先从全局键水合上一个账号的页面与卡片，甚至会触发自动回写同步，导致多账号数据严重互串。
+2. **数据库多租户主键碰撞 (`db.ts:108, 120`)**：
+   - SQLite 中 `pages` 表结构为 `CREATE TABLE pages (id TEXT PRIMARY KEY, user_id TEXT ...)`；
+   - 默认入门指南的页面 ID 为固定字符串 `'doc-guide'`，其包含的卡片 ID 也为固定字符串（如 `'guide-block-welcome'`）；
+   - 当第二名用户在系统中尝试初始化指南或保存相同 ID 页面时，触发 SQLite `UNIQUE constraint failed: pages.id` 或 `blocks.id`，导致 `PUT /api/pages` 直接报 HTTP 500。
+3. **RBAC 鉴权绕过与硬编码字符串依赖 (`ProjectBoard.tsx:72`, `TeamDetailPanel.tsx:40`)**：
+   - 前端管理员权限判定硬编码写死为 `setIsAdmin(data.userId === 'demo-admin-001')`；
+   - 完全脱离了数据库 `project_members` 与 `team_members` 中的真实角色字段（`owner`、`admin`），使得多账号、真实 OAuth 登录用户即便拥有合法管理员权限也无法行使管理功能。
+4. **服务端无状态函数生命周期与单 Snapshot 覆写风险 (`db.ts:480-486`)**：
+   - `saveDb()` 中推送 Neon Postgres 的 Promise 未做 await 阻塞等待；在 Vercel Serverless 环境下，HTTP 响应返回后容器极易进入冻结或销毁状态，导致未完成的异步网络套接字中断而丢失增量变更；
+   - Neon 中全局共享一个 `main` 快照，缺乏按租户/按用户的版本隔离，存在容器并发写入时的覆写竞争。
+5. **IDOR 越权跨用户卡片删除风险 (`pages/[id]/route.ts:131`)**：
+   - 在永久删除页面时，先执行 `DELETE FROM blocks WHERE page_id = ?`，该语句未校验 `page_id` 的归属者，存在潜在的跨用户卡片越权破坏隐患。
+
+### 2. 决策方案与系统重构架构 (Decisions & Architecture)
+
+#### (1) 租户动态名空间与登出强力清场 (Dynamic Scoped Storage & Clean Logout)
+1. **动态持久化键**：将 Zustand persist 键升级为基于当前用户 ID 的动态命名空间：`block-os-storage-${userId || 'guest'}`；未登录态使用独立的临时访客键；
+2. **登出原子重置**：在 `Toolbar.tsx` 及 `auth-utils.ts` 中实现统一的登出清理函数：
+   - 调用 `POST /api/auth/logout`；
+   - 重置内存中的 `useBlockStore.getState().reset()`；
+   - 彻底清除 localStorage 中残留的旧用户缓存；
+   - 清除所有 cookie 状态后重定向。
+
+#### (2) 数据库租户复合主键与租户作用域隔离 (Composite Primary Key & Tenant Scoping)
+1. **复合主键隔离**：
+   - `pages` 表升级支持租户隔离（复合主键或用户级页面 ID 映射），实现不同租户可同时独立拥有 `'doc-guide'`，互不干扰；
+   - `blocks` 表关联至 `(page_id, user_id)` 或通过租户前缀/UUID 生成唯一物理 ID，同时通过 `meta.tourId` 保留向后兼容的引导高亮锚点；
+2. **API 租户穿透防护**：
+   - 严格审核 `DELETE /api/pages/[id]` 等接口，在删除关联 blocks 前必须先行验证该 `page_id` 确实归当前 `userId` 所有，杜绝 IDOR 越权越界删除。
+
+#### (3) 规范化 RBAC 状态机与硬编码清理 (Dynamic RBAC & Hardcoded String Purge)
+1. **服务端返回完整权限上下文**：`/api/user/profile` 与 `/api/auth/user` 同步下发当前用户的系统角色 `role` 及针对当前项目/团队的权限元数据；
+2. **彻底移除硬编码判断**：废除所有 `userId === 'demo-admin-001'` 的硬编码代码，统一改为基于角色能力（`canManage`、`isAdmin: role === 'admin' || role === 'owner'`）的动态判断。
+
+#### (4) 混合持久化网络可靠性加固 (Serverless Neon Persistence Hardening)
+1. **生命周期保活**：在 API 响应结束前，通过 Next.js / Vercel `waitUntil` 或显式 await 确保关键数据库快照写入已落盘，避免冷冻丢失；
+2. **租户快照分片支持**：长期规划支持按租户分片存储快照，消除跨账号并发写入碰撞。
+
+### 3. 产出与验收度量 (Verification Baseline)
+- 多账号切换验证：在同一浏览器中顺序登录 `demo-admin-001` 与 `demo-emp-001`，彼此画布、页面列表、看板任务 100% 物理隔离，无任何污染与穿透；
+- 自动化测试与生产构建：确保 206 项自动化测试全部通过，无构建中断。
