@@ -22,7 +22,7 @@ interface TourStep {
   color: string;
 }
 
-const TOUR_STEPS: TourStep[] = [
+export const TOUR_STEPS: TourStep[] = [
   {
     targetSelector: '[data-tour="guide-block-welcome"]',
     badge: '步骤 1/5',
@@ -40,7 +40,7 @@ const TOUR_STEPS: TourStep[] = [
     category: '核心哲学 · 行动自由',
     title: '文档化身活体：Agent 自主监听与发布自动化',
     description:
-      '文档不再是被动记录的静态纸面！BlockOS 内置 Agent 规则引擎，时刻感知任务状态。勾选任务瞬间，Agent 自动归档生成【迭代发布报告】，并联动智谱 GLM 4.7 Flash 大模型规划【下一步上线保障 Checklist】，卡片垂直智能避让排布，杜绝重叠！',
+      '文档不再是被动记录的静态纸面！BlockOS 内置 Agent 规则引擎，时刻感知任务状态。勾选任务瞬间，Agent 自动归档生成【迭代发布报告】，并联动智谱 GLM 4.7 Flash 大模型自主规划【下一步上线保障 Checklist】，实现无缝的敏捷研发流转！',
     actionHint: '⚡ 试一试：勾选待办任务，见证产研交付自动化流转与 AI 智能规划！',
     icon: Bot,
     color: 'from-emerald-500 to-teal-500',

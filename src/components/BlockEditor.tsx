@@ -94,6 +94,10 @@ export default function BlockEditor({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const dragGroupMembers = useRef<Array<{ id: string; ox: number; oy: number }>>([]);
+  const dragOriginPos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dragHasMoved = useRef(false);
+  const wasMultiSelectedRef = useRef(false);
+  const selectionBoxIsAdditive = useRef(false);
   const [resizeState, setResizeState] = useState<{
     id: string;
     direction: 'ew' | 'ns' | 'nwse';
@@ -409,7 +413,11 @@ export default function BlockEditor({
     const isOnBlock = !!target.closest('[data-block-id]');
     const isOnUI = !!target.closest('[data-ui-control]');
     if (!isOnBlock && !isOnUI) {
-      clearSelection();
+      const isModifier = e.shiftKey || e.metaKey || e.ctrlKey;
+      selectionBoxIsAdditive.current = isModifier;
+      if (!isModifier) {
+        clearSelection();
+      }
       setContextMenu(null);
       setContextTargetId(null);
       setShowParentPicker(false);
@@ -434,26 +442,34 @@ export default function BlockEditor({
     if (draggingId) {
       const block = blocks.find((b) => b.id === draggingId);
       if (block) {
+        dragHasMoved.current = true;
         let newX = (e.clientX - dragOffset.x - pan.x - canvasRef.current!.getBoundingClientRect().left) / zoom;
         let newY = (e.clientY - dragOffset.y - pan.y - canvasRef.current!.getBoundingClientRect().top) / zoom;
 
+        // Snapping logic against stationary blocks
+        const movingIds = dragGroupMembers.current.length > 0
+          ? new Set(dragGroupMembers.current.map((m) => m.id))
+          : new Set([draggingId]);
+        const otherBlocks = blocks.filter((b) => !movingIds.has(b.id) && !b.parentId);
+
         const SNAP = 10;
-        const otherBlocks = blocks.filter((b) => b.id !== draggingId);
+        const blockW = block.width || 760;
         for (const other of otherBlocks) {
+          const otherW = other.width || 760;
+          const otherH = other.height || 200;
           if (Math.abs(newX - other.x) < SNAP) newX = other.x;
-          if (Math.abs(newX + block.width - (other.x + other.width)) < SNAP) newX = other.x + other.width - block.width;
+          if (Math.abs(newX + blockW - (other.x + otherW)) < SNAP) newX = other.x + otherW - blockW;
           if (Math.abs(newY - other.y) < SNAP) newY = other.y;
-          if (Math.abs(newY + 80 - (other.y + 80)) < SNAP) newY = other.y;
-          if (Math.abs(newY - (other.y + 80)) < SNAP) newY = other.y + 80;
+          if (Math.abs(newY + 80 - (other.y + otherH)) < SNAP) newY = other.y;
+          if (Math.abs(newY - (other.y + otherH)) < SNAP) newY = other.y + otherH;
           if (Math.abs(newY + 80 - other.y) < SNAP) newY = other.y - 80;
         }
 
-        const dx = Math.round(newX) - block.x;
-        const dy = Math.round(newY) - block.y;
-
         if (dragGroupMembers.current.length > 0) {
+          const totalDx = Math.round(newX) - dragOriginPos.current.x;
+          const totalDy = Math.round(newY) - dragOriginPos.current.y;
           dragGroupMembers.current.forEach((m) => {
-            moveBlockTo(m.id, m.ox + dx, m.oy + dy);
+            moveBlockTo(m.id, Math.round(m.ox + totalDx), Math.round(m.oy + totalDy));
           });
         } else {
           moveBlockTo(draggingId, Math.round(newX), Math.round(newY));
@@ -481,34 +497,51 @@ export default function BlockEditor({
     setIsPanning(false);
 
     if (selectionBox) {
-      const canvasRect = canvasRef.current!.getBoundingClientRect();
-      const startCanvasX = (selectionBox.startX - canvasRect.left - pan.x) / zoom;
-      const startCanvasY = (selectionBox.startY - canvasRect.top - pan.y) / zoom;
-      const endCanvasX = (selectionBox.currentX - canvasRect.left - pan.x) / zoom;
-      const endCanvasY = (selectionBox.currentY - canvasRect.top - pan.y) / zoom;
+      const boxW = Math.abs(selectionBox.currentX - selectionBox.startX);
+      const boxH = Math.abs(selectionBox.currentY - selectionBox.startY);
 
-      const rect = {
-        left: Math.min(startCanvasX, endCanvasX),
-        right: Math.max(startCanvasX, endCanvasX),
-        top: Math.min(startCanvasY, endCanvasY),
-        bottom: Math.max(startCanvasY, endCanvasY),
-      };
+      if (boxW > 6 || boxH > 6) {
+        const canvasRect = canvasRef.current!.getBoundingClientRect();
+        const startCanvasX = (selectionBox.startX - canvasRect.left - pan.x) / zoom;
+        const startCanvasY = (selectionBox.startY - canvasRect.top - pan.y) / zoom;
+        const endCanvasX = (selectionBox.currentX - canvasRect.left - pan.x) / zoom;
+        const endCanvasY = (selectionBox.currentY - canvasRect.top - pan.y) / zoom;
 
-      const ids = blocks
-        .filter((b) =>
-          b.x + b.width > rect.left && b.x < rect.right &&
-          b.y + 80 > rect.top && b.y < rect.bottom
-        )
-        .map((b) => b.id);
+        const rect = {
+          left: Math.min(startCanvasX, endCanvasX),
+          right: Math.max(startCanvasX, endCanvasX),
+          top: Math.min(startCanvasY, endCanvasY),
+          bottom: Math.max(startCanvasY, endCanvasY),
+        };
 
-      if (ids.length > 0) {
-        setSelection(ids);
+        const ids = blocks
+          .filter((b) => {
+            if (b.parentId) return false;
+            const bWidth = b.width || 760;
+            const bHeight = b.height || 200;
+            const overlapsX = b.x < rect.right && (b.x + bWidth) > rect.left;
+            const overlapsY = b.y < rect.bottom && (b.y + bHeight) > rect.top;
+            return overlapsX && overlapsY;
+          })
+          .map((b) => b.id);
+
+        if (ids.length > 0) {
+          if (selectionBoxIsAdditive.current) {
+            setSelection(Array.from(new Set([...selectedIds, ...ids])));
+          } else {
+            setSelection(ids);
+          }
+        }
       }
       setSelectionBox(null);
     }
 
     if (draggingId) {
+      if (!dragHasMoved.current && wasMultiSelectedRef.current) {
+        setSelection([draggingId]);
+      }
       setDraggingId(null);
+      dragGroupMembers.current = [];
       useBlockStore.getState().saveHistory();
     }
     if (resizeState) {
@@ -517,7 +550,7 @@ export default function BlockEditor({
       window.getSelection()?.removeAllRanges();
       useBlockStore.getState().saveHistory();
     }
-  }, [selectionBox, draggingId, resizeState, blocks, pan, zoom, setSelection]);
+  }, [selectionBox, draggingId, resizeState, blocks, pan, zoom, selectedIds, setSelection]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const target = e.target as HTMLElement | null;
@@ -537,25 +570,46 @@ export default function BlockEditor({
     }
   }, []);
 
-  const startDragBlock = useCallback((id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const block = blocks.find((b) => b.id === id);
-    if (!block) return;
-    const canvasRect = canvasRef.current!.getBoundingClientRect();
-    const blockScreenX = block.x * zoom + pan.x + canvasRect.left;
-    const blockScreenY = block.y * zoom + pan.y + canvasRect.top;
-    setDraggingId(id);
-    setDragOffset({ x: e.clientX - blockScreenX, y: e.clientY - blockScreenY });
+  const startDragBlock = useCallback(
+    (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      const block = blocks.find((b) => b.id === id);
+      if (!block) return;
+      const canvasRect = canvasRef.current!.getBoundingClientRect();
+      const blockScreenX = block.x * zoom + pan.x + canvasRect.left;
+      const blockScreenY = block.y * zoom + pan.y + canvasRect.top;
+      setDraggingId(id);
+      setDragOffset({ x: e.clientX - blockScreenX, y: e.clientY - blockScreenY });
+      dragOriginPos.current = { x: block.x, y: block.y };
+      dragHasMoved.current = false;
 
-    if (block.groupId) {
-      const groupMembers = blocks.filter((b) => b.groupId === block.groupId);
-      dragGroupMembers.current = groupMembers.map((b) => ({ id: b.id, ox: b.x, oy: b.y }));
-      setSelection(groupMembers.map((b) => b.id));
-    } else {
-      dragGroupMembers.current = [];
-      setSelection([id]);
-    }
-  }, [blocks, zoom, pan, setSelection]);
+      const isModifierKey = e.shiftKey || e.metaKey || e.ctrlKey;
+      const isAlreadyMultiSelected = selectedIds.includes(id) && selectedIds.length > 1;
+      wasMultiSelectedRef.current = isAlreadyMultiSelected;
+
+      if (isAlreadyMultiSelected) {
+        // Keep existing multi-selection and drag all selected top-level blocks together
+        const selectedTopBlocks = blocks.filter((b) => selectedIds.includes(b.id) && !b.parentId);
+        dragGroupMembers.current = selectedTopBlocks.map((b) => ({ id: b.id, ox: b.x, oy: b.y }));
+      } else if (isModifierKey) {
+        const newSelected = selectedIds.includes(id) ? selectedIds : [...selectedIds, id];
+        setSelection(newSelected);
+        const selectedTopBlocks = blocks.filter((b) => newSelected.includes(b.id) && !b.parentId);
+        dragGroupMembers.current =
+          selectedTopBlocks.length > 1
+            ? selectedTopBlocks.map((b) => ({ id: b.id, ox: b.x, oy: b.y }))
+            : [];
+      } else if (block.groupId) {
+        const groupMembers = blocks.filter((b) => b.groupId === block.groupId && !b.parentId);
+        dragGroupMembers.current = groupMembers.map((b) => ({ id: b.id, ox: b.x, oy: b.y }));
+        setSelection(groupMembers.map((b) => b.id));
+      } else {
+        dragGroupMembers.current = [];
+        setSelection([id]);
+      }
+    },
+    [blocks, zoom, pan, selectedIds, setSelection]
+  );
 
   const startResizeBlock = useCallback((id: string, direction: 'ew' | 'ns' | 'nwse', e: React.MouseEvent) => {
     e.preventDefault();
@@ -682,7 +736,7 @@ export default function BlockEditor({
           <div
             className={`h-full flex-1 flex flex-col min-h-0 rounded-lg border transition-all ${
               selectedIds.includes(block.id)
-                ? 'border-blue-400/80 shadow-lg shadow-blue-500/10'
+                ? 'border-blue-500 ring-2 ring-blue-500/25 shadow-lg shadow-blue-500/10'
                 : isChild
                   ? 'border-blue-300/60 dark:border-zinc-700/80 bg-gray-50/95 dark:bg-zinc-900/95 shadow-xs'
                   : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60 bg-white dark:bg-zinc-900'

@@ -969,3 +969,45 @@
 ### 3. 产出与验收度量 (Verification Baseline)
 - 多账号切换验证：在同一浏览器中顺序登录 `demo-admin-001` 与 `demo-emp-001`，彼此画布、页面列表、看板任务 100% 物理隔离，无任何污染与穿透；
 - 自动化测试与生产构建：确保 206 项自动化测试全部通过，无构建中断。
+
+---
+
+## ADR-026: 画布多选批量拖拽动力学重构与导览文案面向客户精细化打磨 (Canvas Multi-Selection Batch Drag Dynamics & Customer-Facing Onboarding Polish)
+
+- **日期**：2026-10-14
+- **决策状态**：已全面落地、验证通过并推送到生产环境
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
+  - [src/components/OnboardingTour.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/OnboardingTour.tsx)
+  - [tests/components/BlockMultiSelectDrag.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/components/BlockMultiSelectDrag.test.ts)
+
+### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
+1. **多选状态在按下的瞬间被销毁 (`BlockEditor.tsx:550-557`)**：
+   - 用户通过框选或 Shift/Ctrl 点击选中多张卡片后，鼠标在任意选中的卡片标题栏按下时，`startDragBlock` 未检查当前是否已处于多选态，直接执行了 `dragGroupMembers.current = []; setSelection([id]);`，导致按下鼠标的瞬间多选全部丢失，退化为单卡片。
+2. **多卡片拖拽增量数学计算振荡抖动 (`BlockEditor.tsx:451-456`)**：
+   - 原分组位移计算为 `dx = Math.round(newX) - block.x; moveBlockTo(m.id, m.ox + dx, m.oy + dy);`；
+   - 这里的 `m.ox` 是起拖时的静态初始坐标，而 `block.x` 每一帧在 `moveBlockTo` 后都被动态更新。将一帧的单步增量 `dx` 加到最初的基底 `m.ox` 上，导致第二帧坐标在“新位置”与“回弹位置”之间剧烈跳跃振荡，视觉体验崩溃。
+3. **框选碰撞检测高度硬编码缺陷 (`BlockEditor.tsx:497-502`)**：
+   - 框选范围判断硬编码为 `b.y + 80 > rect.top && b.y < rect.bottom`；
+   - 当卡片拉伸为 300px/500px 时，用户在卡片中下半部分画框完全无法命中卡片。
+4. **导览弹窗遗留技术补丁口吻 (`OnboardingTour.tsx:43`)**：
+   - 步骤 2 弹窗描述中包含技术排查遗留短语 `卡片垂直智能避让排布，杜绝重叠！`，语言偏向内部开发自查与补丁更新说明，不符合企业级产品规范。
+
+### 2. 决策方案与系统实现架构 (Decisions & Implementation)
+1. **多选动力学与累计位移引擎 (Rigid Body Group Drag Engine)**：
+   - 拖拽启动时记录锚点卡片的初始基准 `dragOriginPos.current = { x: block.x, y: block.y }`；
+   - 鼠标滑动时计算全过程累计位移 `totalDx = Math.round(newX) - dragOriginPos.current.x`，严格保持所有被选卡片的刚体相对间距，彻底消除振荡；
+   - 拖拽吸附（Snap）过滤：从候选吸附卡片集合中剔除所有处于当前拖拽集合中的卡片（`movingIds`），仅与画布上静止的顶级卡片进行对齐，杜绝内部吸附冲突。
+2. **符合行业标杆（Figma / Miro / 操作系统）的选择与拖拽交互闭环**：
+   - 当点击已多选卡片时：`mousedown` 保留多选并准备批量拖拽；若用户仅点击未移动（`!dragHasMoved`），在 `mouseup` 时才收敛选择为单卡片；若用户拖动，则完整保持多选态；
+   - 支持 Shift / Ctrl / Cmd 增量框选（`selectionBoxIsAdditive`）；
+   - 升级为严密 2D AABB 矩形交叉判定：`b.x < rect.right && (b.x + bWidth) > rect.left && b.y < rect.bottom && (b.y + bHeight) > rect.top`。
+3. **导览文案面向客户精细化打磨**：
+   - 将 Step 2 文案调整为：`实现无缝的敏捷研发流转！`；
+   - 全量 5 步导览导出 `TOUR_STEPS` 纳入自动化测试回归断言。
+
+### 3. 产出与验收度量 (Verification Baseline)
+- **自动化测试**：新增 `tests/components/BlockMultiSelectDrag.test.ts`，18 套测试套件、212 项用例 100% 绿色通过；
+- **生产构建**：Next.js 全量 38 条路由打包通过；
+- **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证。
