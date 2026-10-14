@@ -105,7 +105,18 @@ export async function getAuthUserId(): Promise<string | null> {
 }
 
 export function logoutUser() {
-  if (typeof document !== 'undefined') {
+  if (typeof window !== 'undefined') {
+    try {
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('block-os') || key.startsWith('doc-') || key.includes('guide'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
     document.cookie = 'demo-session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     document.cookie = 'next-auth.session-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     window.location.href = '/login';

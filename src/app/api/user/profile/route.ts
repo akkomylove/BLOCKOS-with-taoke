@@ -1,5 +1,6 @@
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
+import { DEMO_USERS, isDemoAdmin } from '@/lib/demo-users';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -12,6 +13,24 @@ export async function GET() {
     }
 
     await getDb();
+
+    const demoUser = DEMO_USERS.find((u) => u.id === userId);
+    const adminMembership = query(
+      "SELECT role FROM project_members WHERE user_id = ? AND (role = 'admin' OR role = 'owner') LIMIT 1",
+      [userId]
+    );
+    const teamAdminMembership = query(
+      "SELECT role FROM team_members WHERE user_id = ? AND (role = 'admin' OR role = 'owner') LIMIT 1",
+      [userId]
+    );
+    const isAdmin = Boolean(
+      demoUser?.role === 'admin' ||
+      isDemoAdmin(userId) ||
+      adminMembership.length > 0 ||
+      teamAdminMembership.length > 0
+    );
+    const role = isAdmin ? 'admin' : (demoUser?.role || 'employee');
+
     const rows = query(
       'SELECT user_id, display_name, title, functions, bio, updated_at FROM user_profiles WHERE user_id = ?',
       [userId]
@@ -20,10 +39,12 @@ export async function GET() {
     if (rows.length === 0) {
       return NextResponse.json({
         userId,
-        displayName: '',
-        title: '',
-        functions: [],
+        displayName: demoUser?.name || '',
+        title: demoUser?.title || '',
+        functions: demoUser?.functions || [],
         bio: '',
+        role,
+        isAdmin,
         updatedAt: 0,
       });
     }
@@ -34,10 +55,12 @@ export async function GET() {
 
     return NextResponse.json({
       userId: row.user_id,
-      displayName: String(row.display_name || ''),
-      title: String(row.title || ''),
-      functions,
+      displayName: String(row.display_name || demoUser?.name || ''),
+      title: String(row.title || demoUser?.title || ''),
+      functions: functions.length > 0 ? functions : (demoUser?.functions || []),
       bio: String(row.bio || ''),
+      role,
+      isAdmin,
       updatedAt: Number(row.updated_at),
     });
   } catch (err) {

@@ -7,7 +7,11 @@ export function middleware(req: NextRequest) {
   const nextAuthToken = req.cookies.get('authjs.session-token') || req.cookies.get('__Secure-authjs.session-token');
   let demoSession = req.cookies.get('demo-session');
   
-  if (!demoSession && process.env.NODE_ENV === 'development') {
+  const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth') || nextUrl.pathname === '/api/db-status';
+  const isPublicRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/';
+  const isApiRoute = nextUrl.pathname.startsWith('/api');
+
+  if (!demoSession && process.env.NODE_ENV === 'development' && nextUrl.pathname !== '/login' && !isApiAuthRoute) {
     const response = NextResponse.next();
     response.cookies.set({
       name: 'demo-session',
@@ -22,10 +26,6 @@ export function middleware(req: NextRequest) {
   }
 
   const isLoggedIn = !!nextAuthToken || !!demoSession;
-  
-  const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth') || nextUrl.pathname === '/api/db-status';
-  const isPublicRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/';
-  const isApiRoute = nextUrl.pathname.startsWith('/api');
 
   if (isApiAuthRoute) {
     return NextResponse.next();

@@ -212,4 +212,62 @@ describe('Pages and Blocks Sync Pipeline API', () => {
     const { pages: finalPages } = await finalListRes.json();
     expect(finalPages.find((p: any) => p.id === pageId)).toBeDefined();
   });
+
+  it('should prevent IDOR block deletion on permanent delete by non-owner', async () => {
+    // User A creates page and block
+    const userAPageId = 'page-owner-a-' + nanoid(6);
+    const userABlockId = 'block-owner-a-' + nanoid(6);
+    run(
+      'INSERT INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+      [userAPageId, testUserId, 'Owner A Page', '📄', 0, Date.now(), Date.now()]
+    );
+    run(
+      'INSERT INTO blocks (id, page_id, type, title, content, meta, parent_id, group_id, order_index, x, y, width, height, collapsed, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [userABlockId, userAPageId, 'text', 'User A Data', 'Secret Content', '{}', null, null, 0, 0, 0, 320, 200, 0, 1, Date.now(), Date.now()]
+    );
+
+    // Attacker User B attempts to permanently delete User A's page
+    const attackerUserId = 'attacker-user-' + nanoid(6);
+    vi.spyOn(authUtils, 'getUserId').mockResolvedValue(attackerUserId);
+
+    const delReq = new NextRequest(`http://localhost:3000/api/pages/${userAPageId}?permanent=true`, { method: 'DELETE' });
+    const delRes = await deletePage(delReq, { params: Promise.resolve({ id: userAPageId }) });
+    expect(delRes.status).toBe(404);
+
+    // Verify User A's blocks are still completely safe and NOT deleted
+    const db = await getDb();
+    const blocksResult = db.exec(`SELECT * FROM blocks WHERE page_id = '${userAPageId}'`);
+    expect(blocksResult.length).toBe(1);
+    expect(blocksResult[0].values.length).toBe(1);
+  });
+
+  it('should handle multi-tenant doc-guide page ID collision safely without 500 error', async () => {
+    // User A has doc-guide
+    run(
+      'INSERT OR IGNORE INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+      ['doc-guide', testUserId, 'User A Guide', '👋', 0, Date.now(), Date.now()]
+    );
+
+    // User B tries to sync doc-guide in PUT /api/pages
+    const userBId = 'user-b-' + nanoid(6);
+    vi.spyOn(authUtils, 'getUserId').mockResolvedValue(userBId);
+    run('INSERT OR IGNORE INTO users (id, email, name, provider, provider_id, created_at) VALUES (?, ?, ?, ?, ?, ?)', [
+      userBId, `${userBId}@test.com`, 'User B', 'test', userBId, Date.now()
+    ]);
+
+    const putReq = new NextRequest('http://localhost:3000/api/pages', {
+      method: 'PUT',
+      body: JSON.stringify({
+        pages: [{ id: 'doc-guide', title: 'User B Guide', icon: '👋' }],
+      }),
+    });
+    const putRes = await syncPages(putReq);
+    expect(putRes.status).toBe(200);
+
+    // Check that User B has a page record without throwing constraint error
+    const listRes = await getPages(new NextRequest('http://localhost:3000/api/pages'));
+    expect(listRes.status).toBe(200);
+    const { pages } = await listRes.json();
+    expect(pages.length).toBeGreaterThan(0);
+  });
 });

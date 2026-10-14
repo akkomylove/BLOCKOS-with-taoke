@@ -37,7 +37,7 @@ export function TeamDetailPanel({ teamId, teamName, onClose }: TeamDetailPanelPr
     fetch('/api/user/profile')
       .then(r => r.json())
       .then(data => {
-        setIsAdmin(data.userId === 'demo-admin-001');
+        setIsAdmin(Boolean(data.isAdmin || data.role === 'admin' || data.role === 'owner'));
       })
       .catch(() => {});
   }, []);

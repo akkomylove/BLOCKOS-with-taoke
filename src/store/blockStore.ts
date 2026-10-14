@@ -94,6 +94,7 @@ interface BlockStore {
   syncToServer: () => Promise<void>;
   loadFromServer: (pageId: string) => Promise<void>;
   syncPages: () => Promise<void>;
+  reset: () => void;
 
   blockDependencies: Record<string, string[]>;
   getDependents: (blockId: string) => string[];
@@ -1066,7 +1067,7 @@ export const useBlockStore = create<BlockStore>()(
             const cached = localStorage.getItem(userStoreKey);
             if (cached) {
               const parsed = JSON.parse(cached);
-              if (parsed?.state?.pages) {
+              if (parsed?.state?.pages && Array.isArray(parsed.state.pages) && parsed.state.pages.length > 0) {
                 set((state) => {
                   state.pages = parsed.state.pages || [];
                   state.folders = parsed.state.folders || [];
@@ -1075,8 +1076,22 @@ export const useBlockStore = create<BlockStore>()(
                   state.pageBlocks = parsed.state.pageBlocks || {};
                   state.blocks = parsed.state.pageBlocks?.[state.currentPageId] || [];
                 });
+                return;
               }
             }
+            // 新账号首次登录且本地无对应命名空间缓存时，重置为该用户的干净官方指南，杜绝继承上一个账号的脏页面
+            const { pages, pageBlocks } = createPresetPages();
+            const firstPage = pages[0];
+            const guidePageId = firstPage ? firstPage.id : 'doc-guide';
+            set((state) => {
+              state.pages = pages;
+              state.folders = [];
+              state.groups = [];
+              state.currentPageId = guidePageId;
+              state.pageBlocks = pageBlocks;
+              state.blocks = pageBlocks[guidePageId] || [];
+              state.selectedIds = [];
+            });
           } catch (e) {
             console.warn('Failed to load user-isolated storage:', e);
           }
@@ -1219,6 +1234,26 @@ export const useBlockStore = create<BlockStore>()(
         }
       },
 
+      reset: () => {
+        const { pages, pageBlocks } = createPresetPages();
+        const firstPage = pages[0];
+        const guidePageId = firstPage ? firstPage.id : 'doc-guide';
+        set((state) => {
+          state.pages = pages;
+          state.folders = [];
+          state.groups = [];
+          state.currentPageId = guidePageId;
+          state.pageBlocks = pageBlocks;
+          state.blocks = pageBlocks[guidePageId] || [];
+          state.selectedIds = [];
+          state.currentUserId = null;
+          state.history = [];
+          state.historyIndex = -1;
+          state.saveStatus = 'idle';
+          state.saveError = null;
+        });
+      },
+
       blockDependencies: {},
       getDependents: (blockId) => {
         const deps = get().blockDependencies;
@@ -1236,6 +1271,7 @@ export const useBlockStore = create<BlockStore>()(
         groups: state.groups,
         currentPageId: state.currentPageId,
         pageBlocks: state.pageBlocks,
+        currentUserId: state.currentUserId,
         agentRules: state.agentRules,
         agentEnabled: state.agentEnabled,
         blockDependencies: state.blockDependencies,

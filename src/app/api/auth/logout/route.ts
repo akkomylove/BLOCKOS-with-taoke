@@ -6,6 +6,15 @@ export async function POST() {
     response.cookies.set({
       name: 'demo-session',
       value: '',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    });
+    response.cookies.set({
+      name: 'demo-session',
+      value: '',
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -14,6 +23,24 @@ export async function POST() {
     });
     response.cookies.set({
       name: 'next-auth.session-token',
+      value: '',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    });
+    response.cookies.set({
+      name: '__Secure-authjs.session-token',
+      value: '',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    });
+    response.cookies.set({
+      name: 'authjs.session-token',
       value: '',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

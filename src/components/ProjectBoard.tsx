@@ -69,7 +69,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
       .then(r => r.json())
       .then(data => {
         setCurrentUserId(data.userId || null);
-        setIsAdmin(data.userId === 'demo-admin-001');
+        setIsAdmin(Boolean(data.isAdmin || data.role === 'admin' || data.role === 'owner'));
       })
       .catch(() => {});
   }, []);

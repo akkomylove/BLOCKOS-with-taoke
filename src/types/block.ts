@@ -1,6 +1,7 @@
 export type BlockType = 'text' | 'todo' | 'code' | 'table' | 'media' | 'quote' | 'toggle' | 'divider' | 'whiteboard' | 'mindmap' | 'math';
 
 export interface BlockMeta {
+  tourId?: string;
   aiContext?: string;
   tags?: string[];
   links?: string[];

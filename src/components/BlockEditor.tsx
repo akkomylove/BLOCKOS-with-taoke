@@ -676,7 +676,7 @@ export default function BlockEditor({
           ...(block.height ? { minHeight: `${block.height}px` } : {}),
         }}
         data-block-id={block.id}
-        data-tour={block.id}
+        data-tour={(block.meta?.tourId as string) || block.id}
       >
         <div className="h-full flex-1 flex flex-col min-h-0 w-full">
           <div

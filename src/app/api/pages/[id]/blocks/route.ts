@@ -19,40 +19,68 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     await getDb();
 
+    const isGuideRequest = id === 'doc-guide' || id === `doc-guide-${userId}` || id.includes('guide');
+    let targetPageId = id;
+
     let pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
-    if (pages.length === 0) {
-      if (id === 'doc-guide') {
-        const now = Date.now();
-        run(
-          'INSERT INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          ['doc-guide', userId, '👋 欢迎使用 BlockOS ｜ 新手快速入门指南', '👋', 0, 1, now, now]
-        );
-        pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
-      } else {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    // 如果直接查找未找到且为指南请求，再查找该用户拥有的带用户后缀的指南页面
+    if (pages.length === 0 && isGuideRequest) {
+      const userGuidePages = query(
+        'SELECT * FROM pages WHERE (id = ? OR id = ?) AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)',
+        ['doc-guide', `doc-guide-${userId}`, userId]
+      );
+      if (userGuidePages.length > 0) {
+        pages = userGuidePages;
+        targetPageId = pages[0].id as string;
       }
     }
 
-    let blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [id]);
+    if (pages.length === 0) {
+      if (isGuideRequest) {
+        const now = Date.now();
+        const docGuideTaken = query('SELECT user_id FROM pages WHERE id = ?', ['doc-guide']);
+        targetPageId = (docGuideTaken.length === 0 || docGuideTaken[0].user_id === userId) ? 'doc-guide' : `doc-guide-${userId}`;
 
-    if (id === 'doc-guide' && blocks.length === 0) {
+        run(
+          'INSERT INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          [targetPageId, userId, '👋 欢迎使用 BlockOS ｜ 新手快速入门指南', '👋', 0, 1, now, now]
+        );
+        pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [targetPageId, userId]);
+      } else {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
+    } else {
+      targetPageId = pages[0].id as string;
+    }
+
+    let blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [targetPageId]);
+
+    if (isGuideRequest && blocks.length === 0) {
       const presetBlocks = getPresetDocumentBlocks('doc-guide');
       const now = Date.now();
       transaction(() => {
         for (let i = 0; i < presetBlocks.length; i++) {
           const b = presetBlocks[i];
+          let blockId = b.id;
+          const blockTaken = query('SELECT page_id FROM blocks WHERE id = ?', [b.id]);
+          if (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId) {
+            blockId = `${b.id}-${userId}`;
+          }
+
+          const metaObj = { ...(b.meta || {}), tourId: b.id };
           run(
             `INSERT INTO blocks (
               id, page_id, type, title, content, meta, parent_id, group_id,
               order_index, x, y, width, height, collapsed, version, created_at, updated_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              b.id,
-              'doc-guide',
+              blockId,
+              targetPageId,
               b.type,
               b.title || '',
               b.content || '',
-              JSON.stringify(b.meta || {}),
+              JSON.stringify(metaObj),
               b.parentId || null,
               b.groupId || null,
               typeof b.order === 'number' ? b.order : i,
@@ -69,7 +97,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         }
       });
       saveDb();
-      blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [id]);
+      blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [targetPageId]);
     }
 
     return NextResponse.json({
@@ -144,18 +172,29 @@ async function handleSaveBlocks(req: NextRequest, { params }: { params: Promise<
         const b = blocks[i];
         if (!b || !b.id) continue;
 
+        let blockId = b.id;
+        const blockTaken = query('SELECT page_id FROM blocks WHERE id = ?', [b.id]);
+        if (blockTaken.length > 0 && blockTaken[0].page_id !== id) {
+          blockId = `${b.id}-${userId}`;
+        }
+
+        const metaObj = { ...(b.meta || {}) };
+        if (b.id.startsWith('guide-') && !metaObj.tourId) {
+          metaObj.tourId = b.id;
+        }
+
         run(
           `INSERT INTO blocks (
             id, page_id, type, title, content, meta, parent_id, group_id, 
             order_index, x, y, width, height, collapsed, version, created_at, updated_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            b.id,
+            blockId,
             id,
             b.type || 'text',
             b.title || '',
             b.content || '',
-            JSON.stringify(b.meta || {}),
+            JSON.stringify(metaObj),
             b.parentId || null,
             b.groupId || null,
             typeof b.order === 'number' ? b.order : i,

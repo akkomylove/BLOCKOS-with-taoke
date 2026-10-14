@@ -50,10 +50,15 @@ export async function POST(req: NextRequest) {
     }
 
     const { id: reqId, title, icon, orderIndex } = await req.json();
-    const id = reqId || nanoid();
+    let id = reqId || nanoid();
     const now = Date.now();
 
     await getDb();
+    const conflict = query('SELECT user_id FROM pages WHERE id = ?', [id]);
+    if (conflict.length > 0 && conflict[0].user_id !== userId) {
+      id = `${id}-${userId}`;
+    }
+
     run(
       'INSERT INTO pages (id, user_id, title, icon, order_index, version, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, NULL, ?, ?)',
       [id, userId, title || '无标题', icon || '📄', typeof orderIndex === 'number' ? orderIndex : 0, now, now]
@@ -100,10 +105,25 @@ export async function PUT(req: NextRequest) {
             [p.title || '无标题', p.icon || '📄', i, nextVersion, now, p.id, userId]
           );
         } else {
-          run(
-            'INSERT INTO pages (id, user_id, title, icon, order_index, version, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, NULL, ?, ?)',
-            [p.id, userId, p.title || '无标题', p.icon || '📄', i, now, now]
-          );
+          // 多租户隔离防护：如果客户端传入的 p.id 已被其他用户占用（如固定的 doc-guide），自动分派租户级后缀
+          let insertId = p.id;
+          const conflict = query('SELECT user_id FROM pages WHERE id = ?', [p.id]);
+          if (conflict.length > 0 && conflict[0].user_id !== userId) {
+            insertId = `${p.id}-${userId}`;
+          }
+
+          const targetExists = query('SELECT id FROM pages WHERE id = ? AND user_id = ?', [insertId, userId]);
+          if (targetExists.length > 0) {
+            run(
+              'UPDATE pages SET title = ?, icon = ?, order_index = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+              [p.title || '无标题', p.icon || '📄', i, now, insertId, userId]
+            );
+          } else {
+            run(
+              'INSERT INTO pages (id, user_id, title, icon, order_index, version, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, NULL, ?, ?)',
+              [insertId, userId, p.title || '无标题', p.icon || '📄', i, now, now]
+            );
+          }
         }
       }
     });
