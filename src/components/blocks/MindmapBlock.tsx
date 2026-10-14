@@ -95,6 +95,7 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [linkPopover, setLinkPopover] = useState<{ nodeId: string; rect: DOMRect } | null>(null);
 
   const blocks = useBlockStore((state) => state.blocks);
@@ -397,6 +398,17 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
     return blocks.filter((b) => b.id !== blockId);
   }, [blocks, blockId]);
 
+  const selectedNode = useMemo<MindmapNode | null>(() => {
+    if (!selectedNodeId) return null;
+    let found: MindmapNode | null = null;
+    const search = (n: MindmapNode) => {
+      if (n.id === selectedNodeId) found = n;
+      n.children?.forEach(search);
+    };
+    search(root);
+    return found;
+  }, [root, selectedNodeId]);
+
   return (
     <div className="w-full flex flex-col select-none group/mindmap">
       {/* 顶部极简信息与操作指示条 */}
@@ -410,11 +422,53 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
             {totalNodeCount} 节点
           </span>
           <span className="text-[10px] text-gray-400 dark:text-zinc-500 hidden sm:inline">
-            双击编辑文字，点击 🔗 关联或生成落地 Block
+            双击编辑文字，单击选中展开操作
           </span>
         </div>
         {!readOnly && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {selectedNode && (
+              <div className="flex items-center gap-1 mr-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-zinc-800 border border-blue-200 dark:border-zinc-700 text-[10px]">
+                <span className="text-gray-400 dark:text-zinc-500">已选:</span>
+                <span className="font-medium text-blue-600 dark:text-blue-400 max-w-[80px] truncate">{selectedNode.text}</span>
+                <button
+                  onClick={() => addChild(selectedNode.id)}
+                  className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 hover:bg-blue-200 font-medium"
+                  title="为此节点添加子分支"
+                >
+                  + 子项
+                </button>
+                <button
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setLinkPopover({ nodeId: selectedNode.id, rect });
+                  }}
+                  className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 hover:bg-purple-200"
+                  title="关联或生成画布 Block"
+                >
+                  🔗 关联
+                </button>
+                <button
+                  onClick={() => startEdit(selectedNode)}
+                  className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-zinc-200 hover:bg-gray-300"
+                  title="重命名该节点"
+                >
+                  重命名
+                </button>
+                {selectedNode.id !== root.id && (
+                  <button
+                    onClick={() => {
+                      removeNode(selectedNode.id);
+                      setSelectedNodeId(null);
+                    }}
+                    className="px-1.5 py-0.5 rounded text-red-500 hover:bg-red-100 dark:hover:bg-red-950/40 font-bold"
+                    title="删除选中的节点"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            )}
             <button
               onClick={addRootBranch}
               className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors"
@@ -434,6 +488,7 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
           height={layout.height}
           className="min-w-full transition-all duration-200"
           style={{ minHeight: `${layout.height}px` }}
+          onClick={() => setSelectedNodeId(null)}
         >
           {/* 曲线连线层 */}
           <g className="connections">
@@ -456,6 +511,8 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
               const isRoot = pos.depth === 0;
               const isEditing = editingId === pos.id;
               const isHovered = hoveredNodeId === pos.id;
+              const isSelected = selectedNodeId === pos.id;
+              const isToolbarVisible = !readOnly && !isEditing && (isHovered || isSelected);
               const linkedBlock = pos.linkedBlockId ? blocks.find((b) => b.id === pos.linkedBlockId) : null;
               const hasChildren = pos.node.children && pos.node.children.length > 0;
 
@@ -465,8 +522,26 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
                   transform={`translate(${pos.x}, ${pos.y - pos.height / 2})`}
                   onMouseEnter={() => setHoveredNodeId(pos.id)}
                   onMouseLeave={() => setHoveredNodeId(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedNodeId(pos.id);
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    if (!readOnly) startEdit(pos.node);
+                  }}
                   className="cursor-pointer"
                 >
+                  {/* 透明防断连扩展感应区：连接节点底板与悬停工具栏，防止鼠标横移滑入间隙触发 onMouseLeave */}
+                  <rect
+                    x={-6}
+                    y={-6}
+                    width={pos.width + (isToolbarVisible ? 86 : 12)}
+                    height={pos.height + 12}
+                    fill="transparent"
+                    pointerEvents="all"
+                  />
+
                   {/* 节点背景底板 */}
                   <rect
                     width={pos.width}
@@ -478,8 +553,8 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
                         : linkedBlock
                           ? 'fill-white dark:fill-zinc-800 stroke-blue-400 dark:stroke-blue-500'
                           : 'fill-white dark:fill-zinc-800 stroke-gray-200 dark:stroke-zinc-700 hover:stroke-blue-400 dark:hover:stroke-blue-500'
-                    }`}
-                    strokeWidth={isRoot ? 2 : linkedBlock ? 1.8 : 1.2}
+                    } ${isSelected ? 'stroke-blue-500 dark:stroke-blue-400' : ''}`}
+                    strokeWidth={isRoot ? (isSelected ? 2.5 : 2) : isSelected ? 2 : linkedBlock ? 1.8 : 1.2}
                     filter="drop-shadow(0 2px 4px rgba(0,0,0,0.06))"
                   />
 
@@ -500,7 +575,7 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
                       />
                     </foreignObject>
                   ) : (
-                    <g onClick={() => !readOnly && startEdit(pos.node)}>
+                    <g>
                       <text
                         x={pos.width / 2 - (linkedBlock ? 14 : 0)}
                         y={pos.height / 2 + 4}
@@ -542,8 +617,8 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
                     </g>
                   )}
 
-                  {/* 悬停微型交互工具栏 */}
-                  {!readOnly && isHovered && !isEditing && (
+                  {/* 悬停/选中微型交互工具栏 */}
+                  {isToolbarVisible && (
                     <g transform={`translate(${pos.width + 6}, ${pos.height / 2 - 10})`}>
                       {/* 添加子节点按钮 */}
                       <g
@@ -588,6 +663,7 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
                           onClick={(e) => {
                             e.stopPropagation();
                             removeNode(pos.id);
+                            if (selectedNodeId === pos.id) setSelectedNodeId(null);
                           }}
                           className="cursor-pointer hover:scale-110 transition-transform"
                         >

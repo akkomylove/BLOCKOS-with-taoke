@@ -2,9 +2,10 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Sparkles, Link2 } from 'lucide-react';
+import { GripVertical, Sparkles, Link2, X } from 'lucide-react';
 import BlockRenderer from './BlockRenderer';
 import type { Block, BlockType } from '@/types/block';
+import { useBlockStore } from '@/store/blockStore';
 
 interface SortableBlockProps {
   block: Block;
@@ -23,6 +24,9 @@ export default function SortableBlock({
   isLinkTarget,
   isLinkSource,
 }: SortableBlockProps) {
+  const removeLink = useBlockStore((state) => state.removeLink);
+  const allBlocks = useBlockStore((state) => state.blocks);
+
   const {
     attributes,
     listeners,
@@ -75,11 +79,34 @@ export default function SortableBlock({
       <div className="flex-1 min-w-0 flex flex-col h-full">
         <BlockRenderer block={block} isSelected={isSelected} />
         {block.meta.links && block.meta.links.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <Link2 className="w-3 h-3 text-blue-400/70" />
-            <span className="text-[11px] text-blue-400/70 font-mono">
-              {block.meta.links.length} link{block.meta.links.length > 1 ? 's' : ''}
-            </span>
+          <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-1.5 border-t border-gray-100 dark:border-zinc-800/60">
+            <div className="flex items-center gap-1 text-[11px] text-blue-500 dark:text-blue-400 font-medium mr-0.5">
+              <Link2 className="w-3 h-3" />
+              <span>关联:</span>
+            </div>
+            {block.meta.links.map((targetId) => {
+              const target = allBlocks.find((b) => b.id === targetId);
+              const label = target ? (target.title || `${target.type} Block`) : '目标 Block';
+              return (
+                <span
+                  key={targetId}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-blue-50 dark:bg-zinc-800/90 text-blue-600 dark:text-blue-300 border border-blue-200/80 dark:border-zinc-700 max-w-[150px]"
+                  title={`关联至「${label}」，点击右侧 × 可断开`}
+                >
+                  <span className="truncate">{label}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeLink(block.id, targetId);
+                    }}
+                    className="hover:bg-red-100 dark:hover:bg-red-900/50 rounded p-0.5 text-blue-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                    title="断开此关联"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              );
+            })}
           </div>
         )}
       </div>

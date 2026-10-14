@@ -60,6 +60,7 @@ interface BlockStore {
   toggleSelection: (id: string) => void;
   clearSelection: () => void;
   createLink: (fromId: string, toId: string) => void;
+  removeLink: (fromId: string, toId: string) => void;
   toggleAgent: () => void;
   addAgentLog: (log: Omit<AgentLog, 'id' | 'timestamp'>) => void;
   hydrate: () => void;
@@ -647,6 +648,20 @@ export const useBlockStore = create<BlockStore>()(
             state.blockDependencies[fromId].push(toId);
           }
         });
+        get().saveHistory();
+      },
+
+      removeLink: (fromId, toId) => {
+        set((state) => {
+          const block = state.blocks.find((b) => b.id === fromId);
+          if (block && block.meta.links) {
+            block.meta.links = block.meta.links.filter((id) => id !== toId);
+          }
+          if (state.blockDependencies[fromId]) {
+            state.blockDependencies[fromId] = state.blockDependencies[fromId].filter((id) => id !== toId);
+          }
+        });
+        get().saveHistory();
       },
 
       toggleAgent: () => {
@@ -1174,10 +1189,14 @@ export const useBlockStore = create<BlockStore>()(
             body: JSON.stringify({ pages }),
           });
           if (!res.ok) {
-            console.error('Pages sync failed HTTP', res.status);
+            if (res.status === 401) {
+              // 访客/离线本地模式，静默降级为本地持久化
+              return;
+            }
+            console.warn('Pages sync notice HTTP', res.status);
           }
         } catch (err) {
-          console.error('Pages sync failed:', err);
+          // 网络断开或不可用时静默降级本地
         }
       },
 

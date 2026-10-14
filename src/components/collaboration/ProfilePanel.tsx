@@ -121,7 +121,7 @@ export function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
             ) : (
               <button
                 onClick={() => { setTitleValue(profile?.title || ''); setEditingTitle(true); }}
-                className="w-full text-left px-3 py-2 bg-gray-50 dark:bg-zinc-800 rounded-lg text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-750 transition-colors"
+                className="w-full text-left px-3 py-2 bg-gray-50 dark:bg-zinc-800 rounded-lg text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
               >
                 {profile?.title || '点击设置职务...'}
               </button>

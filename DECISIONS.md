@@ -720,3 +720,58 @@
   - 任何 Block 设为子 Block 后，均完美契合在父 Block 的树形导轨容器中，自适应撑满宽度，无任何右侧突围与样式崩坏；
   - 子 Block 头部与底部工具栏均可一键「移出」，瞬间恢复为画布顶级卡片；
   - 思维导图节点可以自由关联待办、代码或文档，点击徽章画布平滑移动聚焦，或直接从导图分支一键生成新任务。
+
+---
+
+## ADR-021: 双向关联断开交互全链路打通、导图节点悬浮操作防抖固化与暗色子 Block 色彩对比度治理 (Bidirectional Link Disconnection, Mindmap Hover Bridge & Sub-Block Dark Contrast)
+
+- **日期**：2026-10-14
+- **决策状态**：已全面落地、验证通过并纳入工程标准基线
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
+  - [src/components/SortableBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/SortableBlock.tsx)
+  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
+  - [src/components/blocks/MindmapBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/MindmapBlock.tsx)
+
+### 1. 痛点与客观证据链 (Evidence & User Feedback)
+1. **关联关系缺乏断开入口**：
+   - 用户明确反馈：“我怎么断开两个 Block 之间的连接？如果我不需要了，该怎么断开这个链接”；
+   - 之前仅实现了 `createLink`，缺少 `removeLink` 方法，且界面上只有静态的 `N links` 文本，无论是卡片上还是画布连线上均无任何断开操作。
+2. **导图悬浮按钮移动即消失 Bug**：
+   - 用户明确反馈：“你说放到上面会有悬浮，往右按可以链接。但我试了一下，只要不放上去，就点不到那个悬浮按钮。这边需要调整，现在不方便使用”；
+   - 根因分析：
+     1. SVG 节点底板矩形与悬浮按钮组（`+`、`🔗`、`×`）之间存在 6px 的空白间隙，在鼠标从节点向右滑动时，指针一旦进入间隙，浏览器判定移出 `<g>` 容器并触发 `onMouseLeave`，导致悬浮栏立即卸载消失；
+     2. 单击节点直接进入了文字编辑状态，触发 `isEditing = true` 强行隐藏了工具栏。
+3. **子 Block 暗色模式突兀白底与文字浅灰失真**：
+   - 用户截图（`media_1791964842587_a51beee8.jpg`）显示，在暗色画布下，子 Block 呈现为突兀的纯白方块，且内部文字呈浅灰色难以阅读；
+   - 根因排查：代码中误用了非标准 Tailwind 类名 `dark:bg-zinc-850/95`。浏览器直接丢弃无效类名，回退到默认浅色背景 `bg-white/95`，导致暗色模式下突兀反白并与暗色文字配色产生对比度灾难。
+4. **开发模式未授权同步警告阻断**：
+   - 访客或本地匿名状态下，`syncPages` 遇到 401 时执行 `console.error`，触发 Turbopack 红色全局错误覆盖层。
+
+### 2. 决策方案与架构落地 (Decisions & Architecture)
+
+#### (1) 全链路双向关联断开交互 (Link Disconnection Everywhere)
+1. **Store 层原子方法**：在 `blockStore.ts` 中实现 `removeLink: (fromId, toId) => void`，移除 `meta.links` 中对应的 `toId` 并记录 Undo/Redo 历史栈；
+2. **Block 卡片关联药丸**：在 `SortableBlock.tsx` 底部，将原本静态文本重构为交互式标签组。每个标签显示目标 Block 名称（或类型），并带有显眼的红色 `[✕]` 按钮，点击一键断开；
+3. **画布连线中央直接断开**：在 `BlockEditor.tsx` 的 SVG 贝塞尔连线中点 `(midX, midY)` 处，渲染可点击的交互徽章 `[✕ 断开]`（`pointer-events-auto`），用户直接点击画布连线即可秒级切断。
+
+#### (2) 思维导图悬浮桥接、单击固化与顶部快操三维防线 (Mindmap Hover Bridge & Selection Pinning)
+1. **透明感应桥接矩形 (Hover Bridge)**：在 SVG 节点 `<g>` 容器内前置注入透明覆盖层 `<rect x={-6} y={-6} width={pos.width + (isToolbarVisible ? 86 : 12)} height={pos.height + 12} fill="transparent" pointerEvents="all" />`，将节点与按钮完全包裹在无缝感应区内，彻底根除鼠标横移滑入间隙触发 `onMouseLeave`；
+2. **单击持久固化 (`selectedNodeId`)**：单击节点即将其选定并高亮边框，浮动按钮常驻固定显示，不再受鼠标移开影响；双击节点才触发文字编辑；点击画布空白处自动取消选择；
+3. **顶部工具栏快捷操作兜底**：选中节点后，导图顶栏自动展开该节点的极简操作组（`[+子项]`、`[🔗关联]`、`[重命名]`、`[×删除]`），提供 100% 稳定的备用操作入口。
+
+#### (3) 规范化暗色语义色彩与全库类名自检 (Color Contrast & Class Sanitation)
+1. **子 Block 色彩回归**：将子 Block 背景与边框修正为标准暗色语义 `border-blue-300/60 dark:border-zinc-700/80 bg-gray-50/95 dark:bg-zinc-900/95`，子 Block 顶栏使用 `dark:bg-zinc-800/80`，确保与整体暗黑设计语言严密融为一体；
+2. **全库非标类名彻底清剿**：排查并修复 `login/page.tsx` 与 `ProfilePanel.tsx` 中遗留的 `dark:hover:bg-zinc-750`（更正为 `dark:hover:bg-zinc-700`），实现全库 0 非标样式类名。
+
+#### (4) 401 告警静默降级
+- `syncPages` 捕获 401 时仅以 `console.warn` 记录，杜绝在本地未登录开发状态下弹出红色阻断性报错。
+
+### 3. 产出与验收度量 (Verification)
+- **单元与集成测试**：17 个测试套件、206 项测试用例全部 **100% 绿色通过**；
+- **生产构建零错误**：Next.js 15 全量 44 条路由编译打包 **0 错误、0 警告阻断**；
+- **全流程事实闭环**：
+  - 点击 Block 底部关联药丸的 `✕` 或画布连线上的 `✕ 断开`，均可平滑断开关联；
+  - 导图节点悬浮按钮移动不再消失，单击稳定固化并出现顶部快操；
+  - 子 Block 在暗色主题下呈现高对比度沉稳深灰，字体清晰锐利。

@@ -34,6 +34,7 @@ export default function BlockEditor({
   const clearSelection = useBlockStore((state) => state.clearSelection);
   const addBlock = useBlockStore((state) => state.addBlock);
   const createLink = useBlockStore((state) => state.createLink);
+  const removeLink = useBlockStore((state) => state.removeLink);
   const moveBlockTo = useBlockStore((state) => state.moveBlockTo);
   const resizeBlock = useBlockStore((state) => state.resizeBlock);
   const updateBlock = useBlockStore((state) => state.updateBlock);
@@ -565,13 +566,13 @@ export default function BlockEditor({
               selectedIds.includes(block.id)
                 ? 'border-blue-400/80 shadow-lg shadow-blue-500/10'
                 : isChild
-                  ? 'border-blue-300/50 dark:border-blue-800/40 bg-white/95 dark:bg-zinc-850/95 shadow-xs'
+                  ? 'border-blue-300/60 dark:border-zinc-700/80 bg-gray-50/95 dark:bg-zinc-900/95 shadow-xs'
                   : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60 bg-white dark:bg-zinc-900'
             } backdrop-blur-sm`}
           >
             <div
               className={`shrink-0 flex items-center gap-1.5 h-8 px-2.5 cursor-grab active:cursor-grabbing border-b ${
-                isChild ? 'border-blue-200/50 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/30' : 'border-gray-200/40 dark:border-zinc-700/40'
+                isChild ? 'border-blue-200/60 bg-blue-50/60 dark:border-zinc-800 dark:bg-zinc-800/80' : 'border-gray-200/40 dark:border-zinc-700/40'
               }`}
               onMouseDown={(e) => depth === 0 && startDragBlock(block.id, e)}
             >
@@ -803,17 +804,45 @@ export default function BlockEditor({
               const y1 = pos1.y + 30;
               const x2 = pos2.x + pos2.width / 2;
               const y2 = pos2.y + 30;
+              const midX = (x1 + x2) / 2;
               const midY = (y1 + y2) / 2;
               return (
-                <path
-                  key={`${block.id}-${targetId}`}
-                  d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                  fill="none"
-                  stroke="rgba(96,165,250,0.5)"
-                  strokeWidth="2"
-                  strokeDasharray="6 3"
-                  markerEnd="url(#linkArrow)"
-                />
+                <g key={`${block.id}-${targetId}`} className="group/linkline">
+                  <path
+                    d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                    fill="none"
+                    stroke="rgba(96,165,250,0.5)"
+                    strokeWidth="2"
+                    strokeDasharray="6 3"
+                    markerEnd="url(#linkArrow)"
+                  />
+                  <g
+                    className="pointer-events-auto cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeLink(block.id, targetId);
+                    }}
+                  >
+                    <title>{`断开与「${target.title || target.type}」的关联`}</title>
+                    <rect
+                      x={midX - 26}
+                      y={midY - 10}
+                      width={52}
+                      height={20}
+                      rx={10}
+                      className="fill-white dark:fill-zinc-900 stroke-blue-400/60 hover:stroke-red-500 dark:stroke-zinc-600 dark:hover:stroke-red-400 shadow-sm transition-colors"
+                      strokeWidth={1.5}
+                    />
+                    <text
+                      x={midX}
+                      y={midY + 3.5}
+                      textAnchor="middle"
+                      className="text-[10px] fill-blue-600 dark:fill-blue-300 font-sans font-medium select-none pointer-events-none"
+                    >
+                      ✕ 断开
+                    </text>
+                  </g>
+                </g>
               );
             });
           })}

@@ -55,7 +55,7 @@ export default function LoginPage() {
           <button
             onClick={() => handleDemoLogin(DEMO_ADMIN.id, DEMO_ADMIN.name, DEMO_ADMIN.email)}
             disabled={loading}
-            className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-zinc-750 transition-colors text-left"
+            className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors text-left"
           >
             <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 text-sm font-bold">
               {DEMO_ADMIN.name.charAt(0)}
@@ -84,7 +84,7 @@ export default function LoginPage() {
                 key={emp.id}
                 onClick={() => handleDemoLogin(emp.id, emp.name, emp.email)}
                 disabled={loading}
-                className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-zinc-750 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors text-left"
               >
                 <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold">
                   {emp.name.charAt(0)}
