@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Plus, 
@@ -111,161 +111,176 @@ export default function MindmapBlock({ content, onChange, readOnly, blockId }: M
     []
   );
 
-  const addChild = useCallback((parentId: string) => {
-    setRoot((prevRoot) => {
-      const newRoot = updateNode(prevRoot, parentId, (n) => ({
+  const lastEmittedRef = useRef<string>(content);
+
+  useEffect(() => {
+    if (content !== lastEmittedRef.current) {
+      lastEmittedRef.current = content;
+      setRoot(parseMindmap(content));
+    }
+  }, [content]);
+
+  const commitRoot = useCallback(
+    (newRoot: MindmapNode) => {
+      setRoot(newRoot);
+      const json = JSON.stringify(newRoot);
+      lastEmittedRef.current = json;
+      onChange(json);
+    },
+    [onChange]
+  );
+
+  const addChild = useCallback(
+    (parentId: string) => {
+      const newRoot = updateNode(root, parentId, (n) => ({
         ...n,
         collapsed: false,
         children: [...(n.children || []), { id: generateId(), text: '新分支节点', children: [] }],
       }));
-      onChange(JSON.stringify(newRoot));
-      return newRoot;
-    });
-  }, [updateNode, onChange]);
+      commitRoot(newRoot);
+    },
+    [root, updateNode, commitRoot]
+  );
 
   const addRootBranch = useCallback(() => {
-    setRoot((prevRoot) => {
-      const newRoot = {
-        ...prevRoot,
-        children: [...(prevRoot.children || []), { id: generateId(), text: '新主分支', children: [] }],
-      };
-      onChange(JSON.stringify(newRoot));
-      return newRoot;
-    });
-  }, [onChange]);
+    const newRoot: MindmapNode = {
+      ...root,
+      children: [...(root.children || []), { id: generateId(), text: '新主分支', children: [] }],
+    };
+    commitRoot(newRoot);
+  }, [root, commitRoot]);
 
-  const removeNode = useCallback((id: string) => {
-    setRoot((prevRoot) => {
+  const removeNode = useCallback(
+    (id: string) => {
       const removeFrom = (node: MindmapNode): MindmapNode | null => {
         if (node.id === id) return null;
         return { ...node, children: (node.children || []).map(removeFrom).filter(Boolean) as MindmapNode[] };
       };
-      const newRoot = removeFrom(prevRoot);
+      const newRoot = removeFrom(root);
       if (newRoot) {
-        onChange(JSON.stringify(newRoot));
-        return newRoot;
+        commitRoot(newRoot);
       }
-      return prevRoot;
-    });
-  }, [onChange]);
+    },
+    [root, commitRoot]
+  );
 
-  const toggleCollapse = useCallback((id: string) => {
-    setRoot((prevRoot) => {
-      const newRoot = updateNode(prevRoot, id, (n) => ({ ...n, collapsed: !n.collapsed }));
-      onChange(JSON.stringify(newRoot));
-      return newRoot;
-    });
-  }, [updateNode, onChange]);
+  const toggleCollapse = useCallback(
+    (id: string) => {
+      const newRoot = updateNode(root, id, (n) => ({ ...n, collapsed: !n.collapsed }));
+      commitRoot(newRoot);
+    },
+    [root, updateNode, commitRoot]
+  );
 
-  const startEdit = useCallback((node: MindmapNode) => {
-    if (readOnly) return;
-    setEditingId(node.id);
-    setEditText(node.text);
-  }, [readOnly]);
+  const startEdit = useCallback(
+    (node: MindmapNode) => {
+      if (readOnly) return;
+      setEditingId(node.id);
+      setEditText(node.text);
+    },
+    [readOnly]
+  );
 
-  const saveEdit = useCallback((id: string) => {
-    setRoot((prevRoot) => {
-      const newRoot = updateNode(prevRoot, id, (n) => ({ ...n, text: editText.trim() || n.text }));
-      onChange(JSON.stringify(newRoot));
-      return newRoot;
-    });
-    setEditingId(null);
-  }, [editText, updateNode, onChange]);
+  const saveEdit = useCallback(
+    (id: string) => {
+      const newRoot = updateNode(root, id, (n) => ({ ...n, text: editText.trim() || n.text }));
+      commitRoot(newRoot);
+      setEditingId(null);
+    },
+    [root, editText, updateNode, commitRoot]
+  );
 
-  const handleLinkBlock = useCallback((nodeId: string, targetBlockId: string) => {
-    setRoot((prevRoot) => {
-      const newRoot = updateNode(prevRoot, nodeId, (n) => ({ ...n, linkedBlockId: targetBlockId }));
-      onChange(JSON.stringify(newRoot));
-      return newRoot;
-    });
-    if (blockId && targetBlockId) {
-      createLink(blockId, targetBlockId);
-    }
-    setLinkPopover(null);
-  }, [blockId, createLink, updateNode, onChange]);
+  const handleLinkBlock = useCallback(
+    (nodeId: string, targetBlockId: string) => {
+      const newRoot = updateNode(root, nodeId, (n) => ({ ...n, linkedBlockId: targetBlockId }));
+      commitRoot(newRoot);
+      if (blockId && targetBlockId) {
+        createLink(blockId, targetBlockId);
+      }
+      setLinkPopover(null);
+    },
+    [root, blockId, createLink, updateNode, commitRoot]
+  );
 
-  const handleUnlinkBlock = useCallback((nodeId: string) => {
-    setRoot((prevRoot) => {
-      const targetNode = (() => {
-        let found: MindmapNode | null = null;
-        const search = (n: MindmapNode) => {
-          if (n.id === nodeId) found = n;
-          n.children?.forEach(search);
-        };
-        search(prevRoot);
-        return found as MindmapNode | null;
-      })();
+  const handleUnlinkBlock = useCallback(
+    (nodeId: string) => {
+      let targetNode: MindmapNode | null = null;
+      const search = (n: MindmapNode) => {
+        if (n.id === nodeId) targetNode = n;
+        n.children?.forEach(search);
+      };
+      search(root);
 
-      if (targetNode?.linkedBlockId && blockId) {
+      if (targetNode && (targetNode as MindmapNode).linkedBlockId && blockId) {
         const currentBlock = blocks.find((b) => b.id === blockId);
         if (currentBlock && currentBlock.meta.links) {
           updateBlock(blockId, {
             meta: {
               ...currentBlock.meta,
-              links: currentBlock.meta.links.filter((l) => l !== targetNode.linkedBlockId),
+              links: currentBlock.meta.links.filter((l) => l !== (targetNode as MindmapNode).linkedBlockId),
             },
           });
         }
       }
 
-      const newRoot = updateNode(prevRoot, nodeId, (n) => {
+      const newRoot = updateNode(root, nodeId, (n) => {
         const copy = { ...n };
         delete copy.linkedBlockId;
         return copy;
       });
-      onChange(JSON.stringify(newRoot));
-      return newRoot;
-    });
-    setLinkPopover(null);
-  }, [blockId, blocks, updateBlock, updateNode, onChange]);
+      commitRoot(newRoot);
+      setLinkPopover(null);
+    },
+    [root, blockId, blocks, updateBlock, updateNode, commitRoot]
+  );
 
-  const handleCreateAndLinkBlock = useCallback((node: MindmapNode, type: BlockType) => {
-    const parentBlock = blockId ? blocks.find((b) => b.id === blockId) : null;
-    const newX = (parentBlock?.x || 100) + (parentBlock?.width || 560) + 40;
-    const newY = parentBlock?.y || 100;
+  const handleCreateAndLinkBlock = useCallback(
+    (node: MindmapNode, type: BlockType) => {
+      const parentBlock = blockId ? blocks.find((b) => b.id === blockId) : null;
+      const newX = (parentBlock?.x || 100) + (parentBlock?.width || 560) + 40;
+      const newY = parentBlock?.y || 100;
 
-    const newBlockId = addBlock(type, undefined, { x: newX, y: newY });
-    const titleText = `${node.text}`;
+      const newBlockId = addBlock(type, undefined, { x: newX, y: newY });
+      const titleText = `${node.text}`;
 
-    if (type === 'todo') {
-      updateBlock(newBlockId, {
-        title: titleText,
-        content: `【任务执行】${node.text}\n- [ ] 方案梳理与核心实现\n- [ ] 质量验证与验收`,
-        meta: { checked: false, tags: ['导图关联任务'] },
-      });
-    } else if (type === 'text') {
-      updateBlock(newBlockId, {
-        title: titleText,
-        content: `### 📝 ${node.text}\n\n此处由思维导图分支「${node.text}」自动实例化生成。请在此补充详细落地文档与规范说明。`,
-        meta: { tags: ['导图关联文档'] },
-      });
-    } else if (type === 'code') {
-      updateBlock(newBlockId, {
-        title: `${titleText} 代码实现`,
-        content: `// 🚀 模块实现：${node.text}\nexport function execute() {\n  console.log("执行模块逻辑: ${node.text}");\n  return true;\n}`,
-        meta: { language: 'typescript', tags: ['导图代码模块'] },
-      });
-    }
+      if (type === 'todo') {
+        updateBlock(newBlockId, {
+          title: titleText,
+          content: `【任务执行】${node.text}\n- [ ] 方案梳理与核心实现\n- [ ] 质量验证与验收`,
+          meta: { checked: false, tags: ['导图关联任务'] },
+        });
+      } else if (type === 'text') {
+        updateBlock(newBlockId, {
+          title: titleText,
+          content: `### 📝 ${node.text}\n\n此处由思维导图分支「${node.text}」自动实例化生成。请在此补充详细落地文档与规范说明。`,
+          meta: { tags: ['导图关联文档'] },
+        });
+      } else if (type === 'code') {
+        updateBlock(newBlockId, {
+          title: `${titleText} 代码实现`,
+          content: `// 🚀 模块实现：${node.text}\nexport function execute() {\n  console.log("执行模块逻辑: ${node.text}");\n  return true;\n}`,
+          meta: { language: 'typescript', tags: ['导图代码模块'] },
+        });
+      }
 
-    if (blockId) {
-      createLink(blockId, newBlockId);
-    }
+      if (blockId) {
+        createLink(blockId, newBlockId);
+      }
 
-    setRoot((prevRoot) => {
-      const newRoot = updateNode(prevRoot, node.id, (n) => ({ ...n, linkedBlockId: newBlockId }));
-      onChange(JSON.stringify(newRoot));
-      return newRoot;
-    });
+      const newRoot = updateNode(root, node.id, (n) => ({ ...n, linkedBlockId: newBlockId }));
+      commitRoot(newRoot);
 
-    setSelection([newBlockId]);
-    window.dispatchEvent(
-      new CustomEvent('blockos-scroll-to-block', {
-        detail: { blockId: newBlockId },
-      })
-    );
+      setSelection([newBlockId]);
+      window.dispatchEvent(
+        new CustomEvent('blockos-scroll-to-block', {
+          detail: { blockId: newBlockId },
+        })
+      );
 
-    setLinkPopover(null);
-  }, [blockId, blocks, addBlock, updateBlock, createLink, updateNode, onChange, setSelection]);
+      setLinkPopover(null);
+    },
+    [root, blockId, blocks, addBlock, updateBlock, createLink, updateNode, commitRoot, setSelection]
+  );
 
   const jumpToLinkedBlock = useCallback((e: React.MouseEvent, targetBlockId: string) => {
     e.stopPropagation();
