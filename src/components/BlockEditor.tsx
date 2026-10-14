@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useBlockStore } from '@/store/blockStore';
+import { useBlockStore, estimateBlockHeight } from '@/store/blockStore';
 import SortableBlock from './SortableBlock';
 import CommandMenu from './CommandMenu';
 import AIResultCard from './AIResultCard';
@@ -184,6 +184,124 @@ export default function BlockEditor({
     }
     return bounds;
   }, [sortedBlocks]);
+
+  const connectionLinks = useMemo(() => {
+    const getVisualBox = (b: Block) => {
+      let x = b.x;
+      let y = b.y;
+      let w = b.width || 480;
+      const h = b.height || estimateBlockHeight(b);
+
+      if (b.parentId) {
+        const parent = blocks.find((p) => p.id === b.parentId);
+        if (parent) {
+          x = parent.x + 20;
+          y = parent.y + 60;
+          w = Math.max(200, (parent.width || 480) - 40);
+        }
+      }
+
+      return {
+        left: x,
+        right: x + w,
+        top: y,
+        bottom: y + h,
+        centerX: x + w / 2,
+        centerY: y + h / 2,
+        width: w,
+        height: h,
+      };
+    };
+
+    const linksList: Array<{
+      id: string;
+      fromId: string;
+      toId: string;
+      targetTitle: string;
+      path: string;
+      midX: number;
+      midY: number;
+    }> = [];
+
+    for (const block of sortedBlocks) {
+      const links = block.meta.links || [];
+      for (const targetId of links) {
+        const target = blocks.find((b) => b.id === targetId);
+        if (!target) continue;
+
+        const box1 = getVisualBox(block);
+        const box2 = getVisualBox(target);
+
+        const dx = box2.centerX - box1.centerX;
+        const dy = box2.centerY - box1.centerY;
+
+        let x1: number, y1: number, x2: number, y2: number;
+        let path: string;
+        let midX: number, midY: number;
+
+        // Determine if connection is primarily vertical or horizontal
+        if (Math.abs(dy) >= Math.abs(dx)) {
+          // Vertical dominant
+          if (dy >= 0) {
+            // box1 is above box2 -> connect bottom of box1 to top of box2
+            x1 = box1.centerX;
+            y1 = box1.bottom;
+            x2 = box2.centerX;
+            y2 = box2.top;
+            midX = (x1 + x2) / 2;
+            midY = (y1 + y2) / 2;
+            const deltaY = Math.max(24, Math.abs(y2 - y1) * 0.5);
+            path = `M ${x1} ${y1} C ${x1} ${y1 + deltaY}, ${x2} ${y2 - deltaY}, ${x2} ${y2}`;
+          } else {
+            // box1 is below box2 -> connect top of box1 to bottom of box2
+            x1 = box1.centerX;
+            y1 = box1.top;
+            x2 = box2.centerX;
+            y2 = box2.bottom;
+            midX = (x1 + x2) / 2;
+            midY = (y1 + y2) / 2;
+            const deltaY = Math.max(24, Math.abs(y1 - y2) * 0.5);
+            path = `M ${x1} ${y1} C ${x1} ${y1 - deltaY}, ${x2} ${y2 + deltaY}, ${x2} ${y2}`;
+          }
+        } else {
+          // Horizontal dominant
+          if (dx >= 0) {
+            // box1 is to the left of box2 -> connect right edge to left edge
+            x1 = box1.right;
+            y1 = box1.centerY;
+            x2 = box2.left;
+            y2 = box2.centerY;
+            midX = (x1 + x2) / 2;
+            midY = (y1 + y2) / 2;
+            const deltaX = Math.max(24, Math.abs(x2 - x1) * 0.5);
+            path = `M ${x1} ${y1} C ${x1 + deltaX} ${y1}, ${x2 - deltaX} ${y2}, ${x2} ${y2}`;
+          } else {
+            // box1 is to the right of box2 -> connect left edge to right edge
+            x1 = box1.left;
+            y1 = box1.centerY;
+            x2 = box2.right;
+            y2 = box2.centerY;
+            midX = (x1 + x2) / 2;
+            midY = (y1 + y2) / 2;
+            const deltaX = Math.max(24, Math.abs(x1 - x2) * 0.5);
+            path = `M ${x1} ${y1} C ${x1 - deltaX} ${y1}, ${x2 + deltaX} ${y2}, ${x2} ${y2}`;
+          }
+        }
+
+        linksList.push({
+          id: `${block.id}-${targetId}`,
+          fromId: block.id,
+          toId: targetId,
+          targetTitle: target.title || target.type,
+          path,
+          midX,
+          midY,
+        });
+      }
+    }
+
+    return linksList;
+  }, [sortedBlocks, blocks]);
 
   const handleSelect = useCallback(
     (id: string, multi: boolean) => {
@@ -758,11 +876,13 @@ export default function BlockEditor({
           height: '10000px',
         }}
       >
+        {/* 底层 SVG：渲染连线贝塞尔曲线与分组虚线框 (z-1) */}
         <svg
           className="absolute origin-top-left pointer-events-none"
           style={{
             width: '10000px',
             height: '10000px',
+            zIndex: 1,
           }}
         >
           <defs>
@@ -778,74 +898,17 @@ export default function BlockEditor({
               <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(96,165,250,0.6)" />
             </marker>
           </defs>
-          {sortedBlocks.flatMap((block) => {
-            const links = block.meta.links || [];
-            return links.map((targetId) => {
-              const target = blocks.find((b) => b.id === targetId);
-              if (!target) return null;
-
-              const getVisualPos = (b: typeof block) => {
-                if (!b.parentId) {
-                  return { x: b.x, y: b.y, width: b.width };
-                }
-                const parent = blocks.find((p) => p.id === b.parentId);
-                if (!parent) return { x: b.x, y: b.y, width: b.width };
-                return {
-                  x: parent.x + 20,
-                  y: parent.y + 60,
-                  width: (parent.width || 480) - 40,
-                };
-              };
-
-              const pos1 = getVisualPos(block);
-              const pos2 = getVisualPos(target);
-
-              const x1 = pos1.x + pos1.width / 2;
-              const y1 = pos1.y + 30;
-              const x2 = pos2.x + pos2.width / 2;
-              const y2 = pos2.y + 30;
-              const midX = (x1 + x2) / 2;
-              const midY = (y1 + y2) / 2;
-              return (
-                <g key={`${block.id}-${targetId}`} className="group/linkline">
-                  <path
-                    d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                    fill="none"
-                    stroke="rgba(96,165,250,0.5)"
-                    strokeWidth="2"
-                    strokeDasharray="6 3"
-                    markerEnd="url(#linkArrow)"
-                  />
-                  <g
-                    className="pointer-events-auto cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeLink(block.id, targetId);
-                    }}
-                  >
-                    <title>{`断开与「${target.title || target.type}」的关联`}</title>
-                    <rect
-                      x={midX - 26}
-                      y={midY - 10}
-                      width={52}
-                      height={20}
-                      rx={10}
-                      className="fill-white dark:fill-zinc-900 stroke-blue-400/60 hover:stroke-red-500 dark:stroke-zinc-600 dark:hover:stroke-red-400 shadow-sm transition-colors"
-                      strokeWidth={1.5}
-                    />
-                    <text
-                      x={midX}
-                      y={midY + 3.5}
-                      textAnchor="middle"
-                      className="text-[10px] fill-blue-600 dark:fill-blue-300 font-sans font-medium select-none pointer-events-none"
-                    >
-                      ✕ 断开
-                    </text>
-                  </g>
-                </g>
-              );
-            });
-          })}
+          {connectionLinks.map((link) => (
+            <path
+              key={`line-${link.id}`}
+              d={link.path}
+              fill="none"
+              stroke="rgba(96,165,250,0.6)"
+              strokeWidth="2"
+              strokeDasharray="6 3"
+              markerEnd="url(#linkArrow)"
+            />
+          ))}
           {groupBounds.map((g) => (
             <rect
               key={g.groupId}
@@ -862,7 +925,53 @@ export default function BlockEditor({
           ))}
         </svg>
 
-        {visibleBlocks.filter((b) => !b.parentId).map((b) => renderBlockTree(b))}
+        {/* 中间层：Block 卡片树渲染 (z-2) */}
+        <div className="relative" style={{ zIndex: 2 }}>
+          {visibleBlocks.filter((b) => !b.parentId).map((b) => renderBlockTree(b))}
+        </div>
+
+        {/* 顶层高优先级 SVG 覆盖层：渲染断开连接交互药丸 (z-30) - 彻底避免被任何 Block 卡片实体背景遮挡 */}
+        <svg
+          className="absolute origin-top-left pointer-events-none"
+          style={{
+            width: '10000px',
+            height: '10000px',
+            zIndex: 30,
+          }}
+        >
+          {connectionLinks.map((link) => (
+            <g
+              key={`pill-${link.id}`}
+              className="pointer-events-auto cursor-pointer group/linkpill"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeLink(link.fromId, link.toId);
+              }}
+            >
+              <title>{`断开与「${link.targetTitle}」的关联`}</title>
+              <rect
+                x={link.midX - 32}
+                y={link.midY - 12}
+                width={64}
+                height={24}
+                rx={12}
+                className="fill-white dark:fill-zinc-900 stroke-blue-500/80 group-hover/linkpill:stroke-red-500 group-hover/linkpill:fill-red-50 dark:group-hover/linkpill:fill-red-950/80 transition-all"
+                strokeWidth={1.5}
+                style={{
+                  filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))',
+                }}
+              />
+              <text
+                x={link.midX}
+                y={link.midY + 4}
+                textAnchor="middle"
+                className="text-[11px] font-medium fill-blue-600 dark:fill-blue-400 group-hover/linkpill:fill-red-600 dark:group-hover/linkpill:fill-red-400 font-sans select-none pointer-events-none transition-colors"
+              >
+                ✕ 断开
+              </text>
+            </g>
+          ))}
+        </svg>
       </div>
 
       {/* 缩略图导航 (Minimap 鹰眼) */}

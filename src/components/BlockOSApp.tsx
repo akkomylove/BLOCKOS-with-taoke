@@ -57,7 +57,7 @@ export default function BlockOSApp() {
     // 飞书/钉钉风格官方新手入门系统保障与激活机制
     const GUIDE_ID = 'doc-guide';
     const GUIDE_TITLE = '👋 欢迎使用 BlockOS ｜ 新手快速入门指南';
-    const GUIDE_VERSION_KEY = 'blockos-guide-v8-anti-overlap-minimap';
+    const GUIDE_VERSION_KEY = 'blockos-guide-v9-clean-single-doc';
     const hasUpgraded = localStorage.getItem(GUIDE_VERSION_KEY);
 
     const state = useBlockStore.getState();
@@ -97,44 +97,40 @@ export default function BlockOSApp() {
     }
 
     if (!hasUpgraded) {
+      const LEGACY_PRESET_IDS = new Set(['doc-prd', 'doc-tech', 'doc-ui', 'doc-data', 'doc-test']);
+      const isLegacySample = (p: { id: string; title: string }) =>
+        LEGACY_PRESET_IDS.has(p.id) ||
+        ['产品需求文档', '技术方案设计', 'UI 设计规范', 'UI设计规范', '数据流与架构图', '测试计划与用例'].some((t) => p.title.includes(t));
+
       const existingGuide = state.pages.find(
         (p) => p.id === GUIDE_ID || p.title.includes('新手') || p.title.includes('入门')
       );
 
-      if (!existingGuide) {
-        // 创建新指南页面并置顶
-        const newGuidePage = {
+      useBlockStore.setState((prev) => {
+        // 过滤掉旧的 5 个预置样板文档，仅保留用户自定义页面与新手指南文档（其余通过样板库按需引入）
+        const userCustomPages = prev.pages.filter((p) => p.id !== (existingGuide?.id || GUIDE_ID) && !isLegacySample(p));
+        const cleanPageBlocks = { ...prev.pageBlocks };
+        LEGACY_PRESET_IDS.forEach((id) => delete cleanPageBlocks[id]);
+
+        const guidePage = {
           id: GUIDE_ID,
           title: GUIDE_TITLE,
           icon: '👋',
-          createdAt: Date.now(),
+          createdAt: existingGuide?.createdAt || Date.now(),
           updatedAt: Date.now(),
         };
-        useBlockStore.setState((prev) => ({
-          pages: [newGuidePage, ...prev.pages],
+
+        return {
+          pages: [guidePage, ...userCustomPages],
           pageBlocks: {
-            ...prev.pageBlocks,
+            ...cleanPageBlocks,
             [GUIDE_ID]: freshGuideBlocks,
           },
           currentPageId: GUIDE_ID,
           blocks: freshGuideBlocks,
-        }));
-      } else {
-        const guideId = existingGuide.id;
-        useBlockStore.setState((prev) => {
-          const otherPages = prev.pages.filter((p) => p.id !== guideId);
-          const updatedGuidePage = { ...existingGuide, title: GUIDE_TITLE, icon: '👋', updatedAt: Date.now() };
-          return {
-            pages: [updatedGuidePage, ...otherPages],
-            pageBlocks: {
-              ...prev.pageBlocks,
-              [guideId]: freshGuideBlocks,
-            },
-            currentPageId: guideId,
-            blocks: freshGuideBlocks,
-          };
-        });
-      }
+        };
+      });
+
       localStorage.setItem(GUIDE_VERSION_KEY, 'true');
       setShowOnboarding(true);
     } else {

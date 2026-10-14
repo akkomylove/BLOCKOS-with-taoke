@@ -775,3 +775,59 @@
   - 点击 Block 底部关联药丸的 `✕` 或画布连线上的 `✕ 断开`，均可平滑断开关联；
   - 导图节点悬浮按钮移动不再消失，单击稳定固化并出现顶部快操；
   - 子 Block 在暗色主题下呈现高对比度沉稳深灰，字体清晰锐利。
+
+---
+
+## ADR-022: 画布连线断开药丸三层防遮挡架构与首屏极简单文档入门标准 (Unoccluded Link Disconnection Pill & Clean Single-Doc Onboarding Architecture)
+
+- **日期**：2026-10-14
+- **决策状态**：已全面落地、验证通过并纳入工程标准基线
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
+  - [src/components/BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
+  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
+  - [src/config/presetDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/config/presetDocuments.ts)
+
+### 1. 痛点根因与事实证伪 (Evidence & Root Cause)
+1. **纵向连线断开药丸被实体卡片遮挡**：
+   - 用户实测截图（`media_1791967501979_adb20428.jpg`）证明：当上下两个 Block 纵向连接时，断开药丸被上方 Block 卡片本体遮挡，仅能在卡片边缘微透模糊形状；
+   - **根因剖析**：
+     1. **几何锚点失真**：旧算法硬编码锚点为 `(pos.x + width/2, pos.y + 30)`。当上方 Block（如导图，高 400px）位于 `y=40`、下方 Block 位于 `y=500` 时，中心点 `midY = (70 + 530) / 2 = 300`，该点物理落在上方 Block 本体（`y: 40~440`）正中间；
+     2. **DOM 堆叠层级缺陷**：旧版连线与药丸均绘制在处于 DOM 树前置的单个 SVG 中，后续渲染的 Block 卡片拥有实心白底（`bg-white dark:bg-zinc-900`），在层叠上下文（Stacking Context）中自然覆盖在药丸上方。
+2. **新手文档过度臃肿与样板泛滥**：
+   - 用户明确纠偏：“新客户进来时，只需要先看到‘欢迎使用’的入门指南文档，剩下的 5 个文档不要在第一次就立刻出现，它们只是作为样板，而不是用户一打开软件就立刻有的。所以你的功能设计不能通过展示后面这 5 个文档来体现，得换一个方法，或者直接引导客户使用上面工具栏的 AI 助手等功能来体现。”；
+   - 之前初始化将 6 个行业文档全数载入左侧侧边栏，破坏了首屏纯粹性，违背了渐进式交付逻辑。
+
+### 2. 决策方案与架构落地 (Decisions & Architecture)
+
+#### (1) 画布分层渲染与动态边缘路由三维防线 (3-Layer Rendering & Edge-to-Edge Routing)
+1. **动态边缘路由几何算法**：
+   - 弃用固定 `y + 30` 偏移，引入 `estimateBlockHeight` 动态计算 Block 真实三维包围盒（`box1` 与 `box2`）；
+   - **自适应主导轴判定**：
+     - 若 `|dy| >= |dx|`（纵向主导）：上方 Block 连接点取底边中心 `(box1.centerX, box1.bottom)`，下方 Block 连接点取顶边中心 `(box2.centerX, box2.top)`，中点 `midY = (box1.bottom + box2.top) / 2` 严格落在两张卡片间的空白间距内；
+     - 若 `|dx| > |dy|`（横向主导）：左侧 Block 取右边中点，右侧 Block 取左边中点，确保中点始终处于开阔地带。
+2. **三层独立层叠架构 (3-Layer Stacking Architecture)**：
+   - **底层 SVG (`zIndex: 1`)**：仅渲染贝塞尔曲线连线与分组虚线框；
+   - **中间 DOM 层 (`zIndex: 2`)**：渲染 Block 卡片实体树；
+   - **顶层高优先级覆盖层 SVG (`zIndex: 30`)**：独立渲染断开连接交互药丸（`[✕ 断开]`），启用 `pointer-events-auto`。无论卡片如何拖拽、重叠，断开药丸均绝对处于视线与可点击最上层，彻底杜绝遮挡。
+3. **药丸视觉升级**：
+   - 尺寸调整为 `64x24 rx=12`，赋予高对比度投影 `drop-shadow(0 2px 6px rgba(0,0,0,0.18))`；
+   - 默认浅蓝描边，悬停即变鲜红并切换高亮背景，操作意图明确直观。
+
+#### (2) 极简单文档入门与样板库隔离治理 (Clean Single-Doc Onboarding & Template Segregation)
+1. **首屏纯净单文档**：`createPresetPages()` 仅初始化首张《👋 欢迎使用 BlockOS ｜ 新手快速入门指南》（`doc-guide`），左侧文档列表清爽干净；
+2. **样板库按需实例化**：其余 5 篇完整行业标杆文档（电商 PRD、技术架构、UI 规范、数据矩阵、测试用例）全部封装入模板中心（`TemplatePicker`），用户点击「+ 新建页面」时按需选用；
+3. **欢迎页闭环演示与工具栏进阶引导**：
+   - **Block 1**：明确产品 PRD 核心需求与验收 DoD；
+   - **Block 2**：点击勾选【发布保障】核心功能测试用例需 100% 通过，原地由 Agent 规则引擎自驱动触发生成《迭代发布报告》与 AI 规划 Checklist，并在审计流水留痕；
+   - **Block 6**：作为进阶协同总览，明确引导用户使用顶栏的「AI 助手」、「Copilot 规划」、「规则与执行审计」、「敏捷看板」与「样板中心」，构建完整的产研闭环。
+4. **水合与版本升级机制**：
+   - 升级版本键为 `blockos-guide-v9-clean-single-doc`，升级时自动清理旧版遗留在 localStorage 中的 5 个硬编码样板文档（保留用户自定义文档），保证新老用户均享有一致的极简首屏体验。
+
+### 3. 产出与验收度量 (Verification)
+- **自动化测试**：Vitest 17 个测试套件、206 项测试用例全部 **100% 绿色通过**；
+- **生产编译**：Next.js 15 全量 38 个路由生产构建 **0 错误、0 警告阻断**；
+- **事实闭环**：
+  - 纵向连线断开药丸绝对悬浮于两卡片间隙最顶层，无任何遮挡，点击即可秒级切断关联；
+  - 首屏仅展现《欢迎使用》单文档，其余 5 篇文档规范入驻样板库。

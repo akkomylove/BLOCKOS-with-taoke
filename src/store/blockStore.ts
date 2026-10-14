@@ -149,28 +149,49 @@ export function estimateBlockHeight(block: Block): number {
 export const BLOCK_TEMPLATES: BlockTemplate[] = [
   {
     id: 'onboarding-guide',
-    name: '👋 欢迎使用 BlockOS ｜ 新手快速入门指南',
+    name: '👋 新手快速入门指南',
     icon: '👋',
     description: '3 分钟掌握 BlockOS：无界画布、Agent 规则自驱动、代码沙箱与单 Block 专属 AI',
     blocks: PRESET_DOCUMENTS[0]?.blocks || [],
   },
   {
-    id: 'demo-prd',
-    name: '实战演示文档',
-    icon: '🛒',
-    description: 'CircleLight 电商平台 PRD 完整演示文档，包含多种 Block 类型',
-    blocks: [
-      { type: 'text', title: '项目概述', content: '# 电商平台开发项目 PRD\n\n## 项目背景\n\nCircleLight 计划开发一款面向中小企业的电商平台，支持多店铺管理、商品上架、订单处理、支付集成和物流追踪。\n\n## 核心目标\n\n- 3个月内完成 MVP 版本上线\n- 支持日均 10,000 订单处理能力\n- 移动端响应式适配\n- 集成主流支付渠道（微信支付、支付宝、银联）', meta: { tags: ['实战演示文档'] }, parentId: null, order: 0, x: 40, y: 40, width: 480, collapsed: false },
-      { type: 'text', title: '功能模块', content: '## 功能模块清单\n\n### 用户系统\n- 用户注册/登录（手机号+验证码、微信授权）\n- 个人中心（订单、地址、收藏、优惠券）\n- 会员等级体系\n\n### 商品系统\n- 商品分类管理（三级分类）\n- SKU 管理（规格、库存、价格）\n- 商品搜索与筛选\n- 商品评价与问答\n\n### 订单系统\n- 购物车（增删改查、批量结算）\n- 订单创建与支付\n- 订单状态流转（待付款→待发货→已发货→已完成）\n- 售后退款/退货流程\n\n### 支付系统\n- 微信支付（JSAPI、Native、H5）\n- 支付宝（手机网站、APP）\n- 银联云闪付\n- 余额支付\n\n### 物流系统\n- 快递公司对接（顺丰、中通、圆通等）\n- 物流轨迹查询\n- 电子面单打印\n\n### 营销系统\n- 优惠券（满减、折扣、免邮）\n- 秒杀活动\n- 拼团功能\n- 积分商城', meta: { tags: ['实战演示文档'] }, parentId: null, order: 1, x: 40, y: 280, width: 480, collapsed: false },
-      { type: 'table', title: '技术栈选型', content: JSON.stringify({ headers: ['层级', '技术选型', '版本', '说明'], rows: [['前端', 'Next.js', '15.x', 'React 框架，支持 SSR/SSG'], ['前端', 'Tailwind CSS', '3.x', '原子化 CSS 框架'], ['前端', 'Zustand', '5.x', '状态管理'], ['后端', 'Node.js', '20 LTS', '运行环境'], ['后端', 'Prisma', '5.x', 'ORM 框架'], ['数据库', 'PostgreSQL', '16', '主数据库'], ['缓存', 'Redis', '7.x', '会话、缓存、队列'], ['搜索', 'Elasticsearch', '8.x', '商品搜索'], ['消息队列', 'RabbitMQ', '3.x', '异步任务'], ['支付', '官方 SDK', '-', '微信、支付宝、银联'], ['部署', 'Docker', '-', '容器化部署'], ['CI/CD', 'GitHub Actions', '-', '自动化构建']], }), meta: { tags: ['实战演示文档'] }, parentId: null, order: 2, x: 560, y: 40, width: 520, collapsed: false },
-      { type: 'text', title: '团队分工', content: '## 项目团队\n\n| 角色 | 姓名 | 职能 | 负责模块 |\n|------|------|------|----------|\n| 产品经理 | 陈明远 | 产品规划、需求分析 | 整体产品方向、PRD 文档 |\n| 前端开发 | 林小薇 | 前端架构、UI 实现 | 用户端 H5、管理后台 |\n| 后端开发 | 张浩然 | 后端架构、API 开发 | 用户系统、订单系统、支付系统 |\n| UI 设计师 | 苏婉清 | 视觉设计、交互设计 | 设计规范、高保真原型 |\n| 测试工程师 | 王志强 | 测试策略、自动化测试 | 功能测试、性能测试、回归测试 |', meta: { tags: ['实战演示文档'] }, parentId: null, order: 3, x: 560, y: 340, width: 480, collapsed: false },
-      { type: 'text', title: '开发里程碑', content: '## 项目里程碑\n\n### 第一阶段：基础架构（第1-2周）\n- 项目初始化、开发环境搭建\n- 数据库设计、API 规范制定\n- 前端组件库搭建\n\n### 第二阶段：核心功能（第3-6周）\n- 用户系统完整实现\n- 商品系统完整实现\n- 购物车与订单流程\n\n### 第三阶段：支付与物流（第7-9周）\n- 支付渠道对接\n- 物流系统对接\n- 订单状态机完善\n\n### 第四阶段：营销与优化（第10-11周）\n- 优惠券、秒杀、拼团\n- 性能优化、安全加固\n- 测试覆盖与 Bug 修复\n\n### 第五阶段：上线准备（第12周）\n- 生产环境部署\n- 数据迁移\n- 灰度发布', meta: { tags: ['实战演示文档'] }, parentId: null, order: 4, x: 40, y: 680, width: 480, collapsed: false },
-      { type: 'text', title: '风险与应对', content: '## 风险分析\n\n| 风险 | 影响 | 应对措施 |\n|------|------|----------|\n| 支付接口审核周期长 | 高 | 提前申请，准备备用方案 |\n| 高并发性能瓶颈 | 高 | 引入缓存、消息队列、数据库读写分离 |\n| 第三方物流接口不稳定 | 中 | 多物流商对接，降级策略 |\n| 需求变更频繁 | 中 | 敏捷开发，两周一个迭代 |\n| 团队成员请假/离职 | 低 | 代码审查、文档完善、知识共享 |', meta: { tags: ['实战演示文档'] }, parentId: null, order: 5, x: 560, y: 620, width: 480, collapsed: false },
-    ],
+    id: 'template-prd',
+    name: '📋 产品需求文档（PRD）',
+    icon: '📋',
+    description: 'CircleLight 电商平台完整产品需求与验收标准样板',
+    blocks: PRESET_DOCUMENTS[1]?.blocks || [],
+  },
+  {
+    id: 'template-tech',
+    name: '💻 技术方案文档',
+    icon: '💻',
+    description: '微服务架构、API 接口及数据库设计样板',
+    blocks: PRESET_DOCUMENTS[2]?.blocks || [],
+  },
+  {
+    id: 'template-ui',
+    name: '🎨 UI 设计规范',
+    icon: '🎨',
+    description: '色彩系统、组件规范与页面响应式布局样板',
+    blocks: PRESET_DOCUMENTS[3]?.blocks || [],
+  },
+  {
+    id: 'template-data',
+    name: '📊 数据分析报告',
+    icon: '📊',
+    description: '电商经营数据概览、转化漏斗与用户分层洞察样板',
+    blocks: PRESET_DOCUMENTS[4]?.blocks || [],
+  },
+  {
+    id: 'template-test',
+    name: '🧪 测试计划与用例',
+    icon: '🧪',
+    description: '敏捷测试策略、核心功能测试用例与里程碑样板',
+    blocks: PRESET_DOCUMENTS[5]?.blocks || [],
   },
   {
     id: 'meeting',
-    name: '会议纪要',
+    name: '📝 会议纪要',
     icon: '📝',
     description: '记录会议主题、参会人、讨论要点和待办事项',
     blocks: [
@@ -181,7 +202,7 @@ export const BLOCK_TEMPLATES: BlockTemplate[] = [
   },
   {
     id: 'project-plan',
-    name: '项目计划',
+    name: '📊 项目计划',
     icon: '📊',
     description: '项目目标、里程碑、任务分配和进度追踪',
     blocks: [
@@ -191,32 +212,10 @@ export const BLOCK_TEMPLATES: BlockTemplate[] = [
     ],
   },
   {
-    id: 'reading-notes',
-    name: '读书笔记',
-    icon: '📚',
-    description: '书籍信息、核心观点摘录和个人思考',
-    blocks: [
-      { type: 'text', title: '书籍信息', content: '# 《书名》\n\n作者：\n出版社：\n阅读日期：', meta: {}, parentId: null, order: 0, x: 40, y: 40, width: 400, collapsed: false },
-      { type: 'quote', title: '精彩摘录', content: '在此处记录书中的精彩段落...', meta: {}, parentId: null, order: 1, x: 40, y: 200, width: 400, collapsed: false },
-      { type: 'text', title: '个人思考', content: '## 思考与感悟\n\n', meta: {}, parentId: null, order: 2, x: 480, y: 40, width: 400, collapsed: false },
-    ],
-  },
-  {
-    id: 'weekly-report',
-    name: '周报',
-    icon: '📅',
-    description: '本周工作总结、成果展示和下周计划',
-    blocks: [
-      { type: 'text', title: '本周总结', content: '# 周报（第X周）\n\n## 本周完成\n\n- \n- \n\n## 遇到的问题\n\n', meta: {}, parentId: null, order: 0, x: 40, y: 40, width: 400, collapsed: false },
-      { type: 'todo', title: '下周计划', content: '制定下周工作计划', meta: { checked: false }, parentId: null, order: 1, x: 40, y: 280, width: 400, collapsed: false },
-      { type: 'text', title: '成果展示', content: '## 成果与数据\n\n', meta: {}, parentId: null, order: 2, x: 480, y: 40, width: 400, collapsed: false },
-    ],
-  },
-  {
     id: 'blank',
-    name: '空白页面',
+    name: '📄 空白页面',
     icon: '📄',
-    description: '从零开始创建你的页面',
+    description: '从一张完全空白的画布开始自由编排',
     blocks: [],
   },
 ];
@@ -266,18 +265,17 @@ function createPresetPages(): { pages: Page[]; pageBlocks: Record<string, Block[
   const pages: Page[] = [];
   const pageBlocks: Record<string, Block[]> = {};
 
-  for (let i = 0; i < PRESET_DOCUMENTS.length; i++) {
-    const doc = PRESET_DOCUMENTS[i];
-    const pageId = nanoid();
-    pages.push({
-      id: pageId,
-      title: doc.title,
-      icon: doc.icon,
-      createdAt: now + i,
-      updatedAt: now + i,
-    });
-    pageBlocks[pageId] = getPresetDocumentBlocks(doc.id);
-  }
+  // 默认仅初始化首篇欢迎入门指南文档，其余作为样板库按需实例化
+  const guideDoc = PRESET_DOCUMENTS[0];
+  const guidePageId = 'doc-guide';
+  pages.push({
+    id: guidePageId,
+    title: guideDoc.title,
+    icon: guideDoc.icon,
+    createdAt: now,
+    updatedAt: now,
+  });
+  pageBlocks[guidePageId] = getPresetDocumentBlocks(guideDoc.id);
 
   return { pages, pageBlocks };
 }
