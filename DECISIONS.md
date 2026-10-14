@@ -831,3 +831,33 @@
 - **事实闭环**：
   - 纵向连线断开药丸绝对悬浮于两卡片间隙最顶层，无任何遮挡，点击即可秒级切断关联；
   - 首屏仅展现《欢迎使用》单文档，其余 5 篇文档规范入驻样板库。
+
+---
+
+## ADR-023: 全流程云端真机交付与 Vercel 生产部署直接反馈铁律 (Cloud-First Vercel Deployment & Zero Localhost Feedback Law)
+
+- **日期**：2026-10-14
+- **决策状态**：已正式拍板确立并严格纳入全局协同准则
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联基础设施与端点**：
+  - **定制主域名**：[https://blockos.hiakkocv.xyz](https://blockos.hiakkocv.xyz)
+  - **Vercel 生产域名**：[https://blockos-with-taoke-hk9u.vercel.app](https://blockos-with-taoke-hk9u.vercel.app)
+  - **Vercel 控制台与审查**：[blockos-with-taoke-hk9u on Vercel](https://vercel.com/akko5/blockos-with-taoke-hk9u)
+
+### 1. 痛点根因与用户拍板要求 (Evidence & User Rule)
+- **痛点**：以往更新后经常以 `http://localhost:3000` 引导用户体验，忽略了云端与本地环境在网络层、CDN 缓存、环境变量、构建打包产物上的差异，增加了人工验证成本与心智切换负担；
+- **用户强制性拍板**：
+  > “目前我们每次更新完后，不要通过 Localhost 打开软件。既然部署了 Vercel，就直接在那边推送到在线网站，然后我们去体验。如果你需要在谷歌浏览器调试，可以用 Localhost，但最后反馈给我的一定是在 vercel 网站上部署的，也就是在云端展示。”
+
+### 2. 标准工程闭环工作流 (Standard Engineering Workflow)
+1. **本地研发与严密自检（隐式内环）**：
+   - 可以在本地进行代码修改与单元测试（Vitest 206 项测试保驾护航）；
+   - 必须通过 `npm run build` 本地完整打包自检，确保 0 语法报错、0 警告阻断；
+2. **远程推送与 Vercel 自动部署（触发流水线）**：
+   - 本地自检通过后，提交并推送到 GitHub `main` 分支；
+   - Vercel 监听 `main` 分支提交，自动拉取并启动生产构建流水线；
+3. **MCP 实地核查与真机探针双重验证（客观证据链）**：
+   - 严禁盲猜部署状态，必须调用 Vercel MCP 接口（`list_deployments`）确认该次 Commit SHA 对应的部署状态为 `READY`；
+   - 使用网络探针（`curl.exe -sI https://blockos.hiakkocv.xyz`）实地验证 HTTP 响应状态码为 `200 OK`、`Server: Vercel` 且 `X-Vercel-Cache` 正常响应；
+4. **云端显式汇报与直达体验（交付外环）**：
+   - 最终交付一律提供经过验证的云端在线链接，杜绝向用户推送任何 Localhost 体验指令。
