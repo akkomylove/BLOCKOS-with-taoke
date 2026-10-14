@@ -861,3 +861,47 @@
    - 使用网络探针（`curl.exe -sI https://blockos.hiakkocv.xyz`）实地验证 HTTP 响应状态码为 `200 OK`、`Server: Vercel` 且 `X-Vercel-Cache` 正常响应；
 4. **云端显式汇报与直达体验（交付外环）**：
    - 最终交付一律提供经过验证的云端在线链接，杜绝向用户推送任何 Localhost 体验指令。
+
+---
+
+## ADR-024: 官方新手入门卡片与导览系统防冲毁穿透防御架构 (Onboarding Guide Blocks & Tour Anti-Wipeout Architecture)
+
+- **日期**：2026-10-14
+- **决策状态**：已全面落地、验证通过并纳入工程标准基线
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/app/api/pages/[id]/blocks/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/%5Bid%5D/blocks/route.ts)
+  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
+  - [src/components/BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
+  - [src/config/presetDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/config/presetDocuments.ts)
+
+### 1. 痛点根因与事实证伪 (Evidence & Root Cause)
+1. **真实线上截屏证据**：
+   - 用户在 `https://blockos.hiakkocv.xyz` 登录后截屏（`media_1791970097057_1d51c7b1.jpg`）反馈：“引导那些内容怎么没了？”；
+   - 画面事实：中央画布呈纯黑无物状态，右下角 Minimap 明确显示“鹰眼导航 (0 块)”，新手入门卡片与新手导览弹窗均消失。
+2. **三维时序冲突根因**：
+   - **空数组破坏性覆盖 (Destructive Empty Overwrite)**：客户端 `loadFromServer(pageId)` 在加载云端数据时，将服务端响应的 `{ blocks: [] }` 盲目判定为有效结果，执行 `state.blocks = []` 与 `state.pageBlocks['doc-guide'] = []`，将客户端预置的 6 张新手卡片彻底清空；
+   - **服务端静默漏灌**：服务端 `GET /api/pages/[id]/blocks` 在查询新用户数据库时，`blocks WHERE page_id = 'doc-guide'` 自然返回 0 条记录，缺乏针对官方入门页面的自动兜底初始化逻辑；
+   - **水合单次守卫失效**：`hasUpgraded` 一旦被置为 `'true'`，后续刷新页面或用户被清空数据后不再触发新手卡片补齐，且导览组件因找不到锚点元素（`[data-tour="..."]`）无法正常展示。
+
+### 2. 决策方案与穿透防御落地 (Decisions & Architecture)
+
+#### (1) 服务端权威兜底保障 (`route.ts`)
+- 当请求 `GET /api/pages/doc-guide/blocks` 时：
+  - 若当前用户尚未初始化 `doc-guide` 页面记录，自动补齐页面元数据；
+  - 若 `blocks` 关联表中卡片数为 0，服务端**事务级自动写入 6 张完整的官方新手卡片**并落盘保存；
+  - 彻底确保服务端对 `doc-guide` 永远返回 HTTP 200 与 6 张标准卡片，杜绝返回空数组。
+
+#### (2) Store 状态层非空防护网 (`blockStore.ts`)
+- **`loadFromServer` 拦截防护**：当服务端返回 `blocks: []` 时，严禁直接赋空，若本地已有卡片则立即反向同步上云；若本地亦为空且为指南页面，强制调用 `getPresetDocumentBlocks('doc-guide')` 自动复原；
+- **`setCurrentPage` 自动挽救**：用户切换至新手指南页面时，若发现当前 blocks 为空，自动注入官方预置卡片。
+
+#### (3) 客户端多重防漏恢复机制 (`BlockOSApp.tsx`)
+- 引入 `isGuideEmpty` 持续状态探测：无论版本键是否标记，只要检测到当前指南卡片为空，无条件重新灌装 6 张新手卡片并唤醒 `OnboardingTour` 交互导览；
+- 在 `loadServerData` 异步结束末尾增加二次防护，彻底消除时序竞争导致的闪烁清空；
+- 在帮助中心「重新启动新手交互引导」中注入卡片状态核验，确保导览启动时必有卡片锚点。
+
+### 3. 产出与验收度量 (Verification)
+- **单元测试**：Vitest 206 项自动化测试全量通过；
+- **构建校验**：Next.js 38 条路由生产构建通过；
+- **线上闭环**：新老用户无论何时进入系统，首屏《欢迎使用》必有 6 张完整原子 Block 卡片（需求 PRD、Agent 触发待办、专属 AI、代码沙箱、数据表格、AI 进阶协同）及新手漫游导览。

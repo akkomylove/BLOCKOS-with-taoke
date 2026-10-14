@@ -57,11 +57,15 @@ export default function BlockOSApp() {
     // 飞书/钉钉风格官方新手入门系统保障与激活机制
     const GUIDE_ID = 'doc-guide';
     const GUIDE_TITLE = '👋 欢迎使用 BlockOS ｜ 新手快速入门指南';
-    const GUIDE_VERSION_KEY = 'blockos-guide-v9-clean-single-doc';
+    const GUIDE_VERSION_KEY = 'blockos-guide-v12-permanent-onboarding';
     const hasUpgraded = localStorage.getItem(GUIDE_VERSION_KEY);
 
     const state = useBlockStore.getState();
     const freshGuideBlocks = getPresetDocumentBlocks('doc-guide');
+
+    // 检查当前指南文档卡片是否丢失或为空（如被旧版本同步冲掉）
+    const curGuideBlocks = state.pageBlocks[GUIDE_ID] || (state.currentPageId === GUIDE_ID ? state.blocks : []);
+    const isGuideEmpty = !curGuideBlocks || curGuideBlocks.length === 0;
 
     // 强制同步最新的 Agent 规则，彻底清除 localStorage 中旧的祝贺语
     const currentRules = state.agentRules || [];
@@ -96,7 +100,7 @@ export default function BlockOSApp() {
       });
     }
 
-    if (!hasUpgraded) {
+    if (!hasUpgraded || isGuideEmpty) {
       const LEGACY_PRESET_IDS = new Set(['doc-prd', 'doc-tech', 'doc-ui', 'doc-data', 'doc-test']);
       const isLegacySample = (p: { id: string; title: string }) =>
         LEGACY_PRESET_IDS.has(p.id) ||
@@ -133,6 +137,9 @@ export default function BlockOSApp() {
 
       localStorage.setItem(GUIDE_VERSION_KEY, 'true');
       setShowOnboarding(true);
+      setTimeout(() => {
+        useBlockStore.getState().syncToServer();
+      }, 300);
     } else {
       // 检查当前是否仍停留在旧的“产品需求文档”上，若是则切到新手指南
       const guidePage = state.pages.find(
@@ -151,6 +158,19 @@ export default function BlockOSApp() {
       const st = useBlockStore.getState();
       if (st.currentPageId) {
         await loadFromServer(st.currentPageId);
+      }
+      // 防御校验：服务端加载完成后，若当前页面为新手指南但卡片依然为 0，强制恢复官方预置并同步上云
+      const postSt = useBlockStore.getState();
+      if ((postSt.currentPageId === GUIDE_ID || postSt.currentPageId.includes('guide')) && postSt.blocks.length === 0) {
+        useBlockStore.setState((prev) => ({
+          blocks: freshGuideBlocks,
+          pageBlocks: {
+            ...prev.pageBlocks,
+            [GUIDE_ID]: freshGuideBlocks,
+          },
+        }));
+        setShowOnboarding(true);
+        postSt.syncToServer();
       }
     };
     loadServerData();
@@ -204,8 +224,21 @@ export default function BlockOSApp() {
             setShowHelp(false);
             const state = useBlockStore.getState();
             const guidePage = state.pages.find((p) => p.title.includes('新手') || p.id === 'doc-guide');
-            if (guidePage && state.currentPageId !== guidePage.id) {
-              state.setCurrentPage(guidePage.id);
+            const targetGuideId = guidePage?.id || 'doc-guide';
+            if (state.currentPageId !== targetGuideId) {
+              state.setCurrentPage(targetGuideId);
+            }
+            const freshBlocks = getPresetDocumentBlocks('doc-guide');
+            const currentGuideBlocks = useBlockStore.getState().blocks;
+            if (!currentGuideBlocks || currentGuideBlocks.length === 0) {
+              useBlockStore.setState((prev) => ({
+                blocks: freshBlocks,
+                pageBlocks: {
+                  ...prev.pageBlocks,
+                  [targetGuideId]: freshBlocks,
+                },
+              }));
+              useBlockStore.getState().syncToServer();
             }
             setShowOnboarding(true);
           }}

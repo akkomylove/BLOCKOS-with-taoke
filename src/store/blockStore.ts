@@ -396,7 +396,12 @@ export const useBlockStore = create<BlockStore>()(
         set((state) => {
           state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
           state.currentPageId = id;
-          state.blocks = state.pageBlocks[id] ? JSON.parse(JSON.stringify(state.pageBlocks[id])) : [];
+          let targetBlocks = state.pageBlocks[id] ? JSON.parse(JSON.stringify(state.pageBlocks[id])) : [];
+          if ((id === 'doc-guide' || id.includes('guide')) && targetBlocks.length === 0) {
+            targetBlocks = getPresetDocumentBlocks('doc-guide');
+            state.pageBlocks[id] = targetBlocks;
+          }
+          state.blocks = targetBlocks;
           state.selectedIds = [];
         });
       },
@@ -1164,13 +1169,29 @@ export const useBlockStore = create<BlockStore>()(
           const res = await fetch(`/api/pages/${pageId}/blocks`);
           if (res.ok) {
             const data = await res.json();
-            if (Array.isArray(data.blocks)) {
+            if (Array.isArray(data.blocks) && data.blocks.length > 0) {
               set((state) => {
                 state.pageBlocks[pageId] = data.blocks;
                 if (state.currentPageId === pageId) {
                   state.blocks = data.blocks;
                 }
               });
+            } else if (Array.isArray(data.blocks) && data.blocks.length === 0) {
+              // 关键防御：如果服务端返回 0 个 block，但本地当前页面已有 block（或官方指南），
+              // 绝不可用空数组抹去本地数据！
+              const currentLocal = get().pageBlocks[pageId] || (get().currentPageId === pageId ? get().blocks : []);
+              if (currentLocal && currentLocal.length > 0) {
+                await get().syncToServer();
+              } else if (pageId === 'doc-guide' || pageId.includes('guide')) {
+                const guideBlocks = getPresetDocumentBlocks('doc-guide');
+                set((state) => {
+                  state.pageBlocks[pageId] = guideBlocks;
+                  if (state.currentPageId === pageId) {
+                    state.blocks = guideBlocks;
+                  }
+                });
+                await get().syncToServer();
+              }
             }
           }
         } catch (err) {

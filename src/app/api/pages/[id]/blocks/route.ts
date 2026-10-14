@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
+import { getPresetDocumentBlocks } from '@/config/presetDocuments';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,12 +19,58 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     await getDb();
 
-    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
+    let pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
     if (pages.length === 0) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      if (id === 'doc-guide') {
+        const now = Date.now();
+        run(
+          'INSERT INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          ['doc-guide', userId, '👋 欢迎使用 BlockOS ｜ 新手快速入门指南', '👋', 0, 1, now, now]
+        );
+        pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
+      } else {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
     }
 
-    const blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [id]);
+    let blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [id]);
+
+    if (id === 'doc-guide' && blocks.length === 0) {
+      const presetBlocks = getPresetDocumentBlocks('doc-guide');
+      const now = Date.now();
+      transaction(() => {
+        for (let i = 0; i < presetBlocks.length; i++) {
+          const b = presetBlocks[i];
+          run(
+            `INSERT INTO blocks (
+              id, page_id, type, title, content, meta, parent_id, group_id,
+              order_index, x, y, width, height, collapsed, version, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              b.id,
+              'doc-guide',
+              b.type,
+              b.title || '',
+              b.content || '',
+              JSON.stringify(b.meta || {}),
+              b.parentId || null,
+              b.groupId || null,
+              typeof b.order === 'number' ? b.order : i,
+              typeof b.x === 'number' ? b.x : 100,
+              typeof b.y === 'number' ? b.y : 40,
+              typeof b.width === 'number' ? b.width : 760,
+              typeof b.height === 'number' ? b.height : 200,
+              b.collapsed ? 1 : 0,
+              1,
+              now + i,
+              now + i,
+            ]
+          );
+        }
+      });
+      saveDb();
+      blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [id]);
+    }
 
     return NextResponse.json({
       blocks: blocks.map((b) => ({
