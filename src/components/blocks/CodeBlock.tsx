@@ -247,7 +247,14 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
   const langLabel = LANGUAGES.find((l) => l.id === language)?.label || language;
 
   return (
-    <div className="w-full">
+    <div
+      className="w-full"
+      data-sandbox-scroll="true"
+      onWheel={(e) => {
+        // 当鼠标位于代码沙箱区域内时，阻止滚动事件向外层画布冒泡，避免画布同步被拖拽/移动
+        e.stopPropagation();
+      }}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -258,7 +265,7 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
               {langLabel}
             </button>
             {showLangDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl z-10 py-1 min-w-[140px] max-h-48 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl z-10 py-1 min-w-[140px] max-h-48 overflow-y-auto overscroll-contain">
                 {LANGUAGES.map((lang) => (
                   <button
                     key={lang.id}
@@ -327,7 +334,7 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
       </div>
 
       {showRefPicker && (
-        <div className="mb-2 p-2 bg-white/90 dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800 rounded-lg max-h-32 overflow-y-auto">
+        <div className="mb-2 p-2 bg-white/90 dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800 rounded-lg max-h-32 overflow-y-auto overscroll-contain">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] text-gray-400 dark:text-zinc-500">选择要引用的 Block</span>
             <button onClick={() => setShowRefPicker(false)} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
@@ -355,7 +362,7 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
       {previewMode ? (
         <pre
           ref={previewRef}
-          className="w-full h-32 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 text-xs font-mono text-gray-800 dark:text-zinc-300 overflow-auto"
+          className="w-full h-32 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 text-xs font-mono text-gray-800 dark:text-zinc-300 overflow-auto overscroll-contain"
         />
       ) : (
         <textarea
@@ -364,13 +371,13 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
           onChange={(e) => onChange(e.target.value, language)}
           readOnly={readOnly}
           spellCheck={false}
-          className="w-full h-32 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 text-xs font-mono text-gray-800 dark:text-zinc-300 outline-none resize-y focus:border-gray-400 dark:focus:border-zinc-600 transition-colors"
+          className="w-full h-32 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg p-3 text-xs font-mono text-gray-800 dark:text-zinc-300 outline-none resize-y focus:border-gray-400 dark:focus:border-zinc-600 transition-colors overscroll-contain"
           placeholder="输入代码..."
         />
       )}
 
       {runResult && (
-        <div className={`mt-2 p-3 rounded-lg text-xs font-mono ${
+        <div className={`mt-2 p-3 rounded-lg text-xs font-mono max-h-60 overflow-y-auto overscroll-contain ${
           runResult.error ? 'bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
         }`}>
           <div className="flex items-center justify-between mb-1">

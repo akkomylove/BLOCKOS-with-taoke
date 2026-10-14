@@ -26,6 +26,7 @@
 - [ADR-015: 系统首个稳定基准版本确立 (v1.0.0 Baseline Release Checkpoint)](#adr-015-系统首个稳定基准版本确立-v100-baseline-release-checkpoint)
 - [ADR-016: 第一阶段数据安全治理与保存链路闭环落地 (Data Persistence Pipeline, HMAC Auth, RBAC & Sandbox Isolation)](#adr-016-第一阶段数据安全治理与保存链路闭环落地-data-persistence-pipeline-hmac-auth-rbac--sandbox-isolation)
 - [ADR-017: 产研全链路语义闭环、持久化后台引擎、跨视图状态协同与离线自愈架构 (Semantic Requirements, Persistent Agent Jobs, Cross-View Sync & Resilient Offline Fallback)](#adr-017-产研全链路语义闭环持久化后台引擎跨视图状态协同与离线自愈架构-semantic-requirements-persistent-agent-jobs-cross-view-sync--resilient-offline-fallback)
+- [ADR-018: 沙箱独立滚动隔离、工具栏语义极简化与 Portal 标签管理重塑 (Sandbox Scroll Isolation, Concise Toolbar & Portal Tag Picker)](#adr-018-沙箱独立滚动隔离工具栏语义极简化与-portal-标签管理重塑-sandbox-scroll-isolation-concise-toolbar--portal-tag-picker)
 
 ---
 
@@ -569,3 +570,51 @@
 - **全量测试套件通过**：累计新增 `requirements-relations.test.ts`、`ai-impact-invites.test.ts`、`batch3-agent-preview.test.ts`、`batch4-import-export.test.ts`，测试套件达到 **17 个**，测试用例达到 **206 个，100% 绿色通过**；
 - **全量生产环境构建**：Next.js 15 生产级打包 `npm run build` 完成全量 44 个路由与中间件编译，**0 编译错误、0 类型故障**；
 - **生产线上部署**：Vercel Production 验证 HTTP 200 OK，线上稳定运行。
+
+---
+
+## ADR-018: 沙箱独立滚动隔离、工具栏语义极简化与 Portal 标签管理重塑 (Sandbox Scroll Isolation, Concise Toolbar & Portal Tag Picker)
+
+### 1. 业务痛点与技术冲突
+在真实高频使用与多分辨率真机体验中，暴露了以下三处关键交互体验与视觉短板：
+1. **沙箱代码滚动冲突**：在代码沙箱内部上下滚动浏览长代码或执行输出时，`wheel` 事件冒泡至外层画布 `canvasRef`，导致画布同时被联动拖拽/位移，产生严重的操作眩晕感；
+2. **顶层工具栏更多菜单臃肿冗长**：下拉菜单中的工具名称普遍长达 8~10 个中文字符（如“AI Copilot 画布规划”、“Agent 执行流水审计”等），视觉层级拥挤且缺乏快速抓取焦点的干练感；
+3. **标签圆盘功能严重漂移且不美观**：原本的 `TagWheelPicker` 采用纯前端轮盘（Pie Wheel）设计，文字倾斜可读性差，且因为直接渲染在带有 CSS `transform: translate(...) scale(...)` 的画布 DOM 树内，导致其 fixed 坐标被坐标系污染，弹窗严重漂移至屏幕右下角，无法紧贴 Block 渲染。
+
+### 2. 架构设计与技术方案
+
+#### (1) 代码沙箱滚动隔离与边界约束
+- **根容器事件阻断**：在 `CodeBlock` 根容器显式声明 `data-sandbox-scroll="true"`，并挂载 `onWheel={(e) => e.stopPropagation()}`，直接切断向外层 React 状态树冒泡；
+- **画布滚动智能避让**：在 `BlockEditor.tsx` 的 `handleWheel` 中加入目标元素检测：
+  `target?.closest('[data-sandbox-scroll], [data-no-canvas-wheel], textarea, pre, .overflow-y-auto, .overflow-auto')` 时立即返回，实现“鼠标在沙箱内部时优先且独占沙箱滚动，移出沙箱后平滑漫游整个画布”；
+- **样式链防御**：代码编辑 `textarea`、高亮预览 `pre` 及终端执行日志容器全量应用 `overscroll-contain`，杜绝边缘触底反弹传递。
+
+#### (2) 顶层工具栏语义极净化
+- 遵循极简主义（Simplicity First）原则，将所有更多菜单项重构为高度对称统一的 4 字（或 2~4 字）现代产研专业词汇：
+  - `AI Copilot 画布规划` -> `Copilot 规划`
+  - `工作流产研分析` -> `工作流分析`
+  - `多角色透视审阅` -> `多角色审阅`
+  - `双向文档拓扑关联` -> `文档拓扑`
+  - `产研智能折叠规划` -> `智能折叠`
+  - `块级大纲导航` -> `大纲导航`
+  - `全局关系网图谱` -> `关系图谱`
+  - `历史版本留痕` -> `历史版本`
+  - `导出文档 (PDF/MD)` -> `导出文档`
+  - `导入外部文档` -> `导入文档`
+  - `团队敏捷协作看板` -> `敏捷看板`
+  - `Agent 执行流水审计` -> `执行审计`
+  - `使用指南与引导重跑` -> `使用指南`
+
+#### (3) 基于 React Portal 的 Notion / Linear 风格标签管理体系重构
+- **脱离 CSS 变形上下文**：使用 `createPortal(content, document.body)` 将面板脱敏挂载到 `document.body`，彻底摆脱画布 `transform` 对视口定位的干扰；
+- **像素级动态吸附**：精准基于触发按钮的 `getBoundingClientRect()` 计算屏幕坐标，自动根据视口上下边界进行智能翻转（避免溢出屏幕）；
+- **成熟现代的卡片式标签交互**：
+  - 内置搜索框与回车一键新建；
+  - 常用预设标签磁贴阵列，支持单击即时勾选/取消勾选（Toggle）；
+  - 已添加标签即时呈现，支持一键移除；
+  - 自定义色调圆点选择器。
+
+### 3. 产出与验收度量
+- **自动化测试无回退**：17 个测试套件、206 项单元与集成测试持续 **100% 绿色全过**；
+- **生产构建零警告阻断**：`npm run build` 成功完成全量 44 条路由编译打包；
+- **真机行为验证**：鼠标进入代码沙箱内流畅滚动代码与终端输出，画布纹丝不动；移出后自由缩放平移；标签弹窗紧贴 Block 顶部右侧对齐展开，交互直观顺畅。

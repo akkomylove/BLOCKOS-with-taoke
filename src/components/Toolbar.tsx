@@ -391,7 +391,7 @@ export default function Toolbar({
           }}
         >
           <div className="space-y-2 text-xs">
-            {/* AI 进阶能力 */}
+            {/* AI 进阶套件 */}
             <div>
               <div className="px-2 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">AI 进阶套件</div>
               <div className="space-y-0.5">
@@ -400,35 +400,35 @@ export default function Toolbar({
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <BrainCircuit className="w-4 h-4 text-blue-500 shrink-0" />
-                  <span>AI Copilot 画布规划</span>
+                  <span>Copilot 规划</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleAnalyze(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <BarChart3 className="w-4 h-4 text-indigo-500 shrink-0" />
-                  <span>工作流产研分析</span>
+                  <span>工作流分析</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleReviewEnrich(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <ClipboardCheck className="w-4 h-4 text-purple-500 shrink-0" />
-                  <span>多角色透视审阅</span>
+                  <span>多角色审阅</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleDocRelations(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Link2 className="w-4 h-4 text-cyan-500 shrink-0" />
-                  <span>双向文档拓扑关联</span>
+                  <span>文档拓扑</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleFoldPlan(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Layers className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>产研智能折叠规划</span>
+                  <span>智能折叠</span>
                 </button>
               </div>
             </div>
@@ -444,21 +444,21 @@ export default function Toolbar({
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <LayoutGrid className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span>块级大纲导航</span>
+                  <span>大纲导航</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleRelationDrawer(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <GitBranch className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>全局关系网图谱</span>
+                  <span>关系图谱</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleHistory(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <History className="w-4 h-4 text-zinc-500 shrink-0" />
-                  <span>历史版本留痕</span>
+                  <span>历史版本</span>
                 </button>
               </div>
             </div>
@@ -474,35 +474,35 @@ export default function Toolbar({
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Download className="w-4 h-4 text-gray-600 dark:text-zinc-400 shrink-0" />
-                  <span>导出文档 (PDF/MD)</span>
+                  <span>导出文档</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleImport(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Upload className="w-4 h-4 text-gray-600 dark:text-zinc-400 shrink-0" />
-                  <span>导入外部文档</span>
+                  <span>导入文档</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); router.push('/teams'); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span>团队敏捷协作看板</span>
+                  <span>敏捷看板</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleLogs(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Activity className="w-4 h-4 text-rose-500 shrink-0" />
-                  <span>Agent 执行流水审计</span>
+                  <span>执行审计</span>
                 </button>
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleHelp(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <HelpCircle className="w-4 h-4 text-sky-500 shrink-0" />
-                  <span>使用指南与引导重跑</span>
+                  <span>使用指南</span>
                 </button>
               </div>
             </div>

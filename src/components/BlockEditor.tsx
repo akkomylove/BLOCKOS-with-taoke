@@ -400,6 +400,14 @@ export default function BlockEditor({
   }, [selectionBox, draggingId, resizeState, blocks, pan, zoom, setSelection]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
+    const target = e.target as HTMLElement | null;
+    const isInsideScrollable = !!target?.closest(
+      '[data-sandbox-scroll], [data-no-canvas-wheel], textarea, pre, .overflow-y-auto, .overflow-auto'
+    );
+    if (isInsideScrollable) {
+      return;
+    }
+
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -614,6 +622,7 @@ export default function BlockEditor({
                       isOpen={true}
                       onClose={() => setTagWheelBlockId(null)}
                       onSelect={(tag) => handleAddTag(block.id, tag)}
+                      onRemove={(tag) => handleRemoveTag(block.id, tag)}
                       existingTags={block.meta.tags || []}
                       triggerRect={tagWheelRect}
                     />
