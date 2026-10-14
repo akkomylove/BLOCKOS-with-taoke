@@ -715,6 +715,7 @@
 ### 3. 产出与验收度量
 - **自动化测试 100% 绿色**：17 个测试套件、206 项单元与集成测试全量通过；
 - **生产环境零错误构建**：Next.js 15 全量 44 条路由编译打包通过；
+- **React 19 渲染与状态解耦自愈**：将 `MindmapBlock` 中在 `setRoot` 回调内触发 `onChange`（进而更新父级 Zustand 状态）的反模式重构为独立的 `commitRoot` 事务，彻底消除 Next.js Dev Overlay 报出的 `Cannot update a component ('BlockOSApp') while rendering a different component ('MindmapBlock')` 警告；
 - **真机实测闭环**：
   - 任何 Block 设为子 Block 后，均完美契合在父 Block 的树形导轨容器中，自适应撑满宽度，无任何右侧突围与样式崩坏；
   - 子 Block 头部与底部工具栏均可一键「移出」，瞬间恢复为画布顶级卡片；
