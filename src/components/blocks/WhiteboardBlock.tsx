@@ -14,23 +14,34 @@ const COLORS = ['#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'
 export default function WhiteboardBlock({ content, onChange, readOnly }: WhiteboardBlockProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isInitializedRef = useRef(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#3b82f6');
   const [brushSize, setBrushSize] = useState(3);
   const [isEraser, setIsEraser] = useState(false);
   const [hasDrawing, setHasDrawing] = useState(!!content);
 
-  const initCanvas = useCallback(() => {
+  const resizeCanvas = useCallback((width: number, height: number) => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
+    if (!canvas || width <= 0 || height <= 0) return;
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
 
-    const rect = container.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = 320 * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = '320px';
+    // 保存既有绘制内容
+    let tempCanvas: HTMLCanvasElement | null = null;
+    if (canvas.width > 0 && canvas.height > 0) {
+      tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) {
+        tempCtx.drawImage(canvas, 0, 0);
+      }
+    }
+
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -38,21 +49,44 @@ export default function WhiteboardBlock({ content, onChange, readOnly }: Whitebo
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    if (content) {
+    // 默认填充画板底色
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(0, 0, width, height);
+
+    // 还原已有笔迹
+    if (tempCanvas && tempCanvas.width > 0 && isInitializedRef.current) {
+      ctx.drawImage(
+        tempCanvas,
+        0, 0, tempCanvas.width, tempCanvas.height,
+        0, 0, width, height
+      );
+    } else if (content) {
       const img = new Image();
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, rect.width, 320);
+        ctx.drawImage(img, 0, 0, width, height);
       };
       img.src = content;
-    } else {
-      ctx.fillStyle = '#18181b';
-      ctx.fillRect(0, 0, rect.width, 320);
     }
+    isInitializedRef.current = true;
   }, [content]);
 
   useEffect(() => {
-    initCanvas();
-  }, [initCanvas]);
+    const container = containerRef.current;
+    if (!container) return;
+
+    // 监听外层 Block 的尺寸变化（如鼠标拖拽拉大手绘板），自适应填充全画幅
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 50 && height > 50) {
+          resizeCanvas(Math.floor(width), Math.floor(height));
+        }
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [resizeCanvas]);
 
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
@@ -101,8 +135,9 @@ export default function WhiteboardBlock({ content, onChange, readOnly }: Whitebo
     if (!canvas || !container) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const rect = container.getBoundingClientRect();
     ctx.fillStyle = '#18181b';
-    ctx.fillRect(0, 0, container.getBoundingClientRect().width, 320);
+    ctx.fillRect(0, 0, rect.width, rect.height);
     onChange('');
     setHasDrawing(false);
   };
@@ -116,9 +151,9 @@ export default function WhiteboardBlock({ content, onChange, readOnly }: Whitebo
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full flex-1 flex flex-col min-h-[320px]">
       {!readOnly && (
-        <div className="flex items-center gap-2 px-3 py-2 mb-2 flex-wrap border-b border-gray-200 dark:border-zinc-800/60">
+        <div className="flex items-center gap-2 px-3 py-2 mb-2 flex-wrap border-b border-gray-200 dark:border-zinc-800/60 shrink-0">
           <div className="flex items-center gap-1">
             {COLORS.map((c) => (
               <button
@@ -166,10 +201,10 @@ export default function WhiteboardBlock({ content, onChange, readOnly }: Whitebo
           )}
         </div>
       )}
-      <div ref={containerRef} className="w-full rounded-lg overflow-hidden border border-zinc-800">
+      <div ref={containerRef} className="w-full flex-1 min-h-[260px] rounded-lg overflow-hidden border border-zinc-800 relative bg-[#18181b]">
         <canvas
           ref={canvasRef}
-          className={`w-full ${readOnly ? 'cursor-default' : 'cursor-crosshair'}`}
+          className={`absolute inset-0 w-full h-full block ${readOnly ? 'cursor-default' : 'cursor-crosshair'}`}
           onMouseDown={startDraw}
           onMouseMove={draw}
           onMouseUp={endDraw}

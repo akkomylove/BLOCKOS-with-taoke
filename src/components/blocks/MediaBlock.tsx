@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { ImageIcon, Video, Music, Link2, Upload, Edit3, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
+import { ImageIcon, Video, Music, Link2, Upload, Edit3, ExternalLink, Sparkles, Loader2, Trash2 } from 'lucide-react';
 
 interface MediaBlockProps {
   content: string;
@@ -248,6 +248,18 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
                 </a>
                 <p className="text-[11px] text-gray-500 dark:text-zinc-500 mt-0.5">外部链接</p>
               </div>
+              {!readOnly && (
+                <button
+                  onClick={() => {
+                    setUrl(content);
+                    setIsEditing(true);
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 hover:text-blue-500"
+                  title="编辑/更换链接"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              )}
               <a href={content} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
                 <ExternalLink className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-500" />
               </a>
@@ -273,6 +285,18 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
                 </a>
                 <p className="text-[11px] text-gray-500 dark:text-zinc-500 mt-0.5">外部链接</p>
               </div>
+              {!readOnly && (
+                <button
+                  onClick={() => {
+                    setUrl(content);
+                    setIsEditing(true);
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 hover:text-blue-500"
+                  title="编辑/更换链接"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              )}
               <a href={content} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors">
                 <ExternalLink className="w-3.5 h-3.5 text-gray-500 dark:text-zinc-500" />
               </a>
@@ -286,6 +310,21 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
     return (
       <div className="w-full rounded-xl border-2 border-dashed border-gray-300/60 dark:border-zinc-700/60 hover:border-blue-500/30 bg-gray-50/30 dark:bg-zinc-900/30 transition-all duration-200 overflow-hidden">
         <div className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-semibold text-gray-700 dark:text-zinc-300 flex items-center gap-1.5">
+              <Upload className="w-3.5 h-3.5 text-blue-500" />
+              <span>{content ? '更换媒体内容' : '添加媒体内容'}</span>
+            </span>
+            {content && (
+              <button
+                onClick={() => setIsEditing(false)}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 px-2 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                取消
+              </button>
+            )}
+          </div>
+
           <div className="flex items-center justify-center gap-6 mb-5">
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
@@ -313,27 +352,39 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUrlSubmit()}
-              placeholder="粘贴图片/视频/音频链接..."
-              className="flex-1 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-gray-800 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-blue-500/40 transition-colors"
+              placeholder="粘贴图片/视频/音频链接或网址..."
+              className="flex-1 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-xs text-gray-800 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-blue-500 transition-colors"
             />
             <button
               onClick={handleUrlSubmit}
               disabled={!url.trim()}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-medium rounded-xl transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-medium rounded-xl transition-colors shrink-0"
             >
-              添加
+              {content ? '确认更换' : '添加'}
             </button>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pt-1 border-t border-gray-200/50 dark:border-zinc-800/50">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200 hover:bg-gray-100/60 dark:hover:bg-zinc-800/60 rounded-xl transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100/60 dark:hover:bg-zinc-800/60 rounded-lg transition-all"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-3.5 h-3.5 text-blue-500" />
               上传本地文件
             </button>
-            <span className="text-[10px] text-gray-400 dark:text-zinc-600">或拖放文件到此处</span>
+            {content && (
+              <button
+                onClick={() => {
+                  onChange('');
+                  setUrl('');
+                  setIsEditing(true);
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-3 h-3" />
+                清空媒体
+              </button>
+            )}
             <input
               ref={fileInputRef}
               type="file"
@@ -348,7 +399,33 @@ export default function MediaBlock({ content, caption, onChange, readOnly }: Med
   }
 
   return (
-    <div className="w-full" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
+    <div className="w-full relative group/media" onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
+      {!readOnly && content && (
+        <div className={`absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-gray-200 dark:border-zinc-700 rounded-lg p-1 shadow-md transition-opacity duration-150 ${isHovering ? 'opacity-100' : 'opacity-0'}`}>
+          <button
+            onClick={() => {
+              setUrl(content);
+              setIsEditing(true);
+            }}
+            className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-gray-700 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded transition-colors"
+            title="更换媒体或编辑链接"
+          >
+            <Edit3 className="w-3 h-3 text-blue-500" />
+            <span>更换</span>
+          </button>
+          <button
+            onClick={() => {
+              onChange('');
+              setUrl('');
+              setIsEditing(true);
+            }}
+            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
+            title="清空媒体"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      )}
       {renderMedia()}
       {caption !== undefined && (
         <div className="mt-2 flex items-center gap-2">

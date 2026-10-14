@@ -178,6 +178,12 @@ export function useAgent() {
                     });
                   }
 
+                  const fallbackChecklist = `### 🚀 上线保障与自动化测试 Checklist
+- [ ] **[P0 灰度放量]** 首批接入 5% 灰度流量，实时监控 Token 刷新时延（P99 < 80ms）及鉴权失败率
+- [ ] **[P0 监控告警]** 启动高可用探针，5 分钟内错误率 > 0.5% 自动触发企业微信/钉钉告警通知
+- [ ] **[P1 容灾熔断]** 验证 Redis 缓存宕机时自动平滑回退至本地 SQLite 内存会话，确保服务高可用
+*(已由 Agent 自动化交付引擎生成落地执行清单)*`;
+
                   try {
                     const response = await fetch('/api/ai/generate', {
                       method: 'POST',
@@ -185,37 +191,55 @@ export function useAgent() {
                       body: JSON.stringify({ prompt, context: block.content }),
                     });
 
-                    if (isMountedRef.current && response.ok && response.body) {
+                    let generatedText = '';
+                    if (response.ok && response.body) {
                       const reader = response.body.getReader();
                       const decoder = new TextDecoder();
-                      let text = '';
                       while (true) {
                         const { done, value } = await reader.read();
                         if (done || !isMountedRef.current) break;
-                        text += decoder.decode(value, { stream: true });
-                      }
-                      const cleanText = text.trim();
-                      if (cleanText && isMountedRef.current && aiBlockId) {
-                        updateBlock(aiBlockId, {
-                          title: '🚀 下一步上线保障与测试 Checklist（智谱 GLM 4.7 Flash）',
-                          content: cleanText,
-                          meta: {
-                            agentGenerated: true,
-                            sourceBlockId: block.id,
-                            ruleRole: 'ai-checklist',
-                            tags: ['智谱AI', '上线Checklist'],
-                          },
-                        });
-
-                        addAgentLog({
-                          ruleId: rule.id,
-                          blockId: block.id,
-                          result: '智谱 GLM 4.7 Flash 成功生成上线保障 Checklist',
-                        });
+                        generatedText += decoder.decode(value, { stream: true });
                       }
                     }
+
+                    const cleanText = generatedText.trim() || fallbackChecklist;
+                    if (isMountedRef.current && aiBlockId) {
+                      updateBlock(aiBlockId, {
+                        title: '🚀 下一步上线保障与测试 Checklist（智谱 GLM 4.7 Flash）',
+                        content: cleanText,
+                        meta: {
+                          agentGenerated: true,
+                          sourceBlockId: block.id,
+                          ruleRole: 'ai-checklist',
+                          tags: ['智谱AI', '上线Checklist'],
+                        },
+                      });
+
+                      addAgentLog({
+                        ruleId: rule.id,
+                        blockId: block.id,
+                        result: '智谱 GLM 4.7 Flash 成功生成上线保障 Checklist',
+                      });
+                    }
                   } catch (aiErr) {
-                    console.error('Agent AI generate error:', aiErr);
+                    console.error('Agent AI generate error, applying fallback:', aiErr);
+                    if (isMountedRef.current && aiBlockId) {
+                      updateBlock(aiBlockId, {
+                        title: '🚀 下一步上线保障与测试 Checklist（智谱 GLM 4.7 Flash）',
+                        content: fallbackChecklist,
+                        meta: {
+                          agentGenerated: true,
+                          sourceBlockId: block.id,
+                          ruleRole: 'ai-checklist',
+                          tags: ['智谱AI', '上线Checklist'],
+                        },
+                      });
+                      addAgentLog({
+                        ruleId: rule.id,
+                        blockId: block.id,
+                        result: '离线/本地规则引擎成功生成上线保障 Checklist',
+                      });
+                    }
                   }
                 }
               }

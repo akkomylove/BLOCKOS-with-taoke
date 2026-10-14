@@ -27,6 +27,7 @@
 - [ADR-016: 第一阶段数据安全治理与保存链路闭环落地 (Data Persistence Pipeline, HMAC Auth, RBAC & Sandbox Isolation)](#adr-016-第一阶段数据安全治理与保存链路闭环落地-data-persistence-pipeline-hmac-auth-rbac--sandbox-isolation)
 - [ADR-017: 产研全链路语义闭环、持久化后台引擎、跨视图状态协同与离线自愈架构 (Semantic Requirements, Persistent Agent Jobs, Cross-View Sync & Resilient Offline Fallback)](#adr-017-产研全链路语义闭环持久化后台引擎跨视图状态协同与离线自愈架构-semantic-requirements-persistent-agent-jobs-cross-view-sync--resilient-offline-fallback)
 - [ADR-018: 沙箱独立滚动隔离、工具栏语义极简化与 Portal 标签管理重塑 (Sandbox Scroll Isolation, Concise Toolbar & Portal Tag Picker)](#adr-018-沙箱独立滚动隔离工具栏语义极简化与-portal-标签管理重塑-sandbox-scroll-isolation-concise-toolbar--portal-tag-picker)
+- [ADR-019: 多模态 Block 闭环治理：表格 Excel 剪贴板/文件拖拽互通、画板全尺寸弹性自适应、媒体 Block 全生命周期换源与高可用 AI 智能体容灾 (Multimodal Blocks Enhancements & Resilient Agent Fallback)](#adr-019-多模态-block-闭环治理表格-excel-剪贴板文件拖拽互通画板全尺寸弹性自适应媒体-block-全生命周期换源与高可用-ai-智能体容灾-multimodal-blocks-enhancements--resilient-agent-fallback)
 
 ---
 
@@ -618,3 +619,52 @@
 - **自动化测试无回退**：17 个测试套件、206 项单元与集成测试持续 **100% 绿色全过**；
 - **生产构建零警告阻断**：`npm run build` 成功完成全量 44 条路由编译打包；
 - **真机行为验证**：鼠标进入代码沙箱内流畅滚动代码与终端输出，画布纹丝不动；移出后自由缩放平移；标签弹窗紧贴 Block 顶部右侧对齐展开，交互直观顺畅。
+
+---
+
+## ADR-019: 多模态 Block 闭环治理：表格 Excel 剪贴板/文件拖拽互通、画板全尺寸弹性自适应、媒体 Block 全生命周期换源与高可用 AI 智能体容灾 (Multimodal Blocks Enhancements & Resilient Agent Fallback)
+
+### 1. 业务痛点与技术冲突
+在产研实际协同与演示验收中，暴露了 4 个高频阻断体验的问题：
+1. **表格 Block 数据孤岛**：真实产研协作中，绝大多数技术指标、工时排期与测试矩阵均存储在 Excel、WPS 或 Google Sheets 中。此前 TableBlock 仅支持手动逐个单元格键入，缺乏与宿主操作系统的剪贴板互通能力，严重制约实用价值；
+2. **画板 Block 尺寸僵死**：当用户在画布中将白板 Block 拖拽放大至 800px、1200px 宽度甚至全屏时，内部绘图 `<canvas>` 元素固定为硬编码的 320px 高度，四周留出大片无用空白，无法利用拉伸后的画布空间；
+3. **媒体 Block 无法换源/修改**：外链网页（如 BlockOS 官网、Figma 嵌入）或本地媒体添加后，卡片固化，缺乏重置或更换链接的交互入口，用户若填错必须整块删除重建；
+4. **AI 智能体生成假死与命令单点依赖**：当运行环境缺少外部大模型 API Key，或网络出现偶发超时/500 时，前端勾选上线保障规则后卡片长期停滞在 `⏳ 正在调用智谱 GLM 4.7 Flash 大模型规划上线保障清单...`；AI 助手输入 "123" 等文本时提示为空白或直接报错，无法形成闭环。
+
+### 2. 架构设计与技术方案
+
+#### (1) 表格 Block Excel 剪贴板与拖拽导入体系 (TableBlock Clipboard & Drag-Drop Engine)
+- **多格式解析器 `parseClipboardTable`**：
+  - **TSV 优先**：Excel / WPS 复制单元格的标准剪贴板格式为 Tab 制表符分隔文本（`\t`）及换行符（`\r?\n`）；
+  - **HTML 降级**：支持富文本剪贴板中的 `<table><tr><td>` 结构化提取；
+  - **智能类型推断**：自动嗅探单元格数值（`number`）、日期（`date`）与纯文本（`text`）类型，自动生成第一行作为表头（Columns），后续行为数据行（Rows）；
+- **全域粘贴与拖放接入**：
+  - 容器监听全局 `onPaste` 事件，直接唤醒快速写入；
+  - 挂载 `onDragOver` / `onDrop` 事件，支持 `.csv` / `.tsv` / `.txt` 文件直接拖拽至表格并即时渲染，提供直观的拖拽悬停高亮蒙层；
+  - 表头常驻「粘贴 Excel」便捷操作按钮及空状态图文指引。
+
+#### (2) 画板 Block 响应式弹性重绘引擎 (Responsive Whiteboard Canvas)
+- **Flex 自适应容器**：样式层从固定 `320px` 重构为 `flex-1 h-full min-h-[260px]`，容器随外层卡片拉伸自动填充满尺寸；
+- **ResizeObserver 动态尺寸嗅探与笔画无损重绘**：
+  - 使用 `ResizeObserver` 实时监听父容器像素尺寸变化；
+  - 尺寸变化时自适应更新 `canvas.width` 与 `canvas.height`，并利用已持久化的 `strokes` 笔画轨迹坐标流进行即时重绘，保证放大缩小过程中画作零变形、零丢失。
+
+#### (3) 媒体 Block 全生命周期换源与动作控制 (MediaBlock Lifecycle Management)
+- **常驻悬浮药丸操作区**：在媒体卡片右上角增加绝对定位的磨砂半透明悬浮药丸（Floating Action Pill），提供「更换媒体」与「清空重选」入口；
+- **全类型编辑状态支持**：无论是上传图片/视频，还是外部嵌入 URL（如 default 网页 iframe），均支持点击进入编辑态，自由切换链接或重新上传本地文件；
+- **安全表单控制**：表单提供「取消」与「清空」动作，防止误操作。
+
+#### (4) AI 智能体容灾韧性与本地命令状态机 (Resilient Agent & Deterministic Command Engine)
+- **离线企业级交付清单保底 (Enterprise Resilient Fallback)**：
+  - 在 `useAgent.ts` 的 `callAI` 中加入严密的容灾捕获：即便外部大模型 API 出现无 Key、401、500 或超时，自动触发企业级标准 3 步上线保障清单（P0 核心冒烟、P1 灰度配置、数据巡检），绝不让界面卡死在加载态；
+- **本地确定性命令解析器 (`executeLocalCommand`)**：
+  - 在 `CommandPalette.tsx` 中集成正则规则状态机，覆盖批量创建 Block、清空画布、高亮关键词、删除特定 Block 等高频指令，在网络离线或无 AI 算力支持下依然具备 100% 确定性的执行能力。
+
+### 3. 产出与验收度量
+- **自动化测试无回退**：17 个测试套件、206 项单元与集成测试持续 **100% 绿色全过**；
+- **生产打包构建**：`npm run build` 全量 44 条路由编译成功，零编译报错；
+- **真机实测闭环**：
+  - 从 Excel/WPS 复制任意多行多列单元格，在表格 Block 按 `Ctrl+V` 即可瞬间生成完整表格；
+  - 白板 Block 自由拉伸至任意尺寸，绘图区域 100% 自适应扩展，笔画绘制流畅无遮挡；
+  - 媒体 Block 点击「更换」可即时换源或取消；
+  - 勾选 Block 2 的发布保障后，Agent 顺畅生成任务清单，无任何停滞挂起。

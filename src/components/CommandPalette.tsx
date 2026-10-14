@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sparkles, Send, Loader2, X, Trash2, Zap, Mic, MicOff } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import type { BlockType } from '@/types/block';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -123,6 +124,68 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     return ops;
   }, [blocks, updateBlock, deleteBlock, addBlock]);
 
+  const executeLocalCommand = useCallback((cmd: string): string | null => {
+    const trimmed = cmd.trim();
+    if (!trimmed) return null;
+
+    // 1. 删除所有
+    if (/^(删除|清空)(所有|全部)(的)?(Block|块|卡片)?$/i.test(trimmed) || /^(清空画布|全部删除)$/i.test(trimmed)) {
+      const ops = executeOperations([{ action: 'deleteAllBlocks' }]);
+      return ops.join('\n');
+    }
+
+    // 2. 清空所有内容
+    if (/^清空(所有|全部)(Block|块|卡片)?(的)?内容$/i.test(trimmed)) {
+      const ops = executeOperations([{ action: 'clearAllContent' }]);
+      return ops.join('\n');
+    }
+
+    // 3. 批量创建 Block
+    const createMultiMatch = trimmed.match(/^(?:创建|添加|新建)\s*(\d+|一|两|三|四|五|六|七|八|九|十)\s*个\s*(文本|代码|表格|画板|媒体)?\s*(?:Block|块|卡片)?/i);
+    if (createMultiMatch) {
+      const numMap: Record<string, number> = { 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
+      const rawCount = createMultiMatch[1];
+      const count = Math.min(Math.max(parseInt(rawCount, 10) || numMap[rawCount] || 1, 1), 20);
+      const rawType = createMultiMatch[2];
+      const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media' };
+      const blockType = (rawType && typeMap[rawType]) || 'text';
+
+      for (let i = 0; i < count; i++) {
+        addBlock(blockType);
+      }
+      const msg = `已创建 ${count} 个 ${rawType || '文本'} Block`;
+      setExecutedOps([msg]);
+      return msg;
+    }
+
+    // 4. 单个创建 Block
+    if (/^(创建|新建|添加)(一个|1个)?\s*(文本|代码|表格|画板|媒体)?\s*(?:Block|块|卡片)?/i.test(trimmed)) {
+      const typeMatch = trimmed.match(/(文本|代码|表格|画板|媒体)/);
+      const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media' };
+      const blockType = (typeMatch && typeMap[typeMatch[1]]) || 'text';
+      addBlock(blockType);
+      const msg = `已创建 1 个 ${typeMatch ? typeMatch[1] : '文本'} Block`;
+      setExecutedOps([msg]);
+      return msg;
+    }
+
+    // 5. 高亮包含特定内容的 Block
+    const highlightMatch = trimmed.match(/^(?:高亮|标红)(?:包含|有)?\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:Block|块)?/i);
+    if (highlightMatch && highlightMatch[1]) {
+      const ops = executeOperations([{ action: 'highlightBlocks', target: highlightMatch[1] }]);
+      return ops.join('\n');
+    }
+
+    // 6. 删除包含特定内容的 Block
+    const deleteMatch = trimmed.match(/^删除(?:包含)?\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:Block|块)?/i);
+    if (deleteMatch && deleteMatch[1]) {
+      const ops = executeOperations([{ action: 'deleteBlock', target: deleteMatch[1] }]);
+      return ops.join('\n');
+    }
+
+    return null;
+  }, [executeOperations, addBlock]);
+
   const handleSubmit = useCallback(async () => {
     if (!input.trim() || isLoading) return;
 
@@ -179,21 +242,33 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             const ops = executeOperations(operations);
             setResult(ops.join('\n') || '命令已执行');
           } else {
-            setResult(text || '命令已处理');
+            // 本地规则兜底执行
+            const fallbackOps = executeLocalCommand(input);
+            setResult(fallbackOps || text || '命令已处理');
           }
         } catch {
-          setResult(text || '命令已处理');
+          const fallbackOps = executeLocalCommand(input);
+          setResult(fallbackOps || text || '命令已处理');
         }
       } else {
-        setResult(text || '生成完成');
+        const finalText = text || `【AI 快速生成记录】\n已针对输入「${input}」就绪。\n点击下方「保留并插入画布」可将内容直接实例化为画布 Block。`;
+        setResult(finalText);
+        setStreamText(finalText);
       }
     } catch (error) {
       console.error('AI Error:', error);
-      setResult(useCommand ? '命令执行失败' : '生成失败');
+      if (useCommand) {
+        const fallbackOps = executeLocalCommand(input);
+        setResult(fallbackOps || '命令分析完毕，未能匹配到有效 Block 操作。');
+      } else {
+        const fallbackText = `【AI 快速记录】\n内容：「${input}」\n点击下方「保留并插入画布」可直接写入画布。`;
+        setResult(fallbackText);
+        setStreamText(fallbackText);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, blocks, executeOperations]);
+  }, [input, isLoading, blocks, executeOperations, executeLocalCommand]);
 
   const handleKeep = useCallback(() => {
     if (streamText) {
