@@ -9,7 +9,7 @@ import AIResultCard from './AIResultCard';
 import AIActionMenu from './AIActionMenu';
 import CommandPalette from './CommandPalette';
 import RelationDrawer from './RelationDrawer';
-import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon } from 'lucide-react';
+import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, ArrowUpFromLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon } from 'lucide-react';
 import type { BlockType, Block } from '@/types/block';
 import TagWheelPicker, { getTagStyle } from './TagWheelPicker';
 import CanvasMinimap from './CanvasMinimap';
@@ -38,6 +38,7 @@ export default function BlockEditor({
   const resizeBlock = useBlockStore((state) => state.resizeBlock);
   const updateBlock = useBlockStore((state) => state.updateBlock);
   const duplicateBlock = useBlockStore((state) => state.duplicateBlock);
+  const outdentBlock = useBlockStore((state) => state.outdentBlock);
   const groupBlocks = useBlockStore((state) => state.groupBlocks);
   const ungroupBlocks = useBlockStore((state) => state.ungroupBlocks);
   const currentPageId = useBlockStore((state) => state.currentPageId);
@@ -494,17 +495,27 @@ export default function BlockEditor({
 
   const handleSetAsChild = useCallback((parentId: string) => {
     if (selectedIds.length > 0) {
+      const parent = blocks.find((b) => b.id === parentId);
       selectedIds.forEach((id) => {
         if (id !== parentId) {
           updateBlock(id, { parentId });
         }
       });
+      if (parent) {
+        const childWidths = selectedIds
+          .filter((id) => id !== parentId)
+          .map((id) => blocks.find((b) => b.id === id)?.width || 480);
+        const maxChildWidth = Math.max(parent.width || 480, ...childWidths);
+        if (maxChildWidth > (parent.width || 480)) {
+          updateBlock(parentId, { width: maxChildWidth });
+        }
+      }
       useBlockStore.getState().saveHistory();
     }
     setContextMenu(null);
     setContextTargetId(null);
     setShowParentPicker(false);
-  }, [selectedIds, updateBlock]);
+  }, [selectedIds, blocks, updateBlock]);
 
   const handleOpenAIMenu = useCallback((blockId: string, blockType: BlockType, position: { top: number; left: number }) => {
     setAiMenu({ blockId, blockType, position });
@@ -533,45 +544,67 @@ export default function BlockEditor({
     return (
       <div
         key={block.id}
-        className={`${depth === 0 ? 'absolute group/block' : 'relative group/block'} flex flex-col`}
+        className={`${depth === 0 ? 'absolute group/block' : 'relative group/block w-full'} flex flex-col`}
         style={depth === 0 ? {
           left: block.x,
           top: block.y,
           width: block.width,
           ...(block.height ? { height: `${block.height}px` } : {}),
         } : {
-          width: block.width,
-          ...(block.height ? { height: `${block.height}px` } : {}),
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          ...(block.height ? { minHeight: `${block.height}px` } : {}),
         }}
         data-block-id={block.id}
         data-tour={block.id}
       >
-        <div className={`h-full flex-1 flex flex-col min-h-0 ${depth > 0 ? 'ml-4 mt-1' : ''}`}>
+        <div className="h-full flex-1 flex flex-col min-h-0 w-full">
           <div
             className={`h-full flex-1 flex flex-col min-h-0 rounded-lg border transition-all ${
               selectedIds.includes(block.id)
-                ? 'border-blue-400/60 shadow-lg shadow-blue-500/10'
+                ? 'border-blue-400/80 shadow-lg shadow-blue-500/10'
                 : isChild
-                  ? 'border-blue-800/40 hover:border-blue-700/40'
-                  : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60'
-            } bg-white dark:bg-zinc-900 backdrop-blur-sm`}
+                  ? 'border-blue-300/50 dark:border-blue-800/40 bg-white/95 dark:bg-zinc-850/95 shadow-xs'
+                  : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60 bg-white dark:bg-zinc-900'
+            } backdrop-blur-sm`}
           >
             <div
-              className={`shrink-0 flex items-center gap-1 h-7 px-2 cursor-grab active:cursor-grabbing border-b ${
-                isChild ? 'border-blue-300/40 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/25' : 'border-gray-200/40 dark:border-zinc-700/40'
+              className={`shrink-0 flex items-center gap-1.5 h-8 px-2.5 cursor-grab active:cursor-grabbing border-b ${
+                isChild ? 'border-blue-200/50 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/30' : 'border-gray-200/40 dark:border-zinc-700/40'
               }`}
-              onMouseDown={(e) => startDragBlock(block.id, e)}
+              onMouseDown={(e) => depth === 0 && startDragBlock(block.id, e)}
             >
-              <Move className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
+              {depth === 0 ? (
+                <Move className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
+              ) : (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-400/20">
+                  子 Block
+                </span>
+              )}
               <input
                 value={block.title}
                 onChange={(e) => updateBlock(block.id, { title: e.target.value })}
                 placeholder="Block 标题"
-                className={`flex-1 bg-transparent text-[10px] outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600 ${
-                  isChild ? 'text-blue-500 dark:text-blue-300/80' : 'text-gray-700 dark:text-zinc-300'
+                className={`flex-1 bg-transparent text-[11px] outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600 ${
+                  isChild ? 'text-blue-700 dark:text-blue-300 font-medium' : 'text-gray-700 dark:text-zinc-300'
                 }`}
                 onMouseDown={(e) => e.stopPropagation()}
               />
+              {isChild && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    outdentBlock(block.id);
+                  }}
+                  className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] rounded bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-50 dark:hover:bg-blue-900/40 transition-colors"
+                  title="移出子 Block（提升为画布顶级 Block）"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <ArrowUpFromLine className="w-2.5 h-2.5" />
+                  <span>移出</span>
+                </button>
+              )}
               {childCountMap[block.id] && childCountMap[block.id] > 0 && (
                 <span className="text-[9px] text-blue-600 dark:text-blue-300/70 font-mono bg-blue-500/15 px-1.5 py-0.5 rounded-full">
                   {childCountMap[block.id]}
@@ -645,14 +678,25 @@ export default function BlockEditor({
             )}
 
             {!block.collapsed && children.length > 0 && (
-              <div className="shrink-0 pb-2">
-                {children.map((child) => renderBlockTree(child, depth + 1))}
+              <div className="shrink-0 px-3 pb-3 pt-2 border-t border-gray-100 dark:border-zinc-800/80 bg-gray-50/60 dark:bg-zinc-950/40 rounded-b-lg">
+                <div className="flex items-center justify-between py-1 mb-1.5 text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                  <div className="flex items-center gap-1.5">
+                    <ArrowDownToLine className="w-3 h-3" />
+                    <span>包含的子 Block ({children.length})</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-normal">
+                    支持在内部折叠或移出到画布
+                  </span>
+                </div>
+                <div className="space-y-2 border-l-2 border-blue-400/40 dark:border-blue-500/30 pl-2.5 my-1">
+                  {children.map((child) => renderBlockTree(child, depth + 1))}
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {!block.collapsed && (
+        {depth === 0 && !block.collapsed && (
           <>
             {/* 右边缘宽度拉伸 */}
             <div
@@ -676,7 +720,7 @@ export default function BlockEditor({
         )}
       </div>
     );
-  }, [sortedBlocks, selectedIds, childCountMap, updateBlock, startDragBlock, handleSelect, handleOpenAIMenu, linkMode, linkSource, startResizeBlock, tagWheelBlockId, tagWheelRect, handleAddTag, handleRemoveTag]);
+  }, [sortedBlocks, selectedIds, childCountMap, updateBlock, startDragBlock, handleSelect, handleOpenAIMenu, linkMode, linkSource, startResizeBlock, tagWheelBlockId, tagWheelRect, handleAddTag, handleRemoveTag, outdentBlock]);
 
   return (
     <div
@@ -738,10 +782,27 @@ export default function BlockEditor({
             return links.map((targetId) => {
               const target = blocks.find((b) => b.id === targetId);
               if (!target) return null;
-              const x1 = block.x + block.width / 2;
-              const y1 = block.y + 30;
-              const x2 = target.x + target.width / 2;
-              const y2 = target.y + 30;
+
+              const getVisualPos = (b: typeof block) => {
+                if (!b.parentId) {
+                  return { x: b.x, y: b.y, width: b.width };
+                }
+                const parent = blocks.find((p) => p.id === b.parentId);
+                if (!parent) return { x: b.x, y: b.y, width: b.width };
+                return {
+                  x: parent.x + 20,
+                  y: parent.y + 60,
+                  width: (parent.width || 480) - 40,
+                };
+              };
+
+              const pos1 = getVisualPos(block);
+              const pos2 = getVisualPos(target);
+
+              const x1 = pos1.x + pos1.width / 2;
+              const y1 = pos1.y + 30;
+              const x2 = pos2.x + pos2.width / 2;
+              const y2 = pos2.y + 30;
               const midY = (y1 + y2) / 2;
               return (
                 <path
@@ -1000,44 +1061,64 @@ export default function BlockEditor({
               创建链接
             </button>
             <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
-            <div className="relative">
+            <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+            {selectedIds.some((id) => blocks.find((b) => b.id === id)?.parentId) ? (
               <button
-                onClick={() => setShowParentPicker(!showParentPicker)}
-                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-zinc-200 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded-full transition-colors"
+                onClick={() => {
+                  selectedIds.forEach((id) => outdentBlock(id));
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 rounded-full transition-colors font-medium"
+                title="移出子 Block（提升为画布独立 Block）"
               >
-                <ArrowDownToLine className="w-3 h-3" />
-                设为子 Block
+                <ArrowUpFromLine className="w-3 h-3" />
+                移出子 Block
               </button>
-              {showParentPicker && (
-                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-xl py-1">
-                  <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-zinc-700">
-                    <span className="text-[11px] text-gray-500 dark:text-zinc-400">选择父 Block</span>
-                    <button onClick={() => setShowParentPicker(false)} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                  {selectableParents.length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-gray-400 dark:text-zinc-500">没有可选的 Block</div>
-                  ) : (
-                    selectableParents.map((b) => (
-                      <button
-                        key={b.id}
-                        onClick={() => handleSetAsChild(b.id)}
-                        className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors truncate"
-                      >
-                        {b.title || '未命名 Block'}
+            ) : (
+              <div className="relative">
+                <button
+                  onClick={() => setShowParentPicker(!showParentPicker)}
+                  className="flex items-center gap-1.5 px-3 py-1 text-xs bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-zinc-200 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded-full transition-colors"
+                >
+                  <ArrowDownToLine className="w-3 h-3" />
+                  设为子 Block
+                </button>
+                {showParentPicker && (
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-xl py-1">
+                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-zinc-700">
+                      <span className="text-[11px] text-gray-500 dark:text-zinc-400">选择父 Block</span>
+                      <button onClick={() => setShowParentPicker(false)} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
+                        <X className="w-3 h-3" />
                       </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+                    </div>
+                    {selectableParents.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-gray-400 dark:text-zinc-500">没有可选的 Block</div>
+                    ) : (
+                      selectableParents.map((b) => (
+                        <button
+                          key={b.id}
+                          onClick={() => handleSetAsChild(b.id)}
+                          className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors truncate"
+                        >
+                          {b.title || '未命名 Block'}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
       )}
 
       {linkMode && (
-        <div data-ui-control className="fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-blue-600/90 backdrop-blur-xl text-white text-sm rounded-full shadow-2xl shadow-black/50 z-40 animate-slide-up">
-          点击目标 Block 创建链接
+        <div data-ui-control className="fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-blue-600/90 backdrop-blur-xl text-white text-sm rounded-full shadow-2xl shadow-black/50 z-40 animate-slide-up flex items-center gap-3">
+          <span>🔗 正在建立链接：请点击任意目标 Block</span>
+          <button
+            onClick={() => { setLinkMode(false); setLinkSource(null); }}
+            className="px-2 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-xs transition-colors"
+          >
+            取消 (ESC)
+          </button>
         </div>
       )}
 

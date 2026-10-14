@@ -735,7 +735,12 @@ export const useBlockStore = create<BlockStore>()(
         set((state) => {
           const block = state.blocks.find((b) => b.id === id);
           if (!block || !block.parentId) return;
+          const parent = state.blocks.find((b) => b.id === block.parentId);
           block.parentId = null;
+          if (parent) {
+            block.x = (parent.x || 40) + (parent.width || 480) + 40;
+            block.y = parent.y || 40;
+          }
           block.updatedAt = Date.now();
         });
         get().saveHistory();

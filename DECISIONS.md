@@ -28,6 +28,7 @@
 - [ADR-017: 产研全链路语义闭环、持久化后台引擎、跨视图状态协同与离线自愈架构 (Semantic Requirements, Persistent Agent Jobs, Cross-View Sync & Resilient Offline Fallback)](#adr-017-产研全链路语义闭环持久化后台引擎跨视图状态协同与离线自愈架构-semantic-requirements-persistent-agent-jobs-cross-view-sync--resilient-offline-fallback)
 - [ADR-018: 沙箱独立滚动隔离、工具栏语义极简化与 Portal 标签管理重塑 (Sandbox Scroll Isolation, Concise Toolbar & Portal Tag Picker)](#adr-018-沙箱独立滚动隔离工具栏语义极简化与-portal-标签管理重塑-sandbox-scroll-isolation-concise-toolbar--portal-tag-picker)
 - [ADR-019: 多模态 Block 闭环治理：表格 Excel 剪贴板/文件拖拽互通、画板全尺寸弹性自适应、媒体 Block 全生命周期换源与高可用 AI 智能体容灾 (Multimodal Blocks Enhancements & Resilient Agent Fallback)](#adr-019-多模态-block-闭环治理表格-excel-剪贴板文件拖拽互通画板全尺寸弹性自适应媒体-block-全生命周期换源与高可用-ai-智能体容灾-multimodal-blocks-enhancements--resilient-agent-fallback)
+- [ADR-020: 子 Block 响应式树状嵌套治理、架构导图节点与落地 Block 双向互通及多角色交互打磨 (Hierarchical Sub-Blocks, Mindmap Node-to-Block Linking & Multimodal Polish)](#adr-020-子-block-响应式树状嵌套治理架构导图节点与落地-block-双向互通及多角色交互打磨-hierarchical-sub-blocks-mindmap-node-to-block-linking--multimodal-polish)
 
 ---
 
@@ -668,3 +669,53 @@
   - 白板 Block 自由拉伸至任意尺寸，绘图区域 100% 自适应扩展，笔画绘制流畅无遮挡；
   - 媒体 Block 点击「更换」可即时换源或取消；
   - 勾选 Block 2 的发布保障后，Agent 顺畅生成任务清单，无任何停滞挂起。
+
+---
+
+## ADR-020: 子 Block 响应式树状嵌套治理、架构导图节点与落地 Block 双向互通及多角色交互打磨 (Hierarchical Sub-Blocks, Mindmap Node-to-Block Linking & Multimodal Polish)
+
+### 1. 业务痛点与技术冲突
+在深入模拟多角色（架构师、产品经理、工程师、测试）真实操作时，发现两项严重的结构性交互断层：
+1. **子 Block UI 严重畸变与画幅冲突**：
+   - 当用户在画布中将一个大画幅 Block（如 600px 导图或表格）设为另一个小卡片（如 400px 待办卡片）的「子 Block」时，子卡片带着孤立的绝对宽度强制渲染在父卡片内部；
+   - 子 Block 严重突兀地冲破父卡片右边框，且卡片与内容重叠遮挡；
+   - 子卡片依然带有外层画布的拉伸手柄，在嵌套层拖动直接引发坐标失控；且一旦设为子 Block 后，界面完全缺失「移出子 Block / 提升为顶级 Block」的逆向操作入口；
+2. **思维导图与落地原子 Block 割裂无网**：
+   - 用户在导图梳理顶层架构（如需求、架构、测试），但导图节点无法与画布具体的待办 Block、代码 Block、文档 Block 产生业务关联；
+   - 用户误以为“建立联系”必须依靠“设为子 Block”，从而触发了上述 UI 畸变；
+   - 原导图 Block 存在高度硬编码（320px）、树形排布算法缺陷（多子节点垂直碰撞重叠、连线控制点飞出视口引发粗大滚动条）。
+
+### 2. 架构设计与技术方案
+
+#### (1) 响应式子 Block 树状嵌套容器体系 (Hierarchical Sub-Block Engine)
+- **自适应宽度约束 (`w-full`)**：子 Block 渲染时彻底废除外部绝对硬编码像素宽度，强制应用 `w-full max-w-full box-border`，100% 自适应收纳在父卡片可用容器内；
+- **父级尺寸智能自愈 (`handleSetAsChild`)**：在将较大 Block 设为子 Block 时，系统智能感知子 Block 的最小舒适宽度，自动弹性拓宽父卡片宽度（`Math.max(parent.width, maxChildWidth)`），避免内容过度压缩；
+- **IDE 风格树形层级引导轨**：父卡片底部开辟独立子 Block 容器，带有 `border-l-2 border-blue-400/40` 左侧缩进导轨线与「包含的子 Block (N)」计数徽章；
+- **画布手柄隔离与逆向解除 (`outdentBlock`)**：
+  - 嵌套子 Block 彻底禁用画布层拖拽与外缘拉伸手柄（`depth === 0` 条件防护）；
+  - 子 Block 标题栏常驻「移出」快捷按钮，点击调用 `outdentBlock`，自动将该 Block 平滑定位并平铺至父 Block 右侧画布（`parent.x + parent.width + 40`），避免叠放遗失；
+  - 底部多选浮动栏动态识别所选 Block 是否包含子 Block，自适应切换为「移出子 Block」黄色高亮操作。
+
+#### (2) 思维导图 Reingold-Tilford 递归布局与节点级 Block 互通 (Mindmap Node-to-Block Architecture)
+- **精准子树高度递归排布**：
+  - 引入标准树形布局算法：每个分支的纵向位置严格由其子孙节点真实总高度决定，彻底解决分支重叠、碰撞或负轴偏移；
+  - 贝塞尔曲线控制点动态基于父节点右边缘中点与子节点左边缘中点计算，弧度优雅自然；
+  - SVG 视口高度与宽度完全自适应实际节点包围盒，根除内部不必要的双重厚重滚动条；
+- **节点级 Block 双向关联 (`linkedBlockId`)**：
+  - 导图节点数据模型扩展 `linkedBlockId` 属性；
+  - 节点悬停常驻「🔗」关联入口，弹出基于 React Portal 的跨层级选择器，支持直接关联当前画布上的任意 Block（待办、文档、代码、表格、媒体、白板）；
+  - 关联后节点右上角显示 `[↗]` 联动药丸，点击一键派发 `blockos-scroll-to-block` 视口平滑定位并自动高亮目标 Block；
+- **一键从导图分支裂变落地 Block**：
+  - 弹窗内置「⚡ 基于此分支在画布直接生成落地 Block」：一键生成待办 Block、文本 Block 或代码 Block，自动建立双向拓扑连线并居中呈现，实现“顶层导图架构规划 ➔ 落地原子 Block 实施”的端到端闭环。
+
+#### (3) 拓扑连线坐标映射自愈 (Canvas Link Coordinate Mapping)
+- 在画布全局连线渲染层中，新增 `getVisualPos` 映射函数：当连线源端或目标端属于子 Block 时，自动叠加父容器当前屏幕绝对坐标与层级偏倚量，根除连线飞向历史失效坐标的问题；
+- 「创建链接」模式下顶部常驻清晰交互横幅与 ESC 退出提示。
+
+### 3. 产出与验收度量
+- **自动化测试 100% 绿色**：17 个测试套件、206 项单元与集成测试全量通过；
+- **生产环境零错误构建**：Next.js 15 全量 44 条路由编译打包通过；
+- **真机实测闭环**：
+  - 任何 Block 设为子 Block 后，均完美契合在父 Block 的树形导轨容器中，自适应撑满宽度，无任何右侧突围与样式崩坏；
+  - 子 Block 头部与底部工具栏均可一键「移出」，瞬间恢复为画布顶级卡片；
+  - 思维导图节点可以自由关联待办、代码或文档，点击徽章画布平滑移动聚焦，或直接从导图分支一键生成新任务。

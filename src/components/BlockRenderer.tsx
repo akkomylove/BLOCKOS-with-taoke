@@ -79,6 +79,7 @@ export default function BlockRenderer({ block, isSelected }: BlockRendererProps)
         <MindmapBlock
           content={block.content}
           onChange={(content) => updateBlock(block.id, { content })}
+          blockId={block.id}
         />
       );
     case 'math':
