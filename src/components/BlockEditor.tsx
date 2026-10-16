@@ -9,10 +9,11 @@ import AIResultCard from './AIResultCard';
 import AIActionMenu from './AIActionMenu';
 import CommandPalette from './CommandPalette';
 import RelationDrawer from './RelationDrawer';
-import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, ArrowUpFromLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon } from 'lucide-react';
+import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, ArrowUpFromLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon, Sparkles } from 'lucide-react';
 import type { BlockType, Block } from '@/types/block';
 import TagWheelPicker, { getTagStyle } from './TagWheelPicker';
 import CanvasMinimap from './CanvasMinimap';
+import { BLOCK_CATEGORIES } from '@/lib/block-categories';
 
 interface BlockEditorProps {
   commandPaletteOpen: boolean;
@@ -45,6 +46,14 @@ export default function BlockEditor({
   const currentPageId = useBlockStore((state) => state.currentPageId);
 
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const [commandMenuPos, setCommandMenuPos] = useState({ top: 90, left: 100 });
+
+  const openCommandMenuCentered = useCallback(() => {
+    const left = typeof window !== 'undefined' ? Math.max(16, Math.round((window.innerWidth - 320) / 2)) : 100;
+    setCommandMenuPos({ top: 90, left });
+    setCommandMenuOpen(true);
+  }, []);
+
   const [aiResults, setAiResults] = useState<{ id: string; blockId: string; result: string; loading?: boolean; timestamp?: number }[]>([]);
   const [linkMode, setLinkMode] = useState(false);
   const [linkSource, setLinkSource] = useState<string | null>(null);
@@ -1076,59 +1085,89 @@ export default function BlockEditor({
           { type: 'todo' as BlockType, label: '待办' },
           { type: 'code' as BlockType, label: '代码' },
           { type: 'table' as BlockType, label: '表格' },
-          { type: 'media' as BlockType, label: '媒体' },
-          { type: 'whiteboard' as BlockType, label: '白板' },
+          { type: 'bookmark' as BlockType, label: '书签' },
+          { type: 'mermaid' as BlockType, label: '架构图' },
           { type: 'mindmap' as BlockType, label: '导图' },
+          { type: 'callout' as BlockType, label: '高亮' },
+          { type: 'countdown' as BlockType, label: '倒计时' },
+          { type: 'whiteboard' as BlockType, label: '白板' },
           { type: 'math' as BlockType, label: '公式' },
         ]).map(({ type, label }) => (
           <button
             key={type}
             onClick={() => addBlockAtCenter(type)}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors whitespace-nowrap"
             title={`添加 ${label}`}
           >
             <Plus className="w-3 h-3" />
             {label}
           </button>
         ))}
+        <div className="w-px h-3.5 bg-gray-300 dark:bg-zinc-600 mx-1 shrink-0" />
+        <button
+          onClick={openCommandMenuCentered}
+          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 rounded transition-colors whitespace-nowrap"
+          title="打开多维组件库与分类搜索"
+        >
+          <Sparkles className="w-3 h-3" />
+          更多组件
+        </button>
       </div>
 
       {contextMenu && createPortal(
         <div
           data-ui-control
-          className="fixed z-[100] bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-xl py-1 min-w-[160px]"
+          className="fixed z-[100] bg-white/95 dark:bg-zinc-800/95 backdrop-blur-xl border border-gray-200/90 dark:border-zinc-700/90 rounded-xl shadow-2xl py-1.5 min-w-[190px] max-h-[75vh] overflow-y-auto"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">添加 Block</div>
-          {([
-            { type: 'text' as BlockType, label: '文本' },
-            { type: 'todo' as BlockType, label: '待办' },
-            { type: 'code' as BlockType, label: '代码' },
-            { type: 'table' as BlockType, label: '表格' },
-            { type: 'media' as BlockType, label: '媒体' },
-            { type: 'whiteboard' as BlockType, label: '白板' },
-            { type: 'mindmap' as BlockType, label: '思维导图' },
-            { type: 'math' as BlockType, label: '公式' },
-            { type: 'quote' as BlockType, label: '引用' },
-            { type: 'toggle' as BlockType, label: '折叠' },
-            { type: 'divider' as BlockType, label: '分割线' },
-          ]).map(({ type, label }) => (
+          <div className="px-3 py-1 text-[11px] font-semibold text-gray-400 dark:text-zinc-500 flex items-center justify-between border-b border-gray-100 dark:border-zinc-700/70 mb-1">
+            <span>添加 Block</span>
             <button
-              key={type}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                addBlockAtPosition(type, contextMenu.x, contextMenu.y);
+                const targetX = Math.min(contextMenu.x, window.innerWidth - 330);
+                const targetY = Math.min(contextMenu.y, window.innerHeight - 450);
+                setCommandMenuPos({ top: Math.max(10, targetY), left: Math.max(10, targetX) });
+                setContextMenu(null);
+                setCommandMenuOpen(true);
               }}
-              className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
+              className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5"
             >
-              <Plus className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
-              {label}
+              <span>多维菜单</span>
             </button>
+          </div>
+          {BLOCK_CATEGORIES.map((cat) => (
+            <div key={cat.id} className="py-0.5">
+              <div className="px-3 py-0.5 text-[9px] font-bold text-gray-400/80 dark:text-zinc-500 uppercase tracking-wider">
+                {cat.title}
+              </div>
+              {cat.items.map((item) => (
+                <button
+                  key={item.type}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addBlockAtPosition(item.type, contextMenu.x, contextMenu.y);
+                  }}
+                  className="w-full text-left px-3 py-1 text-xs text-gray-800 dark:text-zinc-200 hover:bg-blue-50 dark:hover:bg-zinc-700/80 hover:text-blue-600 dark:hover:text-blue-300 transition-colors flex items-center justify-between group"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <Plus className="w-3 h-3 text-gray-400 group-hover:text-blue-500 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </span>
+                  {item.badge && (
+                    <span className="px-1 text-[8px] rounded bg-blue-500 text-white font-medium shrink-0 ml-1">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           ))}
           <div className="border-t border-gray-200 dark:border-zinc-700 my-1" />
-          <div className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">AI 操作</div>
+          <div className="px-3 py-1 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">AI 操作</div>
           <button
             onMouseDown={(e) => {
               e.preventDefault();
@@ -1143,7 +1182,7 @@ export default function BlockEditor({
           {contextTargetId && selectedIds.length > 0 && selectedIds.some((id) => id !== contextTargetId) && (
             <>
               <div className="border-t border-gray-200 dark:border-zinc-700 my-1" />
-              <div className="px-3 py-1.5 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">Block 操作</div>
+              <div className="px-3 py-1 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">Block 操作</div>
               <button
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -1165,7 +1204,7 @@ export default function BlockEditor({
         isOpen={commandMenuOpen}
         onClose={() => setCommandMenuOpen(false)}
         onSelect={handleCommandSelect}
-        position={{ top: 100, left: 100 }}
+        position={commandMenuPos}
       />
 
       {aiResults.length > 0 && createPortal(

@@ -1,4 +1,19 @@
-export type BlockType = 'text' | 'todo' | 'code' | 'table' | 'media' | 'quote' | 'toggle' | 'divider' | 'whiteboard' | 'mindmap' | 'math';
+export type BlockType =
+  | 'text'
+  | 'todo'
+  | 'code'
+  | 'table'
+  | 'media'
+  | 'quote'
+  | 'toggle'
+  | 'divider'
+  | 'whiteboard'
+  | 'mindmap'
+  | 'math'
+  | 'callout'
+  | 'countdown'
+  | 'bookmark'
+  | 'mermaid';
 
 export interface BlockMeta {
   tourId?: string;
@@ -8,6 +23,24 @@ export interface BlockMeta {
   highlight?: string;
   checked?: boolean;
   language?: string;
+
+  // Callout 高亮警示块
+  calloutTheme?: 'info' | 'warning' | 'danger' | 'success' | 'purple';
+  calloutIcon?: string;
+  calloutEmoji?: string;
+
+  // Countdown 冲刺倒计时
+  targetDate?: string;
+  targetTime?: string;
+  countdownTitle?: string;
+  countdownTarget?: string;
+  countdownCompleted?: boolean;
+
+  // Bookmark 网页外链书签卡片
+  bookmarkUrl?: string;
+  bookmarkTitle?: string;
+  bookmarkDesc?: string;
+  bookmarkFavicon?: string;
 
   expanded?: boolean;
   caption?: string;

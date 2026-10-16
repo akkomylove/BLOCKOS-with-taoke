@@ -1053,3 +1053,56 @@
 - **自动化测试**：22 套测试套件、226 项测试用例 100% 绿色通过；
 - **生产构建**：Next.js 全量 38 条路由编译打包通过；
 - **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证。
+
+---
+
+## ADR-028: 飞书风格多维分类菜单重构与高亮/倒计时/书签/Mermaid四大多维组件落地 (Lark-Style Block Categorization & Four Multi-Dimensional Interactive Blocks)
+
+- **日期**：2026-10-16
+- **决策状态**：已全面落地、验证通过并推送到生产环境
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/lib/block-categories.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/block-categories.ts)
+  - [src/components/CommandMenu.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/CommandMenu.tsx)
+  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
+  - [src/components/BlockRenderer.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockRenderer.tsx)
+  - [src/components/blocks/CalloutBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/CalloutBlock.tsx)
+  - [src/components/blocks/CountdownBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/CountdownBlock.tsx)
+  - [src/components/blocks/BookmarkBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/BookmarkBlock.tsx)
+  - [src/components/blocks/MermaidBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/MermaidBlock.tsx)
+  - [src/lib/document-outline.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/document-outline.ts)
+  - [src/components/mobile/MobileBlockContent.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/mobile/MobileBlockContent.tsx)
+  - [tests/components/LarkBlocksAndCategories.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/components/LarkBlocksAndCategories.test.ts)
+
+### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
+1. **组件查找成本与分类缺失**：
+   - 原画布 Block 菜单采用扁平单列长列表，随着 Block 种类扩充到 10+ 种，右键菜单过长且难以快速定位；
+   - 用户参考飞书 (Lark) 产研协同场景，提出借鉴其功能分类矩阵与高频敏捷模块，提升创作和编排效率。
+2. **缺乏多维关键信息表达容器**：
+   - 团队交付紧盯发布里程碑时，缺少醒目的实时倒计时看板组件；
+   - 架构设计、状态机和流程拆解依赖外部截图或冗长文字，缺少由 Mermaid 驱动的原生图表代码即时渲染能力；
+   - 外部原型/文档引用退化为纯文本超链接，缺乏具有 Favicon、Host 域名、标题、描述与一键复制能力的网页书签卡片；
+   - 核心风险与交付前提无法形成视觉强提示，缺少多语义（提示/注意/阻断/达成/洞察）的高亮警示块。
+
+### 2. 决策方案与系统实现架构 (Decisions & Implementation)
+1. **飞书多维分类菜单体系 (`block-categories.ts`, `CommandMenu.tsx`, `BlockEditor.tsx`)**：
+   - 建立 4 大标准分类：
+     - **基础排版** (`basic`): 文本、待办、引用、折叠、分割线；
+     - **核心与数据** (`data`): 代码、表格、网页书签、LaTeX公式；
+     - **可视化与绘图** (`visual`): 思维导图、架构流程图、自由白板、多媒体；
+     - **敏捷小组件** (`widget`): 高亮提示、冲刺倒计时；
+   - 支持实时模糊搜索（中文名、拼音缩写、类型标识与描述匹配）、分类 Tab 快速过滤、上下键循环导航与 Enter 回车确认；
+   - 画布右键上下文菜单同步升级为分类分组渲染，顶部快捷工具栏新增「更多组件」入口并居中唤起多维菜单。
+2. **四大高频多维互动组件实现**：
+   - **高亮警示块 (`CalloutBlock`)**：预设 5 种色彩语义（info/blue, warning/amber, danger/rose, success/emerald, purple），支持 Emoji 图标自由切换与 Markdown 多行编辑；
+   - **冲刺倒计时 (`CountdownBlock`)**：自适应天/时/分/秒数字翻牌器，实时心跳跳动，支持点击配置目标日期与时间，超期时自动呈现已达成/已过期 Badge；
+   - **网页外链书签 (`BookmarkBlock`)**：解析并高亮域名 Host，集成「复制链接」与「新标签页打开」快捷按钮，支持一键切换行内编辑模式更新标题与描述；
+   - **架构流程图 (`MermaidBlock`)**：采用动态客户端异步加载 (`await import('mermaid')`) 确保 SSR 安全，支持流程图 (Flowchart)、时序图 (Sequence)、状态图 (State) 等，提供「源码编辑 / 预览」双模式切换与温和语法错误捕获。
+3. **双端大纲对齐与移动端阅读零破坏**：
+   - 升级 `document-outline.ts` 中的 `blockTitle`，确保四大新组件在侧边大纲、手机端章节目录中均具备精准自解释标题；
+   - 升级 `MobileBlockContent.tsx` 与 `MobileEditors.tsx`，手机端无缝呈现 Callout 高亮盒、倒计时目标节点、书签卡片与 Mermaid 语法查看，并在不改变电脑端 2D 坐标系的前提下支持移动端轻量修改。
+
+### 3. 产出与验收度量 (Verification Baseline)
+- **自动化测试**：23 套测试套件、235 项单元与集成测试用例 **100% 绿色通过**；
+- **生产构建验证**：Next.js 全量 38 条路由生产打包 `npm run build` **0 编译错误、0 类型故障**；
+- **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证通过。

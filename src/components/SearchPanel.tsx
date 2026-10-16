@@ -14,6 +14,7 @@ const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   text: '文本', todo: '待办', code: '代码', table: '表格', media: '媒体',
   quote: '引用', toggle: '折叠', divider: '分隔线', whiteboard: '白板',
   mindmap: '思维导图', math: '公式',
+  callout: '高亮提示', countdown: '倒计时', bookmark: '网页书签', mermaid: '架构图',
 };
 
 export default function SearchPanel({ isOpen, onClose }: SearchPanelProps) {

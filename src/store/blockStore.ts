@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { Block, BlockType, AgentRule, AgentLog, BlockTemplate } from '@/types/block';
+import type { Block, BlockType, BlockMeta, AgentRule, AgentLog, BlockTemplate } from '@/types/block';
 import type { Page, Folder } from '@/types/page';
 import { PRESET_DOCUMENTS, getPresetDocumentBlocks } from '@/config/presetDocuments';
 
@@ -100,23 +100,60 @@ interface BlockStore {
   getDependents: (blockId: string) => string[];
 }
 
-function createEmptyBlock(type: BlockType): Block {
+export function createEmptyBlock(type: BlockType): Block {
   const now = Date.now();
+  let defaultWidth = 480;
+  let defaultHeight: number | undefined = undefined;
+  let defaultTitle = '';
+  let defaultContent = '';
+  const meta: BlockMeta = {
+    checked: type === 'todo' ? false : undefined,
+    language: type === 'code' ? 'typescript' : undefined,
+  };
+
+  if (type === 'callout') {
+    defaultTitle = '高亮提示';
+    defaultContent = '在此记录重要交付前提、注意事项或核心风险...';
+    meta.calloutTheme = 'info';
+    meta.calloutIcon = '💡';
+    defaultWidth = 520;
+    defaultHeight = 130;
+  } else if (type === 'countdown') {
+    defaultTitle = '冲刺发布倒计时';
+    defaultContent = '本期版本迭代发布节点';
+    const future = new Date(now + 7 * 24 * 3600 * 1000);
+    meta.targetDate = future.toISOString().split('T')[0];
+    meta.targetTime = '18:00';
+    defaultWidth = 460;
+    defaultHeight = 180;
+  } else if (type === 'bookmark') {
+    defaultTitle = '外部文档与链接卡片';
+    defaultContent = 'https://github.com';
+    meta.bookmarkUrl = 'https://github.com';
+    meta.bookmarkTitle = 'GitHub 项目仓库';
+    meta.bookmarkDesc = '团队代码仓库、PR 协同与持续集成';
+    meta.bookmarkFavicon = 'https://github.githubassets.com/favicons/favicon.svg';
+    defaultWidth = 460;
+    defaultHeight = 140;
+  } else if (type === 'mermaid') {
+    defaultTitle = '系统架构流程图';
+    defaultContent = `graph TD\n  Client[客户端 (Web / Mobile)] --> Gateway[API 网关 / 鉴权]\n  Gateway --> Engine[BlockOS 规则引擎]\n  Engine --> AI[智谱 GLM 4.7 Flash 大模型]\n  Engine --> DB[(PostgreSQL / SQLite 混合持久化)]`;
+    defaultWidth = 560;
+    defaultHeight = 320;
+  }
+
   return {
     id: nanoid(),
     type,
-    title: '',
-    content: '',
-    meta: {
-      checked: type === 'todo' ? false : undefined,
-
-      language: type === 'code' ? 'typescript' : undefined,
-    },
+    title: defaultTitle,
+    content: defaultContent,
+    meta,
     parentId: null,
     order: 0,
     x: 0,
     y: 0,
-    width: 480,
+    width: defaultWidth,
+    ...(defaultHeight ? { height: defaultHeight } : {}),
     collapsed: false,
     createdAt: now,
     updatedAt: now,
@@ -138,6 +175,10 @@ export function estimateBlockHeight(block: Block): number {
   if (block.collapsed) return 36;
   const contentLen = block.content ? block.content.length : 0;
   if (block.type === 'todo') return 72;
+  if (block.type === 'callout') return 130;
+  if (block.type === 'countdown') return 180;
+  if (block.type === 'bookmark') return 140;
+  if (block.type === 'mermaid') return 320;
   if (block.type === 'code') return Math.max(120, Math.min(320, 80 + (block.content.split('\n').length * 20)));
   if (block.type === 'table') return 240;
   if (block.type === 'media') return 240;

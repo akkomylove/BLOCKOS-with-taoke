@@ -41,13 +41,14 @@ export function validateChapters(value: unknown): string | null {
 }
 
 export function blockTitle(block: Block): string {
-  const text = block.title.trim() || (['text', 'quote', 'toggle', 'todo'].includes(block.type)
-    ? block.content.split('\n').find((line) => line.trim()) || '' : '');
+  const text = block.title?.trim() || (['text', 'quote', 'toggle', 'todo', 'callout', 'bookmark', 'mermaid'].includes(block.type)
+    ? (block.meta?.bookmarkTitle || block.meta?.countdownTitle || block.content.split('\n').find((line) => line.trim()) || '') : '');
   return text.replace(/^\s*#{1,6}\s*/, '').slice(0, 100) || ({
     text: '正文', todo: '待办', table: '表格', code: '代码', media: '附件',
     quote: '引用', toggle: '折叠内容', divider: '分隔线',
     whiteboard: '白板', mindmap: '思维导图', math: '公式',
-  }[block.type]);
+    callout: '高亮提示', countdown: '冲刺倒计时', bookmark: '网页书签', mermaid: '架构流程图',
+  }[block.type]) || '内容块';
 }
 
 /** Reading order follows explicit outline/order and hierarchy, never canvas coordinates. */

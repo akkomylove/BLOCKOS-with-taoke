@@ -11,6 +11,10 @@ import DividerBlock from './blocks/DividerBlock';
 import WhiteboardBlock from './blocks/WhiteboardBlock';
 import MindmapBlock from './blocks/MindmapBlock';
 import MathBlock from './blocks/MathBlock';
+import CalloutBlock from './blocks/CalloutBlock';
+import CountdownBlock from './blocks/CountdownBlock';
+import BookmarkBlock from './blocks/BookmarkBlock';
+import MermaidBlock from './blocks/MermaidBlock';
 import { useBlockStore } from '@/store/blockStore';
 import type { Block } from '@/types/block';
 
@@ -89,6 +93,14 @@ export default function BlockRenderer({ block, isSelected }: BlockRendererProps)
           onChange={(content) => updateBlock(block.id, { content })}
         />
       );
+    case 'callout':
+      return <CalloutBlock block={block} />;
+    case 'countdown':
+      return <CountdownBlock block={block} />;
+    case 'bookmark':
+      return <BookmarkBlock block={block} />;
+    case 'mermaid':
+      return <MermaidBlock block={block} />;
     default:
       return (
         <TextBlock
