@@ -20,11 +20,10 @@ export const BLOCK_CATEGORIES: BlockCategory[] = [
     title: '基础排版',
     description: '文档层级、待办清单与结构化引用',
     items: [
-      { type: 'text', label: '正文文本', description: '普通多行文本与富文本排版' },
+      { type: 'text', label: '正文文本', description: '普通多行文本与富文本排版（支持工具栏插入分割线）' },
       { type: 'todo', label: '待办清单', description: '可交互勾选的冲刺任务事项' },
       { type: 'quote', label: '引言引用', description: '高亮要点、名言与结论引用块' },
       { type: 'toggle', label: '折叠列表', description: '隐藏次要细节，点击展开/收起' },
-      { type: 'divider', label: '分割线', description: '优雅区隔视觉段落与模块' },
     ],
   },
   {
@@ -67,5 +66,7 @@ export const BLOCK_ITEM_MAP: Record<BlockType, BlockCategoryItem> = ALL_BLOCK_IT
     acc[item.type] = item;
     return acc;
   },
-  {} as Record<BlockType, BlockCategoryItem>
+  {
+    divider: { type: 'divider', label: '分割线', description: '段落分割线（已集成至文本Block工具栏）' },
+  } as Record<BlockType, BlockCategoryItem>
 );

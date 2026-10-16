@@ -6,12 +6,12 @@ import { canEditBlock } from '@/components/mobile/MobileBlockContent';
 import type { BlockType } from '@/types/block';
 
 describe('Lark-style Block Categories & New Multi-dimensional Components', () => {
-  const EXPECTED_TYPES: BlockType[] = [
+  // Standalone creatable types in block menu (divider is integrated into text block)
+  const EXPECTED_CREATABLE_TYPES: BlockType[] = [
     'text',
     'todo',
     'quote',
     'toggle',
-    'divider',
     'code',
     'table',
     'bookmark',
@@ -36,17 +36,21 @@ describe('Lark-style Block Categories & New Multi-dimensional Components', () =>
     }
   });
 
-  it('ALL_BLOCK_ITEMS covers all 15 BlockTypes with 0 duplicates', () => {
+  it('ALL_BLOCK_ITEMS covers all 14 creatable BlockTypes with 0 duplicates', () => {
     const typesInCategories = ALL_BLOCK_ITEMS.map((item) => item.type);
-    expect(typesInCategories.length).toBe(EXPECTED_TYPES.length);
+    expect(typesInCategories.length).toBe(EXPECTED_CREATABLE_TYPES.length);
 
-    // Verify all expected types exist
-    for (const expected of EXPECTED_TYPES) {
+    // Verify all expected types exist in categories
+    for (const expected of EXPECTED_CREATABLE_TYPES) {
       expect(typesInCategories).toContain(expected);
       expect(BLOCK_ITEM_MAP[expected]).toBeDefined();
       expect(BLOCK_ITEM_MAP[expected].label).toBeTruthy();
       expect(BLOCK_ITEM_MAP[expected].description).toBeTruthy();
     }
+
+    // Divider should not be a standalone item in ALL_BLOCK_ITEMS, but retained in BLOCK_ITEM_MAP
+    expect(typesInCategories).not.toContain('divider');
+    expect(BLOCK_ITEM_MAP['divider']).toBeDefined();
 
     // Verify no duplicates
     const uniqueTypes = new Set(typesInCategories);
@@ -78,11 +82,12 @@ describe('Lark-style Block Categories & New Multi-dimensional Components', () =>
       expect(block.meta.bookmarkDesc).toBeTruthy();
     });
 
-    it('creates mermaid block with default architecture flow diagram code', () => {
+    it('creates mermaid block with properly quoted node labels', () => {
       const block = createEmptyBlock('mermaid');
       expect(block.type).toBe('mermaid');
       expect(block.content).toContain('graph TD');
-      expect(block.content).toContain('BlockOS');
+      expect(block.content).toContain('Client["客户端');
+      expect(block.content).toContain('DB[("PostgreSQL');
     });
   });
 

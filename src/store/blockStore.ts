@@ -137,7 +137,7 @@ export function createEmptyBlock(type: BlockType): Block {
     defaultHeight = 140;
   } else if (type === 'mermaid') {
     defaultTitle = '系统架构流程图';
-    defaultContent = `graph TD\n  Client[客户端 (Web / Mobile)] --> Gateway[API 网关 / 鉴权]\n  Gateway --> Engine[BlockOS 规则引擎]\n  Engine --> AI[智谱 GLM 4.7 Flash 大模型]\n  Engine --> DB[(PostgreSQL / SQLite 混合持久化)]`;
+    defaultContent = `graph TD\n  Client["客户端 (Web / 移动端)"] --> Gateway["API 网关 / 鉴权"]\n  Gateway --> Engine["BlockOS 规则引擎"]\n  Engine --> AI["智谱 GLM 4.7 Flash 大模型"]\n  Engine --> DB[("PostgreSQL / SQLite 混合持久化")]`;
     defaultWidth = 560;
     defaultHeight = 320;
   }

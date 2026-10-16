@@ -1081,25 +1081,18 @@ export default function BlockEditor({
 
       <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1 z-20 max-w-[calc(100vw-32px)] overflow-x-auto shadow-sm">
         {([
-          { type: 'text' as BlockType, label: '文本' },
+          { type: 'text' as BlockType, label: '正文' },
           { type: 'todo' as BlockType, label: '待办' },
-          { type: 'code' as BlockType, label: '代码' },
-          { type: 'table' as BlockType, label: '表格' },
-          { type: 'bookmark' as BlockType, label: '书签' },
-          { type: 'mermaid' as BlockType, label: '架构图' },
-          { type: 'mindmap' as BlockType, label: '导图' },
-          { type: 'callout' as BlockType, label: '高亮' },
-          { type: 'countdown' as BlockType, label: '倒计时' },
-          { type: 'whiteboard' as BlockType, label: '白板' },
-          { type: 'math' as BlockType, label: '公式' },
+          { type: 'quote' as BlockType, label: '引用' },
+          { type: 'toggle' as BlockType, label: '折叠' },
         ]).map(({ type, label }) => (
           <button
             key={type}
             onClick={() => addBlockAtCenter(type)}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors whitespace-nowrap"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors whitespace-nowrap"
             title={`添加 ${label}`}
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-3.5 h-3.5" />
             {label}
           </button>
         ))}

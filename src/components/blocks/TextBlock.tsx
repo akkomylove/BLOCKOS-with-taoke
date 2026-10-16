@@ -3,7 +3,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import {
   Bold, Italic, Underline, Strikethrough, List, ListOrdered,
-  Type, AlignLeft, Wand2
+  Type, AlignLeft, Wand2, Minus
 } from 'lucide-react';
 
 interface TextBlockProps {
@@ -177,6 +177,15 @@ export default function TextBlock({
     exec(ordered ? 'insertOrderedList' : 'insertUnorderedList');
   };
 
+  const insertDivider = () => {
+    if (ref.current) {
+      const current = ref.current.innerText || '';
+      const dividerText = current.length > 0 && !current.endsWith('\n') ? '\n---\n' : '---\n';
+      ref.current.innerText = current + dividerText;
+      onChange(ref.current.innerText);
+    }
+  };
+
   const handleFontSizeChange = (size: number) => {
     setFontSize(size);
     setShowSizePicker(false);
@@ -294,6 +303,13 @@ export default function TextBlock({
               title="有序列表"
             >
               <ListOrdered className="w-3 h-3" />
+            </button>
+            <button
+              onClick={insertDivider}
+              className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-100 transition-colors"
+              title="插入分割线 (---)"
+            >
+              <Minus className="w-3 h-3" />
             </button>
             <div className="w-px h-3 bg-gray-300 dark:bg-zinc-600 mx-0.5" />
             <div className="relative" ref={sizePickerRef}>
