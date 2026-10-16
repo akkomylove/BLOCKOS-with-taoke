@@ -1011,3 +1011,45 @@
 - **自动化测试**：新增 `tests/components/BlockMultiSelectDrag.test.ts`，18 套测试套件、212 项用例 100% 绿色通过；
 - **生产构建**：Next.js 全量 38 条路由打包通过；
 - **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证。
+
+---
+
+## ADR-027: 双端职责分离式移动端适配架构与章节大纲引擎 (Dual-Workspace Mobile Adaptation & Chapter Outline Engine)
+
+- **日期**：2026-10-16
+- **决策状态**：已全面落地、验证通过并推送到生产环境
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/components/BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
+  - [src/components/DesktopWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/DesktopWorkspace.tsx)
+  - [src/components/mobile/MobileWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/mobile/MobileWorkspace.tsx)
+  - [src/lib/document-outline.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/document-outline.ts)
+  - [src/hooks/useMobileDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/hooks/useMobileDocuments.ts)
+  - [docs/mobile-reading.md](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/docs/mobile-reading.md)
+
+### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
+1. **小屏操作 2D 画布的天然局限**：
+   - 手机屏幕窄小，强行在移动端运行 2D 无限画布会导致双指缩放误触、平移拖拽卡顿、Block 尺寸变形等问题；
+   - 移动端用户核心需求是便捷查阅、继续阅读上一次章节、轻量修正错别字与随时记录灵感（随手记），而非复杂的自由排版与多卡片拓扑编排。
+2. **多端数据一致性与坐标防破坏刚性诉求**：
+   - 手机端进行文字编辑或追加内容时，严禁破坏电脑端已排布好的 2D 坐标 (`x, y`)、卡片宽高尺寸以及父子嵌套关系。
+
+### 2. 决策方案与系统实现架构 (Decisions & Implementation)
+1. **双工作台物理拆分与零水合闪烁分流**：
+   - 电脑端完整保留 [DesktopWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/DesktopWorkspace.tsx)（自由画布、鹰眼地图、多选拖拽、AI 助手）；
+   - 手机端使用独立打造的 [MobileWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/mobile/MobileWorkspace.tsx)（目录、分章阅读、章节整理、轻编辑、随手记）；
+   - 采用 `useSyncExternalStore` + `matchMedia` 分流，服务端渲染返回安全占位骨架，消灭 Hydration Mismatch。
+2. **智能大纲分章引擎与数据不丢弃保障 (`document-outline.ts`)**：
+   - 支持显式配置的 `page.chapters`；未配置时根据标题层级、父子层级和 Group 分组自动生成阅读目录；
+   - 任何未归属于章节的卡片自动聚合至「未分章内容」，确保 100% 数据不被隐藏或丢弃。
+3. **坐标零破坏与底部智能追加**：
+   - 手机端正文编辑仅更新 Block 的 `content` 与 `title`；
+   - 追加新内容与随手记时，自动探查画布最底部坐标并在 `bottom + 60` 处生成新 Block，电脑端排版井然有序。
+4. **离线草稿缓冲与版本冲突防御 (`useMobileDocuments.ts`)**：
+   - 发送前本地 `localStorage` 前置落盘暂存；
+   - 遇到并发编辑 409 冲突时，严格保留本地草稿并提示合并，坚决不盲目覆盖。
+
+### 3. 产出与验收度量 (Verification Baseline)
+- **自动化测试**：22 套测试套件、226 项测试用例 100% 绿色通过；
+- **生产构建**：Next.js 全量 38 条路由编译打包通过；
+- **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证。

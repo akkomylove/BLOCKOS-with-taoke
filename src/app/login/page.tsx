@@ -102,7 +102,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 dark:text-zinc-500 mt-6">
-          Demo 模式 · 数据仅存储在本地
+          演示账号 · 文档保存至云端，支持跨设备访问
         </p>
       </div>
     </div>

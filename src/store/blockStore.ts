@@ -333,7 +333,7 @@ export const useBlockStore = create<BlockStore>()(
         fetch('/api/pages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: newPage.title, icon: newPage.icon }),
+          body: JSON.stringify({ id: newPage.id, title: newPage.title, icon: newPage.icon, folderId: newPage.folderId }),
         }).catch(() => {});
         return newPage.id;
       },
@@ -369,7 +369,7 @@ export const useBlockStore = create<BlockStore>()(
         fetch('/api/pages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: newPage.title, icon: newPage.icon }),
+          body: JSON.stringify({ id: newPage.id, title: newPage.title, icon: newPage.icon, folderId: newPage.folderId }),
         }).catch(() => {});
         return newPage.id;
       },
@@ -1215,12 +1215,13 @@ export const useBlockStore = create<BlockStore>()(
       },
 
       syncPages: async () => {
-        const { pages } = get();
+        const { pages, folders } = get();
         try {
           const res = await fetch('/api/pages', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pages }),
+            // Directory sync must not overwrite an outline edited on another device.
+            body: JSON.stringify({ pages: pages.map((page) => ({ id: page.id, title: page.title, icon: page.icon, folderId: page.folderId ?? null, kind: page.kind })), folders }),
           });
           if (!res.ok) {
             if (res.status === 401) {
@@ -1228,6 +1229,21 @@ export const useBlockStore = create<BlockStore>()(
               return;
             }
             console.warn('Pages sync notice HTTP', res.status);
+            return;
+          }
+          const index = await fetch('/api/pages');
+          if (index.ok) {
+            const data = await index.json();
+            if (Array.isArray(data.pages)) {
+              set((state) => {
+                state.pages = data.pages;
+                if (Array.isArray(data.folders)) state.folders = data.folders;
+                if (!state.pages.some((page) => page.id === state.currentPageId)) {
+                  state.currentPageId = state.pages[0]?.id || '';
+                  state.blocks = state.pageBlocks[state.currentPageId] || [];
+                }
+              });
+            }
           }
         } catch (err) {
           // 网络断开或不可用时静默降级本地

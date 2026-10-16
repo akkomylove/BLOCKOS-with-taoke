@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
+import { parseChapters, validateChapters } from '@/lib/document-outline';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -31,6 +32,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         userId: pages[0].user_id,
         title: pages[0].title || '无标题',
         icon: pages[0].icon || '📄',
+        folderId: pages[0].folder_id || undefined,
+        chapters: pages[0].chapters === null ? undefined : parseChapters(pages[0].chapters),
+        kind: pages[0].kind || 'document',
         orderIndex: pages[0].order_index ?? 0,
         version: pages[0].version ?? 1,
         deletedAt: pages[0].deleted_at || null,
@@ -73,7 +77,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const body = await req.json();
-    const { title, icon, version } = body;
+    const { title, icon, version, chapters } = body;
+    if (chapters !== undefined) {
+      const error = validateChapters(chapters);
+      if (error) return NextResponse.json({ error }, { status: 400 });
+    }
 
     if (!isValidNanoid(id)) {
       return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
@@ -86,6 +94,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const currentVersion = (existing[0].version as number) || 1;
+    if (chapters !== undefined) {
+      const blockIds = new Set(query('SELECT id FROM blocks WHERE page_id = ?', [id]).map((block) => block.id));
+      if (parseChapters(chapters).some((chapter) => chapter.blockIds.some((blockId) => !blockIds.has(blockId)))) {
+        return NextResponse.json({ error: '章节只能包含当前文档中的内容，请先保存新内容' }, { status: 400 });
+      }
+    }
     if (typeof version === 'number' && version !== currentVersion) {
       return NextResponse.json(
         { error: 'Conflict: Page has been modified by another operation', currentVersion },
@@ -100,6 +114,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       'UPDATE pages SET title = ?, icon = ?, version = ?, updated_at = ? WHERE id = ? AND user_id = ?',
       [title ?? existing[0].title, icon ?? existing[0].icon, nextVersion, now, id, userId]
     );
+    if (chapters !== undefined) run('UPDATE pages SET chapters = ? WHERE id = ? AND user_id = ?', [JSON.stringify(chapters), id, userId]);
     saveDb();
 
     return NextResponse.json({ success: true, version: nextVersion });

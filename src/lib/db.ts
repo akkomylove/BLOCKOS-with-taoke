@@ -1,6 +1,7 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
+import { tmpdir } from 'os';
 import { DEMO_USERS } from './demo-users';
 import { neon } from '@neondatabase/serverless';
 
@@ -10,11 +11,14 @@ let dbInitError: Error | null = null;
 let dbSeeded = false;
 
 const isVercel = !!process.env.VERCEL;
-const DB_PATH = isVercel
+const DB_PATH = process.env.NODE_ENV === 'test'
+  ? path.join(tmpdir(), `blockos-test-${process.pid}-${Date.now()}.db`)
+  : process.env.BLOCKOS_DB_PATH || (isVercel
   ? path.join('/tmp', 'blockos.db')
-  : path.join(process.cwd(), 'data', 'blockos.db');
+  : path.join(process.cwd(), 'data', 'blockos.db'));
 
 function getPostgresClient() {
+  if (process.env.NODE_ENV === 'test') return null;
   const conn =
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URL ||
@@ -75,7 +79,7 @@ export async function getDb() {
       const seedDbPath = path.join(process.cwd(), 'data', 'blockos.db');
       if (fs.existsSync(DB_PATH)) {
         data = fs.readFileSync(DB_PATH);
-      } else if (fs.existsSync(seedDbPath)) {
+      } else if (process.env.NODE_ENV !== 'test' && !process.env.BLOCKOS_DB_PATH && fs.existsSync(seedDbPath)) {
         data = fs.readFileSync(seedDbPath);
       }
     }
@@ -101,6 +105,13 @@ function initSchema(database: Database) {
       avatar TEXT,
       provider TEXT NOT NULL,
       provider_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS folders (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
       created_at INTEGER NOT NULL
     );
 
@@ -378,6 +389,9 @@ function initSchema(database: Database) {
   `);
 
   const safeAddColumns = [
+    'ALTER TABLE pages ADD COLUMN folder_id TEXT',
+    'ALTER TABLE pages ADD COLUMN chapters TEXT',
+    'ALTER TABLE pages ADD COLUMN kind TEXT NOT NULL DEFAULT "document"',
     'ALTER TABLE projects ADD COLUMN agent_paused INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE tasks ADD COLUMN start_date INTEGER',
     'ALTER TABLE tasks ADD COLUMN deleted_at INTEGER',

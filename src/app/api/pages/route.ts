@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { nanoid } from 'nanoid';
+import { parseChapters, validateChapters } from '@/lib/document-outline';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,11 +23,16 @@ export async function GET(req: NextRequest) {
 
     const pages = query(sql, [userId]);
     return NextResponse.json({
+      folders: query('SELECT id, name, created_at FROM folders WHERE user_id = ? ORDER BY created_at', [userId])
+        .map((folder) => ({ id: folder.id, name: folder.name, createdAt: folder.created_at, collapsed: false })),
       pages: pages.map((p) => ({
         id: p.id,
         userId: p.user_id,
         title: p.title || '无标题',
         icon: p.icon || '📄',
+        folderId: p.folder_id || undefined,
+        chapters: p.chapters === null ? undefined : parseChapters(p.chapters),
+        kind: p.kind || 'document',
         orderIndex: p.order_index ?? 0,
         version: p.version ?? 1,
         deletedAt: p.deleted_at || null,
@@ -49,7 +55,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: reqId, title, icon, orderIndex } = await req.json();
+    const { id: reqId, title, icon, orderIndex, folderId, chapters, kind } = await req.json();
+    if (chapters !== undefined) {
+      const error = validateChapters(chapters);
+      if (error) return NextResponse.json({ error }, { status: 400 });
+    }
     let id = reqId || nanoid();
     const now = Date.now();
 
@@ -60,8 +70,9 @@ export async function POST(req: NextRequest) {
     }
 
     run(
-      'INSERT INTO pages (id, user_id, title, icon, order_index, version, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, NULL, ?, ?)',
-      [id, userId, title || '无标题', icon || '📄', typeof orderIndex === 'number' ? orderIndex : 0, now, now]
+      'INSERT INTO pages (id, user_id, title, icon, order_index, version, deleted_at, created_at, updated_at, folder_id, chapters, kind) VALUES (?, ?, ?, ?, ?, 1, NULL, ?, ?, ?, ?, ?)',
+      [id, userId, title || '无标题', icon || '📄', typeof orderIndex === 'number' ? orderIndex : 0, now, now,
+        typeof folderId === 'string' ? folderId : null, chapters === undefined ? null : JSON.stringify(chapters), kind === 'inbox' ? 'inbox' : 'document']
     );
     saveDb();
 
@@ -82,16 +93,31 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { pages } = body;
+    const { pages, folders } = body;
 
     if (!Array.isArray(pages)) {
       return NextResponse.json({ error: 'pages must be an array' }, { status: 400 });
+    }
+    for (const page of pages) {
+      if (page.chapters !== undefined) {
+        const error = validateChapters(page.chapters);
+        if (error) return NextResponse.json({ error }, { status: 400 });
+      }
     }
 
     await getDb();
     const now = Date.now();
 
     transaction(() => {
+      if (Array.isArray(folders)) {
+        for (const folder of folders) {
+          if (typeof folder.id !== 'string' || typeof folder.name !== 'string') continue;
+          const owner = query('SELECT user_id FROM folders WHERE id = ?', [folder.id]);
+          if (owner.length && owner[0].user_id !== userId) continue;
+          run('INSERT INTO folders (id, user_id, name, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name',
+            [folder.id, userId, folder.name.slice(0, 200), folder.createdAt || now]);
+        }
+      }
       for (let i = 0; i < pages.length; i++) {
         const p = pages[i];
         if (!p.id) continue;
@@ -125,6 +151,10 @@ export async function PUT(req: NextRequest) {
             );
           }
         }
+        const metadataId = query('SELECT id FROM pages WHERE id = ? AND user_id = ?', [p.id, userId]).length ? p.id : `${p.id}-${userId}`;
+        run('UPDATE pages SET folder_id = ?, kind = COALESCE(?, kind) WHERE id = ? AND user_id = ?',
+          [typeof p.folderId === 'string' ? p.folderId : null, p.kind === 'inbox' ? 'inbox' : p.kind === 'document' ? 'document' : null, metadataId, userId]);
+        if (p.chapters !== undefined) run('UPDATE pages SET chapters = ? WHERE id = ? AND user_id = ?', [JSON.stringify(p.chapters), metadataId, userId]);
       }
     });
 
