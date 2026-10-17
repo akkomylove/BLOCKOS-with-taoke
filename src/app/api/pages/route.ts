@@ -22,23 +22,44 @@ export async function GET(req: NextRequest) {
       : 'SELECT * FROM pages WHERE user_id = ? AND (deleted_at IS NULL OR deleted_at = 0) ORDER BY order_index';
 
     const pages = query(sql, [userId]);
+    const mappedPages = pages.map((p) => ({
+      id: p.id,
+      userId: p.user_id,
+      title: p.title || '无标题',
+      icon: p.icon || '📄',
+      folderId: p.folder_id || undefined,
+      chapters: p.chapters === null ? undefined : parseChapters(p.chapters),
+      kind: p.kind || 'document',
+      orderIndex: p.order_index ?? 0,
+      version: p.version ?? 1,
+      deletedAt: p.deleted_at || null,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
+    }));
+
+    // 防御性去重：若历史数据中存在多个指南副本（如 doc-guide 与 doc-guide-userId），仅保留唯一有效的一份
+    const seenIds = new Set<string>();
+    let hasGuide = false;
+    const deduplicatedPages = mappedPages.filter((p) => {
+      if (seenIds.has(p.id as string)) return false;
+      seenIds.add(p.id as string);
+      const titleStr = typeof p.title === 'string' ? p.title : '';
+      const isGuide =
+        p.id === 'doc-guide' ||
+        (typeof p.id === 'string' && p.id.startsWith('doc-guide-')) ||
+        titleStr.includes('新手快速入门指南') ||
+        titleStr.includes('欢迎使用 BlockOS');
+      if (isGuide) {
+        if (hasGuide) return false;
+        hasGuide = true;
+      }
+      return true;
+    });
+
     return NextResponse.json({
       folders: query('SELECT id, name, created_at FROM folders WHERE user_id = ? ORDER BY created_at', [userId])
         .map((folder) => ({ id: folder.id, name: folder.name, createdAt: folder.created_at, collapsed: false })),
-      pages: pages.map((p) => ({
-        id: p.id,
-        userId: p.user_id,
-        title: p.title || '无标题',
-        icon: p.icon || '📄',
-        folderId: p.folder_id || undefined,
-        chapters: p.chapters === null ? undefined : parseChapters(p.chapters),
-        kind: p.kind || 'document',
-        orderIndex: p.order_index ?? 0,
-        version: p.version ?? 1,
-        deletedAt: p.deleted_at || null,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at,
-      })),
+      pages: deduplicatedPages,
     });
   } catch (err) {
     console.error('GET /api/pages error:', err);
@@ -110,6 +131,15 @@ export async function PUT(req: NextRequest) {
 
     transaction(() => {
       if (Array.isArray(folders)) {
+        const validFolderIds = folders.map((f) => f.id).filter(Boolean);
+        if (validFolderIds.length > 0) {
+          run(
+            `DELETE FROM folders WHERE user_id = ? AND id NOT IN (${validFolderIds.map(() => '?').join(',')})`,
+            [userId, ...validFolderIds]
+          );
+        } else {
+          run('DELETE FROM folders WHERE user_id = ?', [userId]);
+        }
         for (const folder of folders) {
           if (typeof folder.id !== 'string' || typeof folder.name !== 'string') continue;
           const owner = query('SELECT user_id FROM folders WHERE id = ?', [folder.id]);

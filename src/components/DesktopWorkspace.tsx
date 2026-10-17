@@ -107,18 +107,30 @@ export default function DesktopWorkspace() {
         LEGACY_PRESET_IDS.has(p.id) ||
         ['产品需求文档', '技术方案设计', 'UI 设计规范', 'UI设计规范', '数据流与架构图', '测试计划与用例'].some((t) => p.title.includes(t));
 
-      const existingGuide = state.pages.find(
-        (p) => p.id === GUIDE_ID || p.title.includes('新手') || p.title.includes('入门')
-      );
+      const isGuidePage = (p: { id: string; title: string }) =>
+        p.id === GUIDE_ID ||
+        p.id.startsWith('doc-guide-') ||
+        p.title.includes('新手') ||
+        p.title.includes('入门') ||
+        p.title.includes('欢迎使用 BlockOS');
+
+      const existingGuide = state.pages.find(isGuidePage);
 
       useBlockStore.setState((prev) => {
-        // 过滤掉旧的 5 个预置样板文档，仅保留用户自定义页面与新手指南文档（其余通过样板库按需引入）
-        const userCustomPages = prev.pages.filter((p) => p.id !== (existingGuide?.id || GUIDE_ID) && !isLegacySample(p));
+        // 过滤掉旧的 5 个预置样板文档，仅保留用户自定义页面与唯一样板新手指南文档
+        const seenIds = new Set<string>();
+        const userCustomPages = prev.pages.filter((p) => {
+          if (isGuidePage(p) || isLegacySample(p)) return false;
+          if (seenIds.has(p.id)) return false;
+          seenIds.add(p.id);
+          return true;
+        });
         const cleanPageBlocks = { ...prev.pageBlocks };
         LEGACY_PRESET_IDS.forEach((id) => delete cleanPageBlocks[id]);
 
+        const guideId = existingGuide?.id || GUIDE_ID;
         const guidePage = {
-          id: GUIDE_ID,
+          id: guideId,
           title: GUIDE_TITLE,
           icon: '👋',
           createdAt: existingGuide?.createdAt || Date.now(),
@@ -129,9 +141,9 @@ export default function DesktopWorkspace() {
           pages: [guidePage, ...userCustomPages],
           pageBlocks: {
             ...cleanPageBlocks,
-            [GUIDE_ID]: freshGuideBlocks,
+            [guideId]: freshGuideBlocks,
           },
-          currentPageId: GUIDE_ID,
+          currentPageId: guideId,
           blocks: freshGuideBlocks,
         };
       });

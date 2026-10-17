@@ -125,7 +125,7 @@ export default function Toolbar({
           const keysToRemove: string[] = [];
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && (key.startsWith('block-os') || key.startsWith('doc-') || key.includes('guide'))) {
+            if (key && !key.startsWith('blockos-guide-') && (key.startsWith('block-os') || key.startsWith('doc-') || key.includes('guide'))) {
               keysToRemove.push(key);
             }
           }

@@ -142,16 +142,23 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
     await getDb();
 
-    const existingPage = query('SELECT id FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
-    if (existingPage.length === 0) {
+    const targetCandidates = [id, `${id}-${userId}`];
+    const existingPages = query(
+      `SELECT id FROM pages WHERE id IN (${targetCandidates.map(() => '?').join(',')}) AND user_id = ?`,
+      [...targetCandidates, userId]
+    );
+    if (existingPages.length === 0) {
       return NextResponse.json({ error: 'Page not found' }, { status: 404 });
     }
 
-    if (permanent) {
-      run('DELETE FROM blocks WHERE page_id = ?', [id]);
-      run('DELETE FROM pages WHERE id = ? AND user_id = ?', [id, userId]);
-    } else {
-      run('UPDATE pages SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?', [Date.now(), Date.now(), id, userId]);
+    for (const row of existingPages) {
+      const targetId = row.id as string;
+      if (permanent) {
+        run('DELETE FROM blocks WHERE page_id = ?', [targetId]);
+        run('DELETE FROM pages WHERE id = ? AND user_id = ?', [targetId, userId]);
+      } else {
+        run('UPDATE pages SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?', [Date.now(), Date.now(), targetId, userId]);
+      }
     }
     saveDb();
 

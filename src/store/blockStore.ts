@@ -425,6 +425,33 @@ export const useBlockStore = create<BlockStore>()(
             state.blocks = state.pageBlocks[state.currentPageId] ? JSON.parse(JSON.stringify(state.pageBlocks[state.currentPageId])) : [];
           }
         });
+        get().saveHistory();
+
+        // 立即向服务端下发彻底删除指令
+        fetch(`/api/pages/${encodeURIComponent(id)}?permanent=true`, {
+          method: 'DELETE',
+        }).catch((err) => {
+          console.error('DELETE /api/pages/[id] error:', err);
+        });
+
+        // 用户隔离本地镜像同步更新
+        const { currentUserId, pages, folders, groups, currentPageId, pageBlocks } = get();
+        if (typeof window !== 'undefined' && currentUserId) {
+          try {
+            localStorage.setItem(
+              `block-os-storage-${currentUserId}`,
+              JSON.stringify({
+                state: {
+                  pages,
+                  folders,
+                  groups,
+                  currentPageId,
+                  pageBlocks,
+                },
+              })
+            );
+          } catch {}
+        }
       },
 
       updatePageTitle: (id, title) => {
@@ -453,6 +480,7 @@ export const useBlockStore = create<BlockStore>()(
         set((state) => {
           state.folders.push({ id, name, collapsed: false, createdAt: Date.now() });
         });
+        get().syncPages();
         return id;
       },
 
@@ -463,6 +491,7 @@ export const useBlockStore = create<BlockStore>()(
             if (p.folderId === id) p.folderId = undefined;
           });
         });
+        get().syncPages();
       },
 
       renameFolder: (id, name) => {

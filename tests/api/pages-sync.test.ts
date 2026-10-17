@@ -270,4 +270,64 @@ describe('Pages and Blocks Sync Pipeline API', () => {
     const { pages } = await listRes.json();
     expect(pages.length).toBeGreaterThan(0);
   });
+
+  it('should permanently delete page so that re-login or sync does not resurrect it or duplicate guide', async () => {
+    const userCId = 'user-c-' + nanoid(6);
+    vi.spyOn(authUtils, 'getUserId').mockResolvedValue(userCId);
+    run('INSERT OR IGNORE INTO users (id, email, name, provider, provider_id, created_at) VALUES (?, ?, ?, ?, ?, ?)', [
+      userCId, `${userCId}@test.com`, 'User C', 'test', userCId, Date.now()
+    ]);
+
+    // 1. Create 3 pages: 1 guide and 2 custom
+    const p1Id = nanoid();
+    const p2Id = nanoid();
+    const syncReq = new NextRequest('http://localhost:3000/api/pages', {
+      method: 'PUT',
+      body: JSON.stringify({
+        pages: [
+          { id: 'doc-guide', title: '👋 欢迎使用 BlockOS ｜ 新手快速入门指南', icon: '👋' },
+          { id: p1Id, title: '协同白板与流程图', icon: '🎨' },
+          { id: p2Id, title: '架构推演', icon: '💻' },
+        ],
+      }),
+    });
+    const syncRes = await syncPages(syncReq);
+    expect(syncRes.status).toBe(200);
+
+    // Verify 3 pages in list
+    const listRes1 = await getPages(new NextRequest('http://localhost:3000/api/pages'));
+    const { pages: initialPages } = await listRes1.json();
+    expect(initialPages.length).toBe(3);
+
+    // 2. User deletes p1Id and p2Id permanently
+    const del1 = await deletePage(
+      new NextRequest(`http://localhost:3000/api/pages/${p1Id}?permanent=true`, { method: 'DELETE' }),
+      { params: Promise.resolve({ id: p1Id }) }
+    );
+    expect(del1.status).toBe(200);
+
+    const del2 = await deletePage(
+      new NextRequest(`http://localhost:3000/api/pages/${p2Id}?permanent=true`, { method: 'DELETE' }),
+      { params: Promise.resolve({ id: p2Id }) }
+    );
+    expect(del2.status).toBe(200);
+
+    // 3. Re-login / subsequent GET /api/pages
+    const listRes2 = await getPages(new NextRequest('http://localhost:3000/api/pages'));
+    const { pages: afterDeletePages } = await listRes2.json();
+    expect(afterDeletePages.length).toBe(1);
+    expect(afterDeletePages[0].title).toContain('新手快速入门指南');
+    expect(afterDeletePages.find((p: any) => p.id === p1Id)).toBeUndefined();
+    expect(afterDeletePages.find((p: any) => p.id === p2Id)).toBeUndefined();
+
+    // 4. Test guide deduplication: if multiple guide records exist with similar title, only 1 is returned
+    run(
+      'INSERT INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
+      [`doc-guide-dup-${userCId}`, userCId, '👋 欢迎使用 BlockOS ｜ 新手快速入门指南 (副本)', '👋', 1, Date.now(), Date.now()]
+    );
+    const listRes3 = await getPages(new NextRequest('http://localhost:3000/api/pages'));
+    const { pages: deduplicatedPages } = await listRes3.json();
+    expect(deduplicatedPages.length).toBe(1);
+    expect(deduplicatedPages.filter((p: any) => p.title.includes('新手快速入门指南') || p.title.includes('欢迎使用 BlockOS')).length).toBe(1);
+  });
 });
