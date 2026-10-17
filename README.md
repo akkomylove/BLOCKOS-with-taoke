@@ -17,12 +17,13 @@
 
 > **在线体验 (Live Production)**：[https://blockos.hiakkocv.xyz](https://blockos.hiakkocv.xyz)  
 > **代码仓库**：[GitHub - akkomylove/BLOCKOS-with-taoke](https://github.com/akkomylove/BLOCKOS-with-taoke)  
+> **📖 官方使用手册**：[docs/BLOCKOS_USER_MANUAL.md](docs/BLOCKOS_USER_MANUAL.md)  
 > **所属赛道**：FDoc 创新竞赛「赛道四 · 无界文档 π（半命题）」官方最终汇总版  
 > **团队成员**：曹琅 · 杜诺琦 · 伍菲琪
 
 <br />
 
-[设计哲学](#-赛道背景与设计哲学) • [系统架构](#-系统架构与分层拓扑) • [32项工程演进](#-32-项核心工程与产品演进全景) • [核心功能体系](#-七大核心功能体系全景) • [视觉闭环](#-真机真实运行视觉闭环) • [架构决策 (ADR)](#-架构决策记录-adr-001--adr-017) • [快速开始](#-快速开始与本地复现)
+[📖 官方使用手册](docs/BLOCKOS_USER_MANUAL.md) • [设计哲学](#-赛道背景与设计哲学) • [系统架构](#-系统架构与分层拓扑) • [32项工程演进](#-32-项核心工程与产品演进全景) • [核心功能体系](#-七大核心功能体系全景) • [视觉闭环](#-真机真实运行视觉闭环) • [架构决策 (ADR)](#-架构决策记录-adr-001--adr-017) • [快速开始](#-快速开始与本地复现)
 
 </div>
 
