@@ -6,7 +6,8 @@ import {
   Sparkles, ArrowRight, CheckCircle2, ChevronDown, ChevronUp,
   Type, CheckSquare, Code, Table, ImageIcon, Quote, ChevronRight as ChevronRightIcon,
   Search, Tag, History, Link2, Wand2, Palette, Lightbulb,
-  Users, BarChart3, UserCircle, FileText, ExternalLink
+  Users, BarChart3, UserCircle, FileText, ExternalLink,
+  Terminal, Copy, Check
 } from 'lucide-react';
 
 interface HelpPanelProps {
@@ -18,6 +19,7 @@ interface HelpPanelProps {
 const TABS = [
   { id: 'guide', label: '使用指南', icon: BookOpen, color: 'text-blue-500 dark:text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
   { id: 'ai', label: 'AI 功能', icon: Zap, color: 'text-purple-500 dark:text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  { id: 'mcp', label: 'MCP 智能体接入', icon: Terminal, color: 'text-indigo-500 dark:text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' },
   { id: 'settings', label: '设置', icon: Settings, color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
 ];
 
@@ -68,6 +70,13 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
   const [baseURL, setBaseURL] = useState('');
   const [model, setModel] = useState('');
   const [saved, setSaved] = useState(false);
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, section: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSection(section);
+    setTimeout(() => setCopiedSection(null), 2000);
+  };
 
   const handleSaveSettings = () => {
     if (apiKey) localStorage.setItem('blockos-custom-api-key', apiKey);
@@ -256,6 +265,129 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
                   在文本 Block 中输入内容后暂停 1.5 秒，AI 会自动显示续写建议（半透明文字）。按 Tab 键接受建议，继续输入则忽略。
                   可在文本 Block 的工具栏中开启/关闭此功能。
                 </p>
+              </AccordionItem>
+            </div>
+          )}
+
+          {activeTab === 'mcp' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-200 dark:border-indigo-500/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <Terminal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">Model Context Protocol (MCP) 开放互通协议</h3>
+                </div>
+                <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed">
+                  BlockOS 已全面打通 Model Context Protocol (MCP) 标准协议。任何外部 AI Agent（如 Cursor、Claude Desktop、LangChain、AutoGPT 或 Python 脚本）均可作为独立协同者直接接入，自动化读取画布全局结构、编排 Block 卡片与自适应挂载子 Block 层级。
+                </p>
+              </div>
+
+              <AccordionItem icon={Terminal} title="方式一：Cursor / Claude Desktop 客户端配置 (stdio 协议)">
+                <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed mb-2">
+                  将以下配置填入 Claude Desktop (<code className="text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">claude_desktop_config.json</code>) 或 Cursor (<code className="text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">.cursor/mcp.json</code>) 的 <code className="text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">mcpServers</code> 字段中：
+                </p>
+                <div className="relative rounded-lg bg-zinc-900 border border-zinc-800 p-3 font-mono text-[11px] text-zinc-300 overflow-x-auto">
+                  <button
+                    onClick={() => copyToClipboard(`{\n  "mcpServers": {\n    "blockos": {\n      "command": "node",\n      "args": [\n        "d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/scripts/blockos-mcp-stdio.js"\n      ],\n      "env": {\n        "BLOCKOS_URL": "https://blockos.hiakkocv.xyz/api/open/v1/mcp",\n        "BLOCKOS_API_KEY": "bk_live_antigravity_agent_probe_key"\n      }\n    }\n  }\n}`, 'mcp-config')}
+                    className="absolute top-2.5 right-2.5 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-[10px] flex items-center gap-1 transition-colors"
+                  >
+                    {copiedSection === 'mcp-config' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedSection === 'mcp-config' ? '已复制' : '复制配置'}
+                  </button>
+                  <pre>{`{
+  "mcpServers": {
+    "blockos": {
+      "command": "node",
+      "args": [
+        "d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/scripts/blockos-mcp-stdio.js"
+      ],
+      "env": {
+        "BLOCKOS_URL": "https://blockos.hiakkocv.xyz/api/open/v1/mcp",
+        "BLOCKOS_API_KEY": "bk_live_antigravity_agent_probe_key"
+      }
+    }
+  }
+}`}</pre>
+                </div>
+              </AccordionItem>
+
+              <AccordionItem icon={Code} title="方式二：自研 Agent / Python / HTTP JSON-RPC 接入">
+                <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed mb-2">
+                  外部自研脚本或 LangChain Agent 可直接向线上开放接口发起标准 HTTP POST 请求：
+                </p>
+                <div className="space-y-1 text-xs text-gray-600 dark:text-zinc-400 mb-2">
+                  <div><strong>Endpoint:</strong> <code className="bg-gray-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-indigo-500 font-mono">POST https://blockos.hiakkocv.xyz/api/open/v1/mcp</code></div>
+                  <div><strong>Header:</strong> <code className="bg-gray-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-indigo-500 font-mono">Authorization: Bearer bk_live_antigravity_agent_probe_key</code></div>
+                </div>
+                <div className="relative rounded-lg bg-zinc-900 border border-zinc-800 p-3 font-mono text-[11px] text-zinc-300 overflow-x-auto">
+                  <button
+                    onClick={() => copyToClipboard(`import requests\n\nres = requests.post(\n    "https://blockos.hiakkocv.xyz/api/open/v1/mcp",\n    headers={\n        "Authorization": "Bearer bk_live_antigravity_agent_probe_key",\n        "Content-Type": "application/json"\n    },\n    json={\n        "jsonrpc": "2.0",\n        "id": 1,\n        "method": "tools/call",\n        "params": {\n            "name": "read_canvas",\n            "arguments": {}\n        }\n    }\n)\nprint(res.json())`, 'python-code')}
+                    className="absolute top-2.5 right-2.5 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-[10px] flex items-center gap-1 transition-colors"
+                  >
+                    {copiedSection === 'python-code' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedSection === 'python-code' ? '已复制' : '复制代码'}
+                  </button>
+                  <pre>{`import requests
+
+res = requests.post(
+    "https://blockos.hiakkocv.xyz/api/open/v1/mcp",
+    headers={
+        "Authorization": "Bearer bk_live_antigravity_agent_probe_key",
+        "Content-Type": "application/json"
+    },
+    json={
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": "read_canvas",
+            "arguments": {}
+        }
+    }
+)
+print(res.json())`}</pre>
+                </div>
+              </AccordionItem>
+
+              <AccordionItem icon={Cpu} title="MCP 开放工具能力范围说明">
+                <div className="space-y-3">
+                  <div className="text-xs text-gray-700 dark:text-zinc-300 leading-relaxed">
+                    当前 MCP 重点打通了<strong>画布知识库与卡片拓扑编排</strong>的核心操作，注册了以下 6 大标准原子工具：
+                  </div>
+                  <div className="space-y-1.5">
+                    {[
+                      { name: 'read_canvas', desc: '读取画布所有卡片与层级树 (blockTree)' },
+                      { name: 'create_block', desc: '创建单个卡片（可指定 parentId 设为子卡片）' },
+                      { name: 'batch_create_hierarchy', desc: '一步批量创建 1 个父 Block 并挂载 N 个子 Block' },
+                      { name: 'set_subblock', desc: '将卡片设为子卡片或移出提升为独立卡片' },
+                      { name: 'create_link', desc: '在两张卡片之间建立拓扑连接关系' },
+                      { name: 'delete_block', desc: '删除指定卡片并安全解耦子卡片（防悬空）' },
+                    ].map((tool, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800">
+                        <code className="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-1.5 py-0.5 rounded">{tool.name}</code>
+                        <span className="text-xs text-gray-600 dark:text-zinc-400">{tool.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                    💡 <strong>边界说明：</strong>系统后台的敏捷看板任务流转、代码沙箱执行、PDF 导出与团队管理功能当前仍通过标准的 REST API (<code className="font-mono">/api/tasks</code>, <code className="font-mono">/api/projects</code>) 开放，后续将按需增量封装为更多专属 MCP 工具。
+                  </div>
+                </div>
+              </AccordionItem>
+
+              <AccordionItem icon={Key} title="API Key 凭据管理">
+                <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed mb-2">
+                  系统采用标准 Bearer Token 鉴权体系：
+                </p>
+                <div className="space-y-2 text-xs text-gray-600 dark:text-zinc-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    <span><strong>测试专用探针 Key：</strong><code className="font-mono text-indigo-500">bk_live_antigravity_agent_probe_key</code>（已预置最高读写权限，开箱即用）</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                    <span><strong>生产专属 Key 派发：</strong>可通过发送 <code className="font-mono text-indigo-500">POST /api/open/keys</code> 生成独立的 <code className="font-mono">bk_live_...</code> 密钥，支持有效期设定与即时撤回。</span>
+                  </div>
+                </div>
               </AccordionItem>
             </div>
           )}
