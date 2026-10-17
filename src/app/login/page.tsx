@@ -34,8 +34,8 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">CircleLight</h1>
-          <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">AI 驱动的项目协作平台</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">BlockOS</h1>
+          <p className="text-sm text-gray-500 dark:text-zinc-400 mt-1">AI 原生模块化知识协作操作系统</p>
         </div>
 
         {error && (
