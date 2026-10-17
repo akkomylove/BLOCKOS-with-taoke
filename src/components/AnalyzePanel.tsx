@@ -13,7 +13,7 @@ type SourceType = 'canvas' | 'multi-page' | 'page' | 'upload';
 interface AnalyzePanelProps { isOpen: boolean; onClose: () => void; }
 
 export default function AnalyzePanel({ isOpen, onClose }: AnalyzePanelProps) {
-  const [sourceType, setSourceType] = useState<SourceType>('multi-page');
+  const [sourceType, setSourceType] = useState<SourceType>('canvas');
   const [documentName, setDocumentName] = useState('');
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
   const [singlePageId, setSinglePageId] = useState('');

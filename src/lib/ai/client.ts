@@ -154,8 +154,17 @@ export async function repairJson(
 export function safeText(value: unknown, fallback: string = ''): string {
   if (value === null || value === undefined) return fallback;
   if (Array.isArray(value)) {
-    const cleaned = value.map(String).map((s) => s.trim()).filter(Boolean);
+    const cleaned = value.map((v) => safeText(v)).map((s) => s.trim()).filter(Boolean);
     return cleaned.length > 0 ? cleaned.join('，') : fallback;
+  }
+  if (typeof value === 'object') {
+    try {
+      const entries = Object.entries(value as Record<string, unknown>)
+        .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`);
+      return entries.length > 0 ? entries.join('\n') : fallback;
+    } catch {
+      return fallback;
+    }
   }
   const text = String(value).trim();
   return text || fallback;
