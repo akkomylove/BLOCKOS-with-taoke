@@ -13,7 +13,8 @@ interface CommandPaletteProps {
 
 const COMMAND_KEYWORDS = [
   '删除', '高亮', '标红', '创建', '清空', '移动', '排序', '整理',
-  '添加', '修改', '更新', '移除', '全部', '所有', '新建', '生成'
+  '添加', '修改', '更新', '移除', '全部', '所有', '新建', '生成',
+  '子', '父', '设为', '作为', '移出', '解除', '关联', '链接'
 ];
 
 function isCommandIntent(input: string): boolean {
@@ -24,7 +25,15 @@ interface Operation {
   action: string;
   target?: string;
   content?: string;
+  title?: string;
+  type?: BlockType;
   update?: Record<string, unknown>;
+  childTarget?: string;
+  parentTarget?: string;
+  sourceTarget?: string;
+  targetTarget?: string;
+  parent?: { title?: string; content: string; type?: BlockType };
+  children?: Array<{ title?: string; content: string; type?: BlockType }>;
 }
 
 export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
@@ -38,6 +47,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   const updateBlock = useBlockStore((state) => state.updateBlock);
   const deleteBlock = useBlockStore((state) => state.deleteBlock);
   const addBlock = useBlockStore((state) => state.addBlock);
+  const createLink = useBlockStore((state) => state.createLink);
+  const outdentBlock = useBlockStore((state) => state.outdentBlock);
 
   const { isListening, transcript, startListening, stopListening, resetTranscript, isSupported } = useSpeechRecognition();
 
@@ -65,6 +76,17 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   const executeOperations = useCallback((operations: Operation[]) => {
     const ops: string[] = [];
 
+    const findBlock = (target?: string) => {
+      if (!target) return undefined;
+      const lower = target.toLowerCase();
+      return blocks.find(
+        (b) =>
+          b.id === target ||
+          (b.title && b.title.toLowerCase().includes(lower)) ||
+          (b.content && b.content.toLowerCase().includes(lower))
+      );
+    };
+
     operations.forEach((op) => {
       switch (op.action) {
         case 'deleteAllBlocks': {
@@ -74,41 +96,112 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
           break;
         }
         case 'deleteBlock': {
-          const blockToDelete = blocks.find(
-            (b) => b.id === op.target || b.content.includes(op.target || '') || b.title?.includes(op.target || '')
-          );
+          const blockToDelete = findBlock(op.target);
           if (blockToDelete) {
             deleteBlock(blockToDelete.id);
-            ops.push(`已删除 Block: ${blockToDelete.content.substring(0, 20)}`);
+            ops.push(`已删除 Block: ${blockToDelete.title || blockToDelete.content.substring(0, 20)}`);
           }
           break;
         }
         case 'updateBlock': {
-          const targetBlock = blocks.find(
-            (b) => b.id === op.target || b.content.includes(op.target || '')
-          );
+          const targetBlock = findBlock(op.target);
           if (targetBlock && op.update) {
             updateBlock(targetBlock.id, op.update);
-            ops.push(`已更新 Block: ${targetBlock.content.substring(0, 20)}`);
+            ops.push(`已更新 Block: ${targetBlock.title || targetBlock.content.substring(0, 20)}`);
           }
           break;
         }
         case 'highlightBlocks':
           blocks.forEach((b) => {
-            if (b.content.includes(op.target || '')) {
+            if (b.content.includes(op.target || '') || b.title?.includes(op.target || '')) {
               updateBlock(b.id, { meta: { ...b.meta, highlight: 'red' } });
             }
           });
           ops.push(`已高亮包含"${op.target}"的 Block`);
           break;
         case 'createBlock': {
-          const newBlockId = addBlock('text');
-          if (op.content) {
-            setTimeout(() => {
-              updateBlock(newBlockId, { content: op.content || '' });
-            }, 0);
+          const parent = op.parentTarget ? findBlock(op.parentTarget) : undefined;
+          const newX = parent ? (parent.x || 40) + (parent.width || 420) + 40 : undefined;
+          const newY = parent ? parent.y || 40 : undefined;
+          const newBlockId = addBlock(op.type || 'text', parent?.id, newX && newY ? { x: newX, y: newY } : undefined);
+          updateBlock(newBlockId, {
+            title: op.title || '',
+            content: op.content || '',
+            parentId: parent?.id || null,
+          });
+          ops.push(parent ? `已在「${parent.title || parent.id}」下创建子 Block` : `已创建新 Block`);
+          break;
+        }
+        case 'setParent': {
+          const child = findBlock(op.childTarget || op.target);
+          const parent = findBlock(op.parentTarget);
+          if (child && parent && child.id !== parent.id) {
+            const newX = (parent.x || 40) + (parent.width || 420) + 40;
+            const newY = parent.y || 40;
+            updateBlock(child.id, { parentId: parent.id, x: newX, y: newY });
+            ops.push(`已将 Block「${child.title || child.id}」设为「${parent.title || parent.id}」的子 Block`);
+          } else if (!child) {
+            ops.push(`未找到子 Block: ${op.childTarget || op.target}`);
+          } else if (!parent) {
+            ops.push(`未找到父 Block: ${op.parentTarget}`);
           }
-          ops.push(`已创建新 Block`);
+          break;
+        }
+        case 'outdentBlock': {
+          const block = findBlock(op.target);
+          if (block) {
+            outdentBlock(block.id);
+            ops.push(`已将 Block「${block.title || block.id}」移出子 Block`);
+          }
+          break;
+        }
+        case 'createSubBlock': {
+          const parent = findBlock(op.parentTarget);
+          if (parent) {
+            const newX = (parent.x || 40) + (parent.width || 420) + 40;
+            const newY = parent.y || 40;
+            const newId = addBlock(op.type || 'text', parent.id, { x: newX, y: newY });
+            updateBlock(newId, {
+              title: op.title || '',
+              content: op.content || '',
+              parentId: parent.id,
+            });
+            ops.push(`已为「${parent.title || parent.id}」创建子 Block`);
+          } else {
+            ops.push(`未找到父 Block: ${op.parentTarget}`);
+          }
+          break;
+        }
+        case 'batchCreateHierarchy': {
+          const parentX = 40;
+          const parentY = Math.max(...blocks.map((b) => b.y || 40), 0) + 260;
+          const parentId = addBlock(op.parent?.type || 'text', undefined, { x: parentX, y: parentY });
+          updateBlock(parentId, {
+            title: op.parent?.title || '核心需求',
+            content: op.parent?.content || '',
+          });
+
+          const children = op.children || [];
+          children.forEach((c, idx) => {
+            const childX = parentX + 460;
+            const childY = parentY + idx * 160;
+            const childId = addBlock(c.type || 'todo', parentId, { x: childX, y: childY });
+            updateBlock(childId, {
+              title: c.title || `子项 ${idx + 1}`,
+              content: c.content || '',
+              parentId,
+            });
+          });
+          ops.push(`已创建 1 个父 Block 与 ${children.length} 个子 Block 并完成层级挂载`);
+          break;
+        }
+        case 'createLink': {
+          const src = findBlock(op.sourceTarget);
+          const tgt = findBlock(op.targetTarget);
+          if (src && tgt && src.id !== tgt.id) {
+            createLink(src.id, tgt.id);
+            ops.push(`已在「${src.title || src.id}」与「${tgt.title || tgt.id}」之间建立拓扑链接`);
+          }
           break;
         }
         case 'clearAllContent':
@@ -122,11 +215,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
     setExecutedOps(ops);
     return ops;
-  }, [blocks, updateBlock, deleteBlock, addBlock]);
+  }, [blocks, updateBlock, deleteBlock, addBlock, outdentBlock, createLink]);
 
   const executeLocalCommand = useCallback((cmd: string): string | null => {
     const trimmed = cmd.trim();
     if (!trimmed) return null;
+
+    const numMap: Record<string, number> = { 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
 
     // 1. 删除所有
     if (/^(删除|清空)(所有|全部)(的)?(Block|块|卡片)?$/i.test(trimmed) || /^(清空画布|全部删除)$/i.test(trimmed)) {
@@ -140,10 +235,48 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       return ops.join('\n');
     }
 
-    // 3. 批量创建 Block
+    // 3. 组合层级创建：如“创建1个需求Block，并创建2个子Block”
+    const hierarchyMatch = trimmed.match(/(?:创建|新建)\s*(\d+|一|两|三|四|五)?\s*个.*?(?:并创建|包含|附带)\s*(\d+|一|两|三|四|五)\s*个子\s*(?:Block|块|卡片)?/i);
+    if (hierarchyMatch) {
+      const subCount = Math.min(Math.max(parseInt(hierarchyMatch[2], 10) || numMap[hierarchyMatch[2]] || 2, 1), 10);
+      const subItems = Array.from({ length: subCount }, (_, i) => ({
+        title: `子任务 ${i + 1}`,
+        content: `自动化拆分子项 ${i + 1}（待执行）`,
+        type: 'todo' as BlockType,
+      }));
+
+      const ops = executeOperations([{
+        action: 'batchCreateHierarchy',
+        parent: {
+          title: '核心需求与业务目标',
+          content: '通过内置 AI 智能调度自动生成的父级结构化 Block',
+          type: 'text',
+        },
+        children: subItems,
+      }]);
+      return ops.join('\n');
+    }
+
+    // 4. 将 Block A 设为 Block B 的子 Block
+    const setParentMatch = trimmed.match(/(?:将|把)\s*["'“]?([^"'”\s]+)["'”]?\s*(?:设为|作为)\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:子Block|子块|子节点)/i);
+    if (setParentMatch) {
+      const childTarget = setParentMatch[1];
+      const parentTarget = setParentMatch[2];
+      const ops = executeOperations([{ action: 'setParent', childTarget, parentTarget }]);
+      return ops.join('\n');
+    }
+
+    // 5. 移出子 Block
+    const outdentMatch = trimmed.match(/(?:移出|解除)\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:子Block|子块)/i);
+    if (outdentMatch) {
+      const target = outdentMatch[1];
+      const ops = executeOperations([{ action: 'outdentBlock', target }]);
+      return ops.join('\n');
+    }
+
+    // 6. 批量创建普通 Block
     const createMultiMatch = trimmed.match(/^(?:创建|添加|新建)\s*(\d+|一|两|三|四|五|六|七|八|九|十)\s*个\s*(文本|代码|表格|画板|媒体)?\s*(?:Block|块|卡片)?/i);
     if (createMultiMatch) {
-      const numMap: Record<string, number> = { 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
       const rawCount = createMultiMatch[1];
       const count = Math.min(Math.max(parseInt(rawCount, 10) || numMap[rawCount] || 1, 1), 20);
       const rawType = createMultiMatch[2];
@@ -158,7 +291,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       return msg;
     }
 
-    // 4. 单个创建 Block
+    // 7. 单个创建 Block
     if (/^(创建|新建|添加)(一个|1个)?\s*(文本|代码|表格|画板|媒体)?\s*(?:Block|块|卡片)?/i.test(trimmed)) {
       const typeMatch = trimmed.match(/(文本|代码|表格|画板|媒体)/);
       const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media' };
@@ -169,14 +302,14 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       return msg;
     }
 
-    // 5. 高亮包含特定内容的 Block
+    // 8. 高亮包含特定内容的 Block
     const highlightMatch = trimmed.match(/^(?:高亮|标红)(?:包含|有)?\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:Block|块)?/i);
     if (highlightMatch && highlightMatch[1]) {
       const ops = executeOperations([{ action: 'highlightBlocks', target: highlightMatch[1] }]);
       return ops.join('\n');
     }
 
-    // 6. 删除包含特定内容的 Block
+    // 9. 删除包含特定内容的 Block
     const deleteMatch = trimmed.match(/^删除(?:包含)?\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:Block|块)?/i);
     if (deleteMatch && deleteMatch[1]) {
       const ops = executeOperations([{ action: 'deleteBlock', target: deleteMatch[1] }]);

@@ -1,8 +1,9 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { auth } from './auth';
 import { DEMO_USERS, isDemoAdmin } from './demo-users';
 import { query } from './db';
+import { verifyApiKeyToken } from './api-keys';
 
 const SESSION_SECRET =
   process.env.AUTH_SECRET ||
@@ -50,10 +51,39 @@ export function verifySignedSessionToken(token: string): string | null {
 
 /**
  * 获取当前鉴权通过的用户 ID
- * 严格拒绝未签名、已过期或遭篡改的 Cookie
+ * 1. 优先校验外部 Agent 传入的 Authorization: Bearer <API_KEY>
+ * 2. 其次校验 NextAuth 官方服务端 Session
+ * 3. 校验带 HMAC 签名的 Demo Session Cookie
  */
-export async function getUserId(): Promise<string> {
-  // 1. 优先校验 NextAuth 官方服务端 Session
+export async function getUserId(req?: Request | { headers?: Headers | { get(name: string): string | null } }): Promise<string> {
+  // 0. 外部 Agent API Key 开放鉴权
+  try {
+    let authHeader: string | null = null;
+    if (req && 'headers' in req && typeof req.headers?.get === 'function') {
+      authHeader = req.headers.get('authorization');
+    }
+    if (!authHeader) {
+      try {
+        const headerStore = await headers();
+        authHeader = headerStore.get('authorization');
+      } catch {}
+    }
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const apiKey = authHeader.slice(7).trim();
+      const verified = await verifyApiKeyToken(apiKey);
+      if (verified?.userId) {
+        return verified.userId;
+      }
+      throw new Error('Unauthorized: Invalid or expired API Key');
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('Unauthorized')) {
+      throw err;
+    }
+  }
+
+  // 1. 校验 NextAuth 官方服务端 Session
   try {
     const session = await auth();
     if (session?.user?.id) {

@@ -236,6 +236,18 @@ function initSchema(database: Database) {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      key_prefix TEXT NOT NULL,
+      permissions TEXT NOT NULL DEFAULT '["read", "write"]',
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER,
+      expires_at INTEGER
+    );
+
     CREATE INDEX IF NOT EXISTS idx_blocks_page ON blocks(page_id);
     CREATE INDEX IF NOT EXISTS idx_blocks_parent ON blocks(parent_id);
     CREATE INDEX IF NOT EXISTS idx_pages_user ON pages(user_id);
@@ -248,6 +260,8 @@ function initSchema(database: Database) {
     CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
     CREATE INDEX IF NOT EXISTS idx_milestones_project ON milestones(project_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+    CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+    CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id);
     CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);

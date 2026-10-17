@@ -104,6 +104,10 @@ src/
 - **踩坑现象**：网络偶发波动或服务器 500 时，如果前端直接提示错误且不保存，用户辛苦编辑的内容一刷新便永久丢失。
 - **解法备忘**：在 `blockStore.ts` 的 `syncToServer` catch 块中，将当前未同步的快照写入 `localStorage('block-os-offline-pending')`；同时在前端监听 window `online` 事件，一旦检测到网络恢复，立即无感触发重试补偿同步，成功后清除离线队列，实现优雅降级自愈。
 
+### 5. 外部 Agent (MCP / Open API) 与 Bearer Token 中间件鉴权放行
+- **踩坑现象**：Next.js `middleware.ts` 默认拦截所有未携带 session cookie 的路由并强制 307 重定向到 `/login`，导致外部 Agent（如 Cursor / Claude Desktop / Python 脚本）发送带 `Authorization: Bearer <API_KEY>` 的 POST/PATCH 请求被无差别重定向并丢失 JSON 请求体。
+- **解法备忘**：在 `middleware.ts` 中将 `/api/open/*` 纳入白名单并优先检测 `authHeader?.startsWith('Bearer ')` 放行，由后续 Controller 层通过 `getUserId(req)` 结合 SHA-256 严密验签，既保全了全站网页的 Session 鉴权阻断，又为标准 Model Context Protocol (MCP) 与开放 API 开辟了标准互通渠道。
+
 ---
 
 ## 🚀 五、 后续演进与维护建议 (Post-Milestone Operations)

@@ -32,6 +32,7 @@
 - [ADR-027: 双端职责分离式移动端适配架构与章节大纲引擎 (Dual-Workspace Mobile Adaptation & Chapter Outline Engine)](#adr-027-双端职责分离式移动端适配架构与章节大纲引擎-dual-workspace-mobile-adaptation--chapter-outline-engine)
 - [ADR-028: 飞书风格多维分类菜单重构与高亮/倒计时/书签/Mermaid四大多维组件落地 (Lark-Style Block Categorization & Four Multi-Dimensional Interactive Blocks)](#adr-028-飞书风格多维分类菜单重构与高亮倒计时书签mermaid四大多维组件落地-lark-style-block-categorization--four-multi-dimensional-interactive-blocks)
 - [ADR-029: 全链路 AI 原生安全合规体系与对抗性探针防御架构 (Full-Stack AI Security Compliance & Adversarial Probe Defense Framework)](#adr-029-全链路-ai-原生安全合规体系与对抗性探针防御架构-full-stack-ai-security-compliance--adversarial-probe-defense-framework)
+- [ADR-030: 外部智能体无缝集成体系 (Open API / MCP Server / API Key) 与内置 AI 工具调用拓展 (Sub-Block & Hierarchy Tool-Calling)](#adr-030-外部智能体无缝集成体系-open-api--mcp-server--api-key-与内置-ai-工具调用拓展-sub-block--hierarchy-tool-calling)
 
 ---
 
@@ -1159,3 +1160,63 @@
 - **自动化测试**：24 套测试套件、261 项测试用例（新增 26 项安全探针测试）**100% 绿色通过**；
 - **生产构建验证**：Next.js 全量 38 条路由生产打包 `npm run build` **0 编译错误、0 类型故障**；
 - **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证通过。
+
+---
+
+## ADR-030: 外部智能体无缝集成体系 (Open API / MCP Server / API Key) 与内置 AI 工具调用拓展 (Sub-Block & Hierarchy Tool-Calling)
+
+- **日期**：2026-10-17
+- **决策状态**：已全面落地实施、26 套自动化测试通过、Next.js 生产构建完成、Playwright 真机 E2E 验证闭环
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/lib/db.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/db.ts)
+  - [src/lib/api-keys.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/api-keys.ts)
+  - [src/lib/auth-utils.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/auth-utils.ts)
+  - [src/middleware.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/middleware.ts)
+  - [src/app/api/open/keys/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/keys/route.ts)
+  - [src/app/api/open/v1/canvas/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/v1/canvas/route.ts)
+  - [src/app/api/open/v1/blocks/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/v1/blocks/route.ts)
+  - [src/app/api/open/v1/mcp/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/v1/mcp/route.ts)
+  - [src/app/api/ai/command/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/ai/command/route.ts)
+  - [src/components/CommandPalette.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/CommandPalette.tsx)
+  - [src/components/DesktopWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/DesktopWorkspace.tsx)
+  - [tests/api/external-agent-mcp.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/api/external-agent-mcp.test.ts)
+  - [tests/components/ai-command-subblock.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/components/ai-command-subblock.test.ts)
+  - [tests/e2e-ai-command-subblock.js](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/e2e-ai-command-subblock.js)
+
+### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
+1. **外部 Agent 接入阻断 (0 编程调用通道)**：
+   - 过去 BlockOS 的鉴权体系 100% 依赖浏览器端生成的 HMAC Cookie / NextAuth 会话 Cookie，外部独立 Agent（如 Claude Desktop、Cursor、LangChain、AutoGPT 或用户自研脚本）无法使用标准的 API Token 访问系统；
+   - 缺少符合业界开放协议标准的接口层，外部 Agent 既无法读取当前画布的树状 Block 拓扑，也无法以机器友好的方式在画布上创建或编排 Block。
+2. **内置 AI 工具调用维度狭窄 (Tool-Calling Capability Deficit)**：
+   - 用户明确询问：“现在软件里面是有内置 AI 的，这 AI 能对软件中的功能进行调用吗？例如创建多个 Block，自动将 Block 设置为子 Block 之类的”；
+   - 排查发现原内置 AI 指令系统（`CommandPalette.tsx` 与 `/api/ai/command`）仅支持单平铺卡片的 `createBlock`、`deleteBlock`、`updateBlock` 和 `highlightBlocks`，底层完全未暴露对 `parentId` 的感知能力，无法理解“父子嵌套”、“将某卡片挂载为子卡片”、“批量创建需求与子卡片”等高阶层级操作。
+
+### 2. 决策方案与系统实现架构 (Decisions & Implementation)
+1. **API Key 安全鉴权体系与路由通行中间件**：
+   - **底层数据存储 (`src/lib/db.ts`)**：新增 `api_keys` 表与 `idx_api_keys_hash`、`idx_api_keys_user` 索引；
+   - **安全凭证引擎 (`src/lib/api-keys.ts`)**：采用 `bk_live_<64-hex>` 格式，入库前经 SHA-256 摘要加盐防泄漏存储，支持权限细分（`read`, `write`, `admin`）、过期时间控制与即时吊销 (`revokeApiKey`)；
+   - **中间件放行与多源鉴权 (`src/middleware.ts` & `src/lib/auth-utils.ts`)**：重构 `getUserId(req)`，优先解析 `Authorization: Bearer <API_KEY>`，无缝兼容外部 Agent 脚本调用与浏览器用户 Session。
+2. **外部 Agent 开放协议层 (Open API & Model Context Protocol MCP)**：
+   - **Open REST API 体系**：
+     - `GET /api/open/v1/canvas`：返回画布所有 Blocks 并递归构建树状拓扑 `blockTree`；
+     - `POST /api/open/v1/canvas`：批量原子同步与写入 Blocks；
+     - `POST /api/open/v1/blocks`：创建单个 Block，支持指定 `parentId` 并自动计算侧翼排布坐标；
+     - `PATCH /api/open/v1/blocks`：增量更新 Block，支持更新 `parentId` 或传入 `null` 解除父子关系；
+     - `DELETE /api/open/v1/blocks`：删除 Block 时自动将名下子 Block 提升为根层级，杜绝孤儿卡片悬空。
+   - **标准 MCP JSON-RPC 2.0 Server (`/api/open/v1/mcp`)**：
+     - 实现 MCP 协议规范，暴露 `initialize`、`tools/list` 与 `tools/call` 三大核心方法；
+     - 注册 6 大专属生产级工具：`read_canvas`、`create_block`、`set_subblock`、`batch_create_hierarchy`、`create_link`、`delete_block`，支持与 Claude Desktop、Cursor 等现代智能体平台一键配置连接。
+3. **内置 AI 工具调用全链路升级 (Hierarchy & Sub-Block Tool-Calling)**：
+   - **大模型 Prompt 增强 (`src/app/api/ai/command/route.ts`)**：系统提示词扩充支持 `batchCreateHierarchy`、`setParent`、`outdentBlock`、`createSubBlock`、`createLink`；
+   - **前端指令分发引擎 (`src/components/CommandPalette.tsx`)**：
+     - 扩展 `Operation` 接口与关键词匹配器；
+     - 实现 `batchCreateHierarchy` 本地执行器：一键生成 1 个父 Block 并计算其右侧侧翼坐标自动生成 N 个子 Block；
+     - 实现 `setParent` 与 `outdentBlock`：智能修改 Store 内部的 `parentId` 与物理坐标；
+     - 增加针对口语化指令的本地即时正则识别器（无需等待云端大模型毫秒级极速响应）；
+   - **全键盘快捷键接入 (`src/components/DesktopWorkspace.tsx`)**：为桌面工作区增加 `Ctrl+K` / `Cmd+K` 全局监听，与工具栏「AI 助手」按钮双通道触发。
+
+### 3. 产出与验收度量 (Verification Baseline)
+- **自动化测试**：26 套测试套件、275 项用例（新增 10 项外部 Agent/MCP 测试与 4 项内置 AI 子 Block 指令测试）**100% 绿色全通**；
+- **生产构建验证**：Next.js 全量 42 条路由生产打包 `npm run build` **0 编译错误、0 类型故障**；
+- **浏览器 E2E 实测**：通过 Playwright 模拟用户在真机浏览器中唤起 AI 助手，键入自然语言指令“创建1个需求Block，并创建2个子Block”回车执行，成功渲染并捕获多层父子卡片截图证据。
