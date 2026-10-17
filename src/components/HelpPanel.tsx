@@ -45,8 +45,8 @@ const FEATURES = [
   { icon: UserCircle, title: '个人中心', desc: '设置个人信息、职务职能，查看跨项目任务分配情况。' },
 ];
 
-function AccordionItem({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function AccordionItem({ icon: Icon, title, children, defaultOpen = false }: { icon: React.ElementType; title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-gray-200 dark:border-zinc-700 rounded-xl overflow-hidden bg-white dark:bg-zinc-900">
       <button
@@ -281,7 +281,7 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
                 </p>
               </div>
 
-              <AccordionItem icon={Terminal} title="方式一：Cursor / Claude Desktop 客户端配置 (stdio 协议)">
+              <AccordionItem icon={Terminal} title="方式一：Cursor / Claude Desktop 客户端配置 (stdio 协议)" defaultOpen>
                 <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed mb-2">
                   将以下配置填入 Claude Desktop (<code className="text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">claude_desktop_config.json</code>) 或 Cursor (<code className="text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">.cursor/mcp.json</code>) 的 <code className="text-indigo-600 dark:text-indigo-400 font-mono text-[11px]">mcpServers</code> 字段中：
                 </p>
