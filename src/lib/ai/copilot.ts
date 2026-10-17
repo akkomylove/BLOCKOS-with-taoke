@@ -1,7 +1,15 @@
 import { postJsonCompletion, parseJsonContent, safeText, safeList, AIServiceError } from './client';
 import type { CopilotRequest, CopilotResponse } from './types';
+import { validateInputSafety, sanitizeAiOutput } from './safety-filter';
 
 export async function runCopilot(payload: CopilotRequest): Promise<CopilotResponse> {
+  // 1. 安全合规前置审查 (Pre-flight Security Inspection)
+  validateInputSafety({
+    userMessage: payload.userMessage,
+    contexts: [payload.documentContent, payload.copilotDocumentContent || ''],
+    documentSummary: payload.documentSummary,
+  });
+
   const rawContent = await postJsonCompletion([
     { role: 'system', content: buildSystemPrompt(payload.action) },
     { role: 'user', content: buildUserPrompt(payload) },
@@ -11,6 +19,7 @@ export async function runCopilot(payload: CopilotRequest): Promise<CopilotRespon
     const parsed = parseJsonContent(rawContent);
     return normalizeCopilotResponse(parsed, payload.action);
   } catch (error) {
+    if (error instanceof AIServiceError) throw error;
     throw new AIServiceError('Copilot 响应解析失败', 'copilot_parse_error', 502, { error: String(error) });
   }
 }
@@ -23,20 +32,20 @@ function normalizeCopilotResponse(payload: Record<string, unknown>, action: stri
         understandingSummary: safeText(payload.understanding_summary, '已理解当前文档内容。'),
         nextQuestion: safeText(payload.next_question),
         readyToFinalize: payload.ready_to_finalize === true,
-        draftMarkdown: safeText(payload.draft_markdown, ''),
+        draftMarkdown: sanitizeAiOutput(safeText(payload.draft_markdown, '')),
       };
     case 'plan_finalize':
       return {
         action: 'plan_finalize',
         summary: safeText(payload.summary, '计划已生成。'),
-        finalMarkdown: safeText(payload.final_markdown, ''),
+        finalMarkdown: sanitizeAiOutput(safeText(payload.final_markdown, '')),
       };
     case 'critique_generate':
       return {
         action: 'critique_generate',
         overview: safeText(payload.overview, '审阅已完成。'),
         issues: normalizeIssues(payload.issues),
-        reviewMarkdown: safeText(payload.review_markdown, ''),
+        reviewMarkdown: sanitizeAiOutput(safeText(payload.review_markdown, '')),
       };
     default:
       throw new AIServiceError(`未知的 Copilot action: ${action}`, 'invalid_copilot_action', 400);

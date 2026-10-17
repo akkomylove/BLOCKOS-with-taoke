@@ -9,3 +9,4 @@ export * from './chat';
 export * from './review-enrich';
 export * from './fold-plan';
 export * from './doc-relations';
+export * from './safety-filter';

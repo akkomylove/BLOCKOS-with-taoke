@@ -5,8 +5,8 @@
 
 const FULL_BLOCK_TAGS_REGEX = /<\s*(script|style|iframe|embed|object|base)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi;
 const DANGEROUS_TAGS_REGEX = /<\s*\/?\s*(script|iframe|embed|object|form|input|button|link|meta|style|base|frame|frameset)[^>]*>/gi;
-const EVENT_HANDLER_REGEX = /\s+on[a-z0-9_-]+\s*=\s*(['"][^'"]*['"]|[^\s>]+)/gi;
-const JAVASCRIPT_URL_REGEX = /(href|src|action)\s*=\s*['"]\s*(javascript|vbscript|data\s*:\s*text\/html):[^'"]*['"]/gi;
+const EVENT_HANDLER_REGEX = /[\s/]+on[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+const JAVASCRIPT_URL_REGEX = /(href|src|action)\s*=\s*(?:"\s*(?:javascript|vbscript|data\s*:\s*text\/html):[^"]*"|'\s*(?:javascript|vbscript|data\s*:\s*text\/html):[^']*'|(?:javascript|vbscript|data\s*:\s*text\/html):[^\s>]*)/gi;
 
 /**
  * 纯文本转义，将敏感 HTML 字符替换为安全实体

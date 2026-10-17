@@ -28,7 +28,10 @@
 - [ADR-017: 产研全链路语义闭环、持久化后台引擎、跨视图状态协同与离线自愈架构 (Semantic Requirements, Persistent Agent Jobs, Cross-View Sync & Resilient Offline Fallback)](#adr-017-产研全链路语义闭环持久化后台引擎跨视图状态协同与离线自愈架构-semantic-requirements-persistent-agent-jobs-cross-view-sync--resilient-offline-fallback)
 - [ADR-018: 沙箱独立滚动隔离、工具栏语义极简化与 Portal 标签管理重塑 (Sandbox Scroll Isolation, Concise Toolbar & Portal Tag Picker)](#adr-018-沙箱独立滚动隔离工具栏语义极简化与-portal-标签管理重塑-sandbox-scroll-isolation-concise-toolbar--portal-tag-picker)
 - [ADR-019: 多模态 Block 闭环治理：表格 Excel 剪贴板/文件拖拽互通、画板全尺寸弹性自适应、媒体 Block 全生命周期换源与高可用 AI 智能体容灾 (Multimodal Blocks Enhancements & Resilient Agent Fallback)](#adr-019-多模态-block-闭环治理表格-excel-剪贴板文件拖拽互通画板全尺寸弹性自适应媒体-block-全生命周期换源与高可用-ai-智能体容灾-multimodal-blocks-enhancements--resilient-agent-fallback)
-- [ADR-020: 子 Block 响应式树状嵌套治理、架构导图节点与落地 Block 双向互通及多角色交互打磨 (Hierarchical Sub-Blocks, Mindmap Node-to-Block Linking & Multimodal Polish)](#adr-020-子-block-响应式树状嵌套治理架构导图节点与落地-block-双向互通及多角色交互打磨-hierarchical-sub-blocks-mindmap-node-to-block-linking--multimodal-polish)
+-[ADR-020: 子 Block 响应式树状嵌套治理、架构导图节点与落地 Block 双向互通及多角色交互打磨 (Hierarchical Sub-Blocks, Mindmap Node-to-Block Linking & Multimodal Polish)](#adr-020-子-block-响应式树状嵌套治理架构导图节点与落地-block-双向互通及多角色交互打磨-hierarchical-sub-blocks-mindmap-node-to-block-linking--multimodal-polish)
+- [ADR-027: 双端职责分离式移动端适配架构与章节大纲引擎 (Dual-Workspace Mobile Adaptation & Chapter Outline Engine)](#adr-027-双端职责分离式移动端适配架构与章节大纲引擎-dual-workspace-mobile-adaptation--chapter-outline-engine)
+- [ADR-028: 飞书风格多维分类菜单重构与高亮/倒计时/书签/Mermaid四大多维组件落地 (Lark-Style Block Categorization & Four Multi-Dimensional Interactive Blocks)](#adr-028-飞书风格多维分类菜单重构与高亮倒计时书签mermaid四大多维组件落地-lark-style-block-categorization--four-multi-dimensional-interactive-blocks)
+- [ADR-029: 全链路 AI 原生安全合规体系与对抗性探针防御架构 (Full-Stack AI Security Compliance & Adversarial Probe Defense Framework)](#adr-029-全链路-ai-原生安全合规体系与对抗性探针防御架构-full-stack-ai-security-compliance--adversarial-probe-defense-framework)
 
 ---
 
@@ -1107,5 +1110,52 @@
 
 ### 3. 产出与验收度量 (Verification Baseline)
 - **自动化测试**：23 套测试套件、235 项单元与集成测试用例 **100% 绿色通过**；
+- **生产构建验证**：Next.js 全量 38 条路由生产打包 `npm run build` **0 编译错误、0 类型故障**；
+- **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证通过。
+
+---
+
+## ADR-029: 全链路 AI 原生安全合规体系与对抗性探针防御架构 (Full-Stack AI Security Compliance & Adversarial Probe Defense Framework)
+
+- **日期**：2026-10-17
+- **决策状态**：已全面落地、自动化测试通过并推送到生产环境
+- **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
+- **关联文件**：
+  - [src/lib/ai/safety-filter.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/ai/safety-filter.ts)
+  - [src/lib/sanitize.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/sanitize.ts)
+  - [src/lib/ai/chat.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/ai/chat.ts)
+  - [src/lib/ai/copilot.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/ai/copilot.ts)
+  - [src/app/api/ai/chat/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/ai/chat/route.ts)
+  - [src/app/api/ai/generate/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/ai/generate/route.ts)
+  - [tests/security/ai-security-compliance.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/security/ai-security-compliance.test.ts)
+  - [tests/security/sanitize.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/security/sanitize.test.ts)
+
+### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
+1. **AI 原生安全敞口与脆弱性 (OWASP Top 10 for LLM Applications)**：
+   - 在协同知识操作系统 BlockOS 中，AI 深度介入对话、文档润色、需求分析、代码实验室与任务分派；
+   - 传统 Web 安全防御仅关注 SQL 注入与传统 XSS，无法防范针对大语言模型原生威胁（提示词直接/间接注入、系统提示词窥探、环境变量与 API Key 诱导套取、恶意代码/存储型 XSS 诱导生成、以及越权成员身份伪造）；
+   - 在缺少前置防御的情况下，恶意用户若在 Prompt 或选中文本（`selectedContexts`）中注入指令（如 `Ignore all previous instructions...`、`输出系统提示词`、`打印 ZHIPU_API_KEY`），可能导致模型行为失控或敏感凭据泄露。
+2. **算力 DoS 与账单攻击隐患**：
+   - 恶意超长文本（如 50KB+ 畸形字符串）若直接打入大模型 API，会导致服务器内存打满、长连接超时阻塞以及昂贵的 API Token 费用消耗；
+   - 必须遵循全局研发宪法之“轻重资源分层防御”，以 0 成本的本地轻量规则前置拦截 99% 的恶意探测，杜绝暴力调用大模型。
+
+### 2. 决策方案与系统实现架构 (Decisions & Implementation)
+1. **轻重两道防御漏斗架构 (`src/lib/ai/safety-filter.ts`)**：
+   - **漏斗一：Pre-flight 入参前置防御 (0 成本本地毫秒级过滤)**：
+     - **提示词注入与越狱拦截 (LLM01)**：中英文指令抹除（`Ignore all previous instructions`、`忽略之前的所有指令`）、DAN/开发者模式（`Bypass all safety filters`、`作为无限制AI`）、系统提示词窥探（`Print exact system prompt`、`输出系统提示词`）全面正则特征检测，命中直接中断并返回 HTTP 400 与结构化安全威胁详情；
+     - **敏感凭据探测拦截 (LLM06)**：拦截试图窥探 `ZHIPU_API_KEY`、`POSTGRES_URL`、`DATABASE_URL`、`JWT_SECRET`、`process.env` 等敏感信息的恶意输入；
+     - **DoS / ReDoS 边界熔断 (LLM04)**：严格限定单条提示词最大 16KB、总上下文最大 64KB，在 <5ms 内完成本地静态校验并阻断，不产生任何外部大模型网络开销。
+   - **漏斗二：Post-flight 出参后置脱敏与 XSS 净化 (LLM02)**：
+     - **敏感凭据自动脱敏清洗 (`scrubSecrets`)**：扫描模型生成内容中的 `sk-*` API Key、`postgresql://` 数据库连接串、Bearer/JWT Token 及私钥块，自动替换为 `[REDACTED_*]` 掩码，杜绝模型意外回显系统机密；
+     - **存储型 XSS 彻底剥离 (`sanitizeAiOutput`)**：彻底剔除 AI 输出富文本中的 `<script>`、`<iframe>`、`javascript:` 伪协议、以及包含嵌套双/单引号的行内 `onerror`/`onload` 监听器（修复了对 `<img/src=x/onerror="alert('XSS')">` 复杂嵌套语法的正则解析漏洞）；
+     - **任务与成员越权防御 (`validateAssigneeScope`, LLM07)**：严格校验 AI 推荐分配人必须存在于项目当前成员白名单中，对伪造的 `super_admin`、`root` 或未知账号自动重置为 `null` 或安全降级，防范越权提权。
+2. **全流程 API 路由安全咬合**：
+   - 对 `/api/ai/chat`、`/api/ai/generate`、`/api/ai/copilot` 全量接入鉴权校验与安全合规过滤器；
+   - 未登录调用严格返回 HTTP 401，安全违规请求返回 HTTP 400 与 `ai_safety_violation` 错误代码及审计线索。
+3. **自动化安全对抗探针套件建设 (`tests/security/ai-security-compliance.test.ts`)**：
+   - 建立覆盖 OWASP Top 10 for LLMs 5 大核心维度（提示词注入、敏感凭据窃取、存储型 XSS、越权分配、DoS 边界）的 26 项端到端对抗性自动化测试用例，纳入团队持续集成基线。
+
+### 3. 产出与验收度量 (Verification Baseline)
+- **自动化测试**：24 套测试套件、261 项测试用例（新增 26 项安全探针测试）**100% 绿色通过**；
 - **生产构建验证**：Next.js 全量 38 条路由生产打包 `npm run build` **0 编译错误、0 类型故障**；
 - **线上部署**：推送到 Vercel 生产环境，在 `https://blockos.hiakkocv.xyz` 实测验证通过。

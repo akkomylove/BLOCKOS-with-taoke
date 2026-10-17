@@ -1,5 +1,6 @@
-import { postJsonCompletion, parseJsonContent, safeText } from './client';
+import { postJsonCompletion, parseJsonContent } from './client';
 import type { ChatRequest, ChatResponse } from './types';
+import { validateInputSafety, sanitizeAiOutput } from './safety-filter';
 
 const CHAT_ROLE_PRESETS: Record<string, { title: string; style: string }> = {
   '专业产品经理': {
@@ -21,6 +22,14 @@ const CHAT_ROLE_PRESETS: Record<string, { title: string; style: string }> = {
 };
 
 export async function chat(payload: ChatRequest): Promise<ChatResponse> {
+  // 1. 安全合规前置扫描 (Pre-flight Security Inspection)
+  validateInputSafety({
+    userMessage: payload.userMessage,
+    contexts: payload.selectedContexts?.map((c) => c.text),
+    personaNote: payload.personaNote,
+    documentSummary: payload.documentSummary,
+  });
+
   const preset = CHAT_ROLE_PRESETS[payload.rolePreset] || { title: payload.rolePreset, style: '请以清晰、专业、直接的方式回答。' };
 
   const systemPrompt = (
@@ -70,8 +79,11 @@ export async function chat(payload: ChatRequest): Promise<ChatResponse> {
     ? parsed.assistant_message
     : (typeof parsed.assistantMessage === 'string' ? parsed.assistantMessage : rawContent);
 
+  // 2. 出参全量安全清洗 (脱敏敏感信息与剥离 XSS 危险代码)
+  const safeAssistantMessage = sanitizeAiOutput(assistantMessage);
+
   return {
-    assistantMessage: assistantMessage || '我已经看过你选中的内容，建议你再补充一下目标、限制条件或希望我重点分析的方面。',
+    assistantMessage: safeAssistantMessage || '我已经看过你选中的内容，建议你再补充一下目标、限制条件或希望我重点分析的方面。',
     rolePreset: typeof parsed.role_preset === 'string' ? parsed.role_preset : payload.rolePreset,
     selectedContextCount: payload.selectedContexts.length,
   };

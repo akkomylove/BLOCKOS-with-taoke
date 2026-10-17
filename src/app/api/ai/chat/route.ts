@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { chat } from '@/lib/ai/chat';
+import { AIServiceError } from '@/lib/ai/client';
 import { getUserId } from '@/lib/auth-utils';
 
 export async function POST(req: NextRequest) {
@@ -11,6 +12,12 @@ export async function POST(req: NextRequest) {
     const result = await chat(body);
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof AIServiceError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code, details: error.details },
+        { status: error.statusCode }
+      );
+    }
     console.error('Chat error:', error);
     return NextResponse.json({ error: 'Chat failed' }, { status: 500 });
   }
