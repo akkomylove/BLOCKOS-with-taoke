@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { LogIn, Shield, User, Sparkles } from 'lucide-react';
+import { Shield, User, Sparkles } from 'lucide-react';
 import { DEMO_ADMIN, DEMO_EMPLOYEES } from '@/lib/demo-users';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

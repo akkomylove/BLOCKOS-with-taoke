@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X, BookOpen, Zap, HelpCircle, Settings, Key, Globe, Cpu,
   Sparkles, ArrowRight, CheckCircle2, ChevronDown, ChevronUp,
   Type, CheckSquare, Code, Table, ImageIcon, Quote, ChevronRight as ChevronRightIcon,
   Search, Tag, History, Link2, Wand2, Palette, Lightbulb,
   Users, BarChart3, UserCircle, FileText, ExternalLink,
-  Terminal, Copy, Check
+  Terminal, Copy, Check, Plus, Trash2, Loader2, ShieldCheck, AlertCircle
 } from 'lucide-react';
 
 interface HelpPanelProps {
@@ -64,6 +64,14 @@ function AccordionItem({ icon: Icon, title, children, defaultOpen = false }: { i
   );
 }
 
+interface ApiKeyItem {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  permissions: string[];
+  createdAt: number;
+}
+
 export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelProps) {
   const [activeTab, setActiveTab] = useState('guide');
   const [apiKey, setApiKey] = useState('');
@@ -71,6 +79,81 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
   const [model, setModel] = useState('');
   const [saved, setSaved] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+
+  // API Key 凭据管理状态
+  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
+  const [loadingKeys, setLoadingKeys] = useState(false);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newlyCreatedRawKey, setNewlyCreatedRawKey] = useState<string | null>(null);
+  const [keyError, setKeyError] = useState<string | null>(null);
+
+  const fetchApiKeys = async () => {
+    setLoadingKeys(true);
+    setKeyError(null);
+    try {
+      const res = await fetch('/api/open/keys');
+      if (res.ok) {
+        const data = await res.json();
+        setApiKeys(data.keys || []);
+      }
+    } catch {
+      // 忽略请求异常
+    } finally {
+      setLoadingKeys(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'mcp') {
+      fetchApiKeys();
+    }
+  }, [isOpen, activeTab]);
+
+  const handleGenerateApiKey = async () => {
+    setGeneratingKey(true);
+    setKeyError(null);
+    try {
+      const res = await fetch('/api/open/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newKeyName.trim() || 'My External Agent Key',
+          permissions: ['read', 'write'],
+          ttlDays: 90
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '生成密钥失败');
+      }
+      setNewlyCreatedRawKey(data.rawKey);
+      setNewKeyName('');
+      await fetchApiKeys();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setKeyError(msg || '生成失败，请确认您已登录账户');
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const handleRevokeApiKey = async (keyId: string) => {
+    if (!window.confirm('确定要注销并废除该 API Key 吗？废除后使用此密钥的 Agent 将无法再访问您的画布。')) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/open/keys?id=${encodeURIComponent(keyId)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchApiKeys();
+        if (newlyCreatedRawKey) setNewlyCreatedRawKey(null);
+      }
+    } catch (err) {
+      console.error('Revoke key error:', err);
+    }
+  };
 
   const copyToClipboard = (text: string, section: string) => {
     navigator.clipboard.writeText(text);
@@ -377,18 +460,122 @@ print(res.json())`}</pre>
                 </div>
               </AccordionItem>
 
-              <AccordionItem icon={Key} title="API Key 凭据管理">
-                <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed mb-2">
-                  系统采用标准 Bearer Token 鉴权体系：
-                </p>
-                <div className="space-y-2 text-xs text-gray-600 dark:text-zinc-400">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    <span><strong>专属 Key 派发：</strong>可通过发送 <code className="font-mono text-indigo-500">POST /api/open/keys</code> 生成独立的 <code className="font-mono">bk_live_...</code> 密钥，支持权限细分与有效期管理。</span>
+              <AccordionItem icon={Key} title="API Key 凭据管理" defaultOpen={true}>
+                <div className="space-y-4">
+                  <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed">
+                    供 Cursor、Claude Desktop 或自研 Python Agent 鉴权调用。密钥拥有您账户画布的读写控制权限，请妥善保存。
+                  </p>
+
+                  {/* 一键生成区域 */}
+                  <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 space-y-3">
+                    <div className="text-xs font-semibold text-gray-900 dark:text-zinc-200 flex items-center gap-1.5">
+                      <Plus className="w-3.5 h-3.5 text-indigo-500" />
+                      创建新专属 Agent API Key
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newKeyName}
+                        onChange={(e) => setNewKeyName(e.target.value)}
+                        placeholder="输入密钥用途（例如：Cursor 插件、Claude Desktop）"
+                        className="flex-1 bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-indigo-500 transition-colors"
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleGenerateApiKey(); }}
+                      />
+                      <button
+                        onClick={handleGenerateApiKey}
+                        disabled={generatingKey}
+                        className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors flex-shrink-0"
+                      >
+                        {generatingKey ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
+                        {generatingKey ? '生成中...' : '一键生成 Key'}
+                      </button>
+                    </div>
+
+                    {keyError && (
+                      <div className="flex items-center gap-1.5 text-xs text-rose-500">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{keyError}</span>
+                      </div>
+                    )}
+
+                    {/* 新生成密钥展示高亮卡片 */}
+                    {newlyCreatedRawKey && (
+                      <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-600/50 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            新密钥已签发成功（仅展示一次，请立即复制）：
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 bg-white dark:bg-zinc-900 px-2.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-700/50 font-mono text-xs text-emerald-700 dark:text-emerald-300 select-all overflow-x-auto">
+                            {newlyCreatedRawKey}
+                          </code>
+                          <button
+                            onClick={() => copyToClipboard(newlyCreatedRawKey, 'new-raw-key')}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors flex-shrink-0"
+                          >
+                            {copiedSection === 'new-raw-key' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copiedSection === 'new-raw-key' ? '已复制' : '复制密钥'}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
+                          💡 复制后，直接填入上方客户端配置的 <code className="font-mono font-semibold">BLOCKOS_API_KEY</code> 即可立即接入！
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span><strong>安全防护原则：</strong>API Key 享有您账户画布的读写权限，切勿将其硬编码提交至 GitHub 或任何公开渠道。</span>
+
+                  {/* 已签发密钥列表 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
+                      <span>已签发密钥列表 ({apiKeys.length})</span>
+                      <button
+                        onClick={fetchApiKeys}
+                        className="text-[11px] text-indigo-500 hover:underline"
+                      >
+                        刷新
+                      </button>
+                    </div>
+
+                    {loadingKeys ? (
+                      <div className="flex items-center justify-center p-4 text-xs text-gray-400 gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>正在加载密钥列表...</span>
+                      </div>
+                    ) : apiKeys.length === 0 ? (
+                      <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-center text-xs text-gray-400 dark:text-zinc-500">
+                        暂无已签发的 API Key，点击上方“一键生成 Key”即可派发。
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {apiKeys.map((k) => (
+                          <div
+                            key={k.id}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800"
+                          >
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-900 dark:text-zinc-200">{k.name}</span>
+                                <code className="text-[10px] font-mono text-gray-500 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800 px-1 py-0.5 rounded">
+                                  {k.keyPrefix}
+                                </code>
+                              </div>
+                              <div className="text-[10px] text-gray-400 dark:text-zinc-500">
+                                创建于：{new Date(k.createdAt).toLocaleDateString()} · 权限：{Array.isArray(k.permissions) ? k.permissions.join(', ') : '读/写'}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleRevokeApiKey(k.id)}
+                              title="注销此密钥"
+                              className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </AccordionItem>
