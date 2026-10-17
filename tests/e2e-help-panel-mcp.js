@@ -52,16 +52,29 @@ async function runTest() {
     console.log('✓ 成功切换至【MCP 智能体接入】Tab');
     await page.waitForTimeout(500);
 
+    // 4. 滚动到 API Key 凭据管理区域并截图
+    const apiKeySection = page.locator('text=API Key 凭据管理');
+    await apiKeySection.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+
     const shot1 = path.join(EVIDENCE_DIR, '14_help_panel_mcp_tab.png');
     await page.screenshot({ path: shot1 });
     console.log('✓ 截图已保存:', shot1);
 
-    // 4. 验证内容是否存在
-    const hasConfig = await page.locator('text=claude_desktop_config.json').count() > 0;
-    const hasKeyPlaceholder = await page.locator('text=your_blockos_api_key_here').count() > 0;
-    console.log(`✓ 界面关键信息检测: claude_desktop_config=${hasConfig}, keyPlaceholder=${hasKeyPlaceholder}`);
+    // 5. 点击【一键生成 Key】按钮
+    console.log('点击【一键生成 Key】测试真实签发...');
+    const generateBtn = page.locator('button:has-text("一键生成 Key")');
+    await generateBtn.click();
 
-    console.log('\n=== [HelpPanel MCP 验证完成] ===\n');
+    // 6. 等待新密钥生成并高亮展示
+    await page.waitForSelector('text=新密钥已签发成功', { timeout: 10000 });
+    console.log('✓ 成功检测到新密钥签发成功卡片！');
+
+    const shot2 = path.join(EVIDENCE_DIR, '15_api_key_generated_live.png');
+    await page.screenshot({ path: shot2 });
+    console.log('✓ 密钥签发成功截图已保存:', shot2);
+
+    console.log('\n=== [HelpPanel MCP 交互式 Key 验证 100% 成功] ===\n');
   } catch (err) {
     console.error('Test error:', err);
     throw err;
