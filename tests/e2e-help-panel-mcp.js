@@ -8,8 +8,8 @@ if (!fs.existsSync(EVIDENCE_DIR)) {
 }
 
 async function runTest() {
-  console.log('=== [E2E Playwright: Help Panel MCP Tab Verification] ===');
-  console.log('Target: http://localhost:3005');
+  console.log('=== [E2E Playwright: Help Panel MCP Tab Verification (Live Production)] ===');
+  console.log('Target: https://blockos.hiakkocv.xyz');
 
   const browser = await chromium.launch({
     executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -24,10 +24,10 @@ async function runTest() {
 
   try {
     // 1. 登录
-    await page.goto('http://localhost:3005/login', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.goto('https://blockos.hiakkocv.xyz/login', { waitUntil: 'networkidle', timeout: 25000 });
     const adminBtn = page.locator('button:has-text("管理者")').first();
     await adminBtn.click();
-    await page.waitForURL('http://localhost:3005/', { timeout: 15000 });
+    await page.waitForURL('https://blockos.hiakkocv.xyz/', { timeout: 25000 });
     await page.waitForTimeout(1000);
 
     // 关闭新手弹窗
@@ -37,18 +37,10 @@ async function runTest() {
     }
 
     // 2. 点击【帮助】按钮打开 HelpPanel
-    console.log('打开帮助与设置中心...');
-    const helpBtn = page.locator('button[title="帮助与设置"], button[title="新手帮助"], button:has-text("帮助")').first();
-    if (await helpBtn.count() > 0) {
-      await helpBtn.click();
-    } else {
-      // 通过更多菜单查找帮助
-      const moreBtn = page.locator('button[title="更多功能"], button:has-text("···")').first();
-      await moreBtn.click();
-      await page.waitForTimeout(300);
-      const helpItem = page.locator('button:has-text("使用指南"), button:has-text("帮助")').first();
-      await helpItem.click();
-    }
+    console.log('查找并点击【帮助】按钮...');
+    const helpBtn = page.locator('button[title="帮助"]').first();
+    await helpBtn.waitFor({ state: 'visible', timeout: 8000 });
+    await helpBtn.click();
 
     await page.waitForSelector('text=帮助中心', { timeout: 5000 });
     console.log('✓ 帮助中心弹窗已打开');
