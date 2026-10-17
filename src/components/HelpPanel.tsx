@@ -287,7 +287,7 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
                 </p>
                 <div className="relative rounded-lg bg-zinc-900 border border-zinc-800 p-3 font-mono text-[11px] text-zinc-300 overflow-x-auto">
                   <button
-                    onClick={() => copyToClipboard(`{\n  "mcpServers": {\n    "blockos": {\n      "command": "node",\n      "args": [\n        "d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/scripts/blockos-mcp-stdio.js"\n      ],\n      "env": {\n        "BLOCKOS_URL": "https://blockos.hiakkocv.xyz/api/open/v1/mcp",\n        "BLOCKOS_API_KEY": "bk_live_antigravity_agent_probe_key"\n      }\n    }\n  }\n}`, 'mcp-config')}
+                    onClick={() => copyToClipboard(`{\n  "mcpServers": {\n    "blockos": {\n      "command": "node",\n      "args": [\n        "<your-project-path>/scripts/blockos-mcp-stdio.js"\n      ],\n      "env": {\n        "BLOCKOS_URL": "https://blockos.hiakkocv.xyz/api/open/v1/mcp",\n        "BLOCKOS_API_KEY": "your_blockos_api_key_here"\n      }\n    }\n  }\n}`, 'mcp-config')}
                     className="absolute top-2.5 right-2.5 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-[10px] flex items-center gap-1 transition-colors"
                   >
                     {copiedSection === 'mcp-config' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -298,16 +298,19 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
     "blockos": {
       "command": "node",
       "args": [
-        "d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/scripts/blockos-mcp-stdio.js"
+        "<your-project-path>/scripts/blockos-mcp-stdio.js"
       ],
       "env": {
         "BLOCKOS_URL": "https://blockos.hiakkocv.xyz/api/open/v1/mcp",
-        "BLOCKOS_API_KEY": "bk_live_antigravity_agent_probe_key"
+        "BLOCKOS_API_KEY": "your_blockos_api_key_here"
       }
     }
   }
 }`}</pre>
                 </div>
+                <p className="text-[11px] text-gray-500 dark:text-zinc-500 mt-2">
+                  * 注：请将 <code className="font-mono text-indigo-500">&lt;your-project-path&gt;</code> 替换为您本地项目的实际绝对路径。
+                </p>
               </AccordionItem>
 
               <AccordionItem icon={Code} title="方式二：自研 Agent / Python / HTTP JSON-RPC 接入">
@@ -316,11 +319,11 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
                 </p>
                 <div className="space-y-1 text-xs text-gray-600 dark:text-zinc-400 mb-2">
                   <div><strong>Endpoint:</strong> <code className="bg-gray-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-indigo-500 font-mono">POST https://blockos.hiakkocv.xyz/api/open/v1/mcp</code></div>
-                  <div><strong>Header:</strong> <code className="bg-gray-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-indigo-500 font-mono">Authorization: Bearer bk_live_antigravity_agent_probe_key</code></div>
+                  <div><strong>Header:</strong> <code className="bg-gray-100 dark:bg-zinc-800 px-1 py-0.5 rounded text-indigo-500 font-mono">Authorization: Bearer your_blockos_api_key_here</code></div>
                 </div>
                 <div className="relative rounded-lg bg-zinc-900 border border-zinc-800 p-3 font-mono text-[11px] text-zinc-300 overflow-x-auto">
                   <button
-                    onClick={() => copyToClipboard(`import requests\n\nres = requests.post(\n    "https://blockos.hiakkocv.xyz/api/open/v1/mcp",\n    headers={\n        "Authorization": "Bearer bk_live_antigravity_agent_probe_key",\n        "Content-Type": "application/json"\n    },\n    json={\n        "jsonrpc": "2.0",\n        "id": 1,\n        "method": "tools/call",\n        "params": {\n            "name": "read_canvas",\n            "arguments": {}\n        }\n    }\n)\nprint(res.json())`, 'python-code')}
+                    onClick={() => copyToClipboard(`import requests\n\nres = requests.post(\n    "https://blockos.hiakkocv.xyz/api/open/v1/mcp",\n    headers={\n        "Authorization": "Bearer your_blockos_api_key_here",\n        "Content-Type": "application/json"\n    },\n    json={\n        "jsonrpc": "2.0",\n        "id": 1,\n        "method": "tools/call",\n        "params": {\n            "name": "read_canvas",\n            "arguments": {}\n        }\n    }\n)\nprint(res.json())`, 'python-code')}
                     className="absolute top-2.5 right-2.5 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-[10px] flex items-center gap-1 transition-colors"
                   >
                     {copiedSection === 'python-code' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -331,7 +334,7 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
 res = requests.post(
     "https://blockos.hiakkocv.xyz/api/open/v1/mcp",
     headers={
-        "Authorization": "Bearer bk_live_antigravity_agent_probe_key",
+        "Authorization": "Bearer your_blockos_api_key_here",
         "Content-Type": "application/json"
     },
     json={
@@ -381,11 +384,11 @@ print(res.json())`}</pre>
                 <div className="space-y-2 text-xs text-gray-600 dark:text-zinc-400">
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    <span><strong>测试专用探针 Key：</strong><code className="font-mono text-indigo-500">bk_live_antigravity_agent_probe_key</code>（已预置最高读写权限，开箱即用）</span>
+                    <span><strong>专属 Key 派发：</strong>可通过发送 <code className="font-mono text-indigo-500">POST /api/open/keys</code> 生成独立的 <code className="font-mono">bk_live_...</code> 密钥，支持权限细分与有效期管理。</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                    <span><strong>生产专属 Key 派发：</strong>可通过发送 <code className="font-mono text-indigo-500">POST /api/open/keys</code> 生成独立的 <code className="font-mono">bk_live_...</code> 密钥，支持有效期设定与即时撤回。</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span><strong>安全防护原则：</strong>API Key 享有您账户画布的读写权限，切勿将其硬编码提交至 GitHub 或任何公开渠道。</span>
                   </div>
                 </div>
               </AccordionItem>

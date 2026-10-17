@@ -389,15 +389,15 @@
 - **日期**：2026-10-13
 - **决策状态**：已落地实施并通过全量自动化测试与构建校验
 - **关联文件**：
-  - [CanvasMinimap.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/CanvasMinimap.tsx)
-  - [BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
-  - [OnboardingTour.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/OnboardingTour.tsx)
-  - [presetDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/config/presetDocuments.ts)
-  - [BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
+  - [CanvasMinimap.tsx](src/components/CanvasMinimap.tsx)
+  - [BlockEditor.tsx](src/components/BlockEditor.tsx)
+  - [OnboardingTour.tsx](src/components/OnboardingTour.tsx)
+  - [presetDocuments.ts](src/config/presetDocuments.ts)
+  - [BlockOSApp.tsx](src/components/BlockOSApp.tsx)
 
 ### 1. 痛点根因与物理事实证伪 (Evidence & Root Cause)
 1. **导览框步骤 3 跳步骤 4 巨大位移跳跃**：
-   - 查验代码发现：[OnboardingTour.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/OnboardingTour.tsx) 对 `currentStep === 3`（步骤 4）硬编码了 `nextLeft = 24; nextTop = window.innerHeight - estimatedCardHeight - 24;`（左下角停靠），而步骤 3 位于屏幕居中。点击“下一步”时卡片从屏幕中央横跨全屏飞向左下角，体验极突兀。
+   - 查验代码发现：[OnboardingTour.tsx](src/components/OnboardingTour.tsx) 对 `currentStep === 3`（步骤 4）硬编码了 `nextLeft = 24; nextTop = window.innerHeight - estimatedCardHeight - 24;`（左下角停靠），而步骤 3 位于屏幕居中。点击“下一步”时卡片从屏幕中央横跨全屏飞向左下角，体验极突兀。
 2. **预置卡片 1~6 分三组相互重叠遮挡**：
    - 数据事实：Block 1 高 360px (底 400)，但 Block 2 设在 `y: 320`（逆向重叠 80px）；Block 3 高 280px (底 1080)，但 Block 4 设在 `y: 1060`（重叠 20px）；Block 5 表格高 340px (底 1720)，但 Block 6 设在 `y: 1680`（重叠 40px）。三组均存在明确的数学碰撞重叠。
 3. **滚轮提示与画布交互预期冲突**：
@@ -733,10 +733,10 @@
 - **决策状态**：已全面落地、验证通过并纳入工程标准基线
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
-  - [src/components/SortableBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/SortableBlock.tsx)
-  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
-  - [src/components/blocks/MindmapBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/MindmapBlock.tsx)
+  - [src/store/blockStore.ts](src/store/blockStore.ts)
+  - [src/components/SortableBlock.tsx](src/components/SortableBlock.tsx)
+  - [src/components/BlockEditor.tsx](src/components/BlockEditor.tsx)
+  - [src/components/blocks/MindmapBlock.tsx](src/components/blocks/MindmapBlock.tsx)
 
 ### 1. 痛点与客观证据链 (Evidence & User Feedback)
 1. **关联关系缺乏断开入口**：
@@ -788,10 +788,10 @@
 - **决策状态**：已全面落地、验证通过并纳入工程标准基线
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
-  - [src/components/BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
-  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
-  - [src/config/presetDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/config/presetDocuments.ts)
+  - [src/components/BlockEditor.tsx](src/components/BlockEditor.tsx)
+  - [src/components/BlockOSApp.tsx](src/components/BlockOSApp.tsx)
+  - [src/store/blockStore.ts](src/store/blockStore.ts)
+  - [src/config/presetDocuments.ts](src/config/presetDocuments.ts)
 
 ### 1. 痛点根因与事实证伪 (Evidence & Root Cause)
 1. **纵向连线断开药丸被实体卡片遮挡**：
@@ -874,10 +874,10 @@
 - **决策状态**：已全面落地、验证通过并纳入工程标准基线
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/app/api/pages/[id]/blocks/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/%5Bid%5D/blocks/route.ts)
-  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
-  - [src/components/BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
-  - [src/config/presetDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/config/presetDocuments.ts)
+  - [src/app/api/pages/[id]/blocks/route.ts](src/app/api/pages/%5Bid%5D/blocks/route.ts)
+  - [src/store/blockStore.ts](src/store/blockStore.ts)
+  - [src/components/BlockOSApp.tsx](src/components/BlockOSApp.tsx)
+  - [src/config/presetDocuments.ts](src/config/presetDocuments.ts)
 
 ### 1. 痛点根因与事实证伪 (Evidence & Root Cause)
 1. **真实线上截屏证据**：
@@ -918,14 +918,14 @@
 - **决策状态**：方案已正式确立并制定系统化排查与实施基线
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/store/blockStore.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/store/blockStore.ts)
-  - [src/lib/db.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/db.ts)
-  - [src/app/api/pages/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/route.ts)
-  - [src/app/api/pages/[id]/blocks/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/%5Bid%5D/blocks/route.ts)
-  - [src/app/api/pages/[id]/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/pages/%5Bid%5D/route.ts)
-  - [src/components/Toolbar.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/Toolbar.tsx)
-  - [src/components/ProjectBoard.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/ProjectBoard.tsx)
-  - [src/components/collaboration/TeamDetailPanel.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/collaboration/TeamDetailPanel.tsx)
+  - [src/store/blockStore.ts](src/store/blockStore.ts)
+  - [src/lib/db.ts](src/lib/db.ts)
+  - [src/app/api/pages/route.ts](src/app/api/pages/route.ts)
+  - [src/app/api/pages/[id]/blocks/route.ts](src/app/api/pages/%5Bid%5D/blocks/route.ts)
+  - [src/app/api/pages/[id]/route.ts](src/app/api/pages/%5Bid%5D/route.ts)
+  - [src/components/Toolbar.tsx](src/components/Toolbar.tsx)
+  - [src/components/ProjectBoard.tsx](src/components/ProjectBoard.tsx)
+  - [src/components/collaboration/TeamDetailPanel.tsx](src/components/collaboration/TeamDetailPanel.tsx)
 
 ### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
 1. **客户端 LocalStorage 全局键污染 (`blockStore.ts:1231`)**：
@@ -982,9 +982,9 @@
 - **决策状态**：已全面落地、验证通过并推送到生产环境
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
-  - [src/components/OnboardingTour.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/OnboardingTour.tsx)
-  - [tests/components/BlockMultiSelectDrag.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/components/BlockMultiSelectDrag.test.ts)
+  - [src/components/BlockEditor.tsx](src/components/BlockEditor.tsx)
+  - [src/components/OnboardingTour.tsx](src/components/OnboardingTour.tsx)
+  - [tests/components/BlockMultiSelectDrag.test.ts](tests/components/BlockMultiSelectDrag.test.ts)
 
 ### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
 1. **多选状态在按下的瞬间被销毁 (`BlockEditor.tsx:550-557`)**：
@@ -1024,12 +1024,12 @@
 - **决策状态**：已全面落地、验证通过并推送到生产环境
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/components/BlockOSApp.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockOSApp.tsx)
-  - [src/components/DesktopWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/DesktopWorkspace.tsx)
-  - [src/components/mobile/MobileWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/mobile/MobileWorkspace.tsx)
-  - [src/lib/document-outline.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/document-outline.ts)
-  - [src/hooks/useMobileDocuments.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/hooks/useMobileDocuments.ts)
-  - [docs/mobile-reading.md](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/docs/mobile-reading.md)
+  - [src/components/BlockOSApp.tsx](src/components/BlockOSApp.tsx)
+  - [src/components/DesktopWorkspace.tsx](src/components/DesktopWorkspace.tsx)
+  - [src/components/mobile/MobileWorkspace.tsx](src/components/mobile/MobileWorkspace.tsx)
+  - [src/lib/document-outline.ts](src/lib/document-outline.ts)
+  - [src/hooks/useMobileDocuments.ts](src/hooks/useMobileDocuments.ts)
+  - [docs/mobile-reading.md](docs/mobile-reading.md)
 
 ### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
 1. **小屏操作 2D 画布的天然局限**：
@@ -1040,8 +1040,8 @@
 
 ### 2. 决策方案与系统实现架构 (Decisions & Implementation)
 1. **双工作台物理拆分与零水合闪烁分流**：
-   - 电脑端完整保留 [DesktopWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/DesktopWorkspace.tsx)（自由画布、鹰眼地图、多选拖拽、AI 助手）；
-   - 手机端使用独立打造的 [MobileWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/mobile/MobileWorkspace.tsx)（目录、分章阅读、章节整理、轻编辑、随手记）；
+   - 电脑端完整保留 [DesktopWorkspace.tsx](src/components/DesktopWorkspace.tsx)（自由画布、鹰眼地图、多选拖拽、AI 助手）；
+   - 手机端使用独立打造的 [MobileWorkspace.tsx](src/components/mobile/MobileWorkspace.tsx)（目录、分章阅读、章节整理、轻编辑、随手记）；
    - 采用 `useSyncExternalStore` + `matchMedia` 分流，服务端渲染返回安全占位骨架，消灭 Hydration Mismatch。
 2. **智能大纲分章引擎与数据不丢弃保障 (`document-outline.ts`)**：
    - 支持显式配置的 `page.chapters`；未配置时根据标题层级、父子层级和 Group 分组自动生成阅读目录；
@@ -1066,17 +1066,17 @@
 - **决策状态**：已全面落地、验证通过并推送到生产环境
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/lib/block-categories.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/block-categories.ts)
-  - [src/components/CommandMenu.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/CommandMenu.tsx)
-  - [src/components/BlockEditor.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockEditor.tsx)
-  - [src/components/BlockRenderer.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/BlockRenderer.tsx)
-  - [src/components/blocks/CalloutBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/CalloutBlock.tsx)
-  - [src/components/blocks/CountdownBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/CountdownBlock.tsx)
-  - [src/components/blocks/BookmarkBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/BookmarkBlock.tsx)
-  - [src/components/blocks/MermaidBlock.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/blocks/MermaidBlock.tsx)
-  - [src/lib/document-outline.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/document-outline.ts)
-  - [src/components/mobile/MobileBlockContent.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/mobile/MobileBlockContent.tsx)
-  - [tests/components/LarkBlocksAndCategories.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/components/LarkBlocksAndCategories.test.ts)
+  - [src/lib/block-categories.ts](src/lib/block-categories.ts)
+  - [src/components/CommandMenu.tsx](src/components/CommandMenu.tsx)
+  - [src/components/BlockEditor.tsx](src/components/BlockEditor.tsx)
+  - [src/components/BlockRenderer.tsx](src/components/BlockRenderer.tsx)
+  - [src/components/blocks/CalloutBlock.tsx](src/components/blocks/CalloutBlock.tsx)
+  - [src/components/blocks/CountdownBlock.tsx](src/components/blocks/CountdownBlock.tsx)
+  - [src/components/blocks/BookmarkBlock.tsx](src/components/blocks/BookmarkBlock.tsx)
+  - [src/components/blocks/MermaidBlock.tsx](src/components/blocks/MermaidBlock.tsx)
+  - [src/lib/document-outline.ts](src/lib/document-outline.ts)
+  - [src/components/mobile/MobileBlockContent.tsx](src/components/mobile/MobileBlockContent.tsx)
+  - [tests/components/LarkBlocksAndCategories.test.ts](tests/components/LarkBlocksAndCategories.test.ts)
 
 ### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
 1. **组件查找成本与分类缺失**：
@@ -1122,14 +1122,14 @@
 - **决策状态**：已全面落地、自动化测试通过并推送到生产环境
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/lib/ai/safety-filter.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/ai/safety-filter.ts)
-  - [src/lib/sanitize.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/sanitize.ts)
-  - [src/lib/ai/chat.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/ai/chat.ts)
-  - [src/lib/ai/copilot.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/ai/copilot.ts)
-  - [src/app/api/ai/chat/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/ai/chat/route.ts)
-  - [src/app/api/ai/generate/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/ai/generate/route.ts)
-  - [tests/security/ai-security-compliance.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/security/ai-security-compliance.test.ts)
-  - [tests/security/sanitize.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/security/sanitize.test.ts)
+  - [src/lib/ai/safety-filter.ts](src/lib/ai/safety-filter.ts)
+  - [src/lib/sanitize.ts](src/lib/sanitize.ts)
+  - [src/lib/ai/chat.ts](src/lib/ai/chat.ts)
+  - [src/lib/ai/copilot.ts](src/lib/ai/copilot.ts)
+  - [src/app/api/ai/chat/route.ts](src/app/api/ai/chat/route.ts)
+  - [src/app/api/ai/generate/route.ts](src/app/api/ai/generate/route.ts)
+  - [tests/security/ai-security-compliance.test.ts](tests/security/ai-security-compliance.test.ts)
+  - [tests/security/sanitize.test.ts](tests/security/sanitize.test.ts)
 
 ### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
 1. **AI 原生安全敞口与脆弱性 (OWASP Top 10 for LLM Applications)**：
@@ -1169,20 +1169,20 @@
 - **决策状态**：已全面落地实施、26 套自动化测试通过、Next.js 生产构建完成、Playwright 真机 E2E 验证闭环
 - **参与决策人**：用户 (Architect & Decision Maker), Antigravity AI Pair Engineer
 - **关联文件**：
-  - [src/lib/db.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/db.ts)
-  - [src/lib/api-keys.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/api-keys.ts)
-  - [src/lib/auth-utils.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/lib/auth-utils.ts)
-  - [src/middleware.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/middleware.ts)
-  - [src/app/api/open/keys/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/keys/route.ts)
-  - [src/app/api/open/v1/canvas/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/v1/canvas/route.ts)
-  - [src/app/api/open/v1/blocks/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/v1/blocks/route.ts)
-  - [src/app/api/open/v1/mcp/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/open/v1/mcp/route.ts)
-  - [src/app/api/ai/command/route.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/app/api/ai/command/route.ts)
-  - [src/components/CommandPalette.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/CommandPalette.tsx)
-  - [src/components/DesktopWorkspace.tsx](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/src/components/DesktopWorkspace.tsx)
-  - [tests/api/external-agent-mcp.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/api/external-agent-mcp.test.ts)
-  - [tests/components/ai-command-subblock.test.ts](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/components/ai-command-subblock.test.ts)
-  - [tests/e2e-ai-command-subblock.js](file:///d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/tests/e2e-ai-command-subblock.js)
+  - [src/lib/db.ts](src/lib/db.ts)
+  - [src/lib/api-keys.ts](src/lib/api-keys.ts)
+  - [src/lib/auth-utils.ts](src/lib/auth-utils.ts)
+  - [src/middleware.ts](src/middleware.ts)
+  - [src/app/api/open/keys/route.ts](src/app/api/open/keys/route.ts)
+  - [src/app/api/open/v1/canvas/route.ts](src/app/api/open/v1/canvas/route.ts)
+  - [src/app/api/open/v1/blocks/route.ts](src/app/api/open/v1/blocks/route.ts)
+  - [src/app/api/open/v1/mcp/route.ts](src/app/api/open/v1/mcp/route.ts)
+  - [src/app/api/ai/command/route.ts](src/app/api/ai/command/route.ts)
+  - [src/components/CommandPalette.tsx](src/components/CommandPalette.tsx)
+  - [src/components/DesktopWorkspace.tsx](src/components/DesktopWorkspace.tsx)
+  - [tests/api/external-agent-mcp.test.ts](tests/api/external-agent-mcp.test.ts)
+  - [tests/components/ai-command-subblock.test.ts](tests/components/ai-command-subblock.test.ts)
+  - [tests/e2e-ai-command-subblock.js](tests/e2e-ai-command-subblock.js)
 
 ### 1. 痛点根因与客观事实证据 (Evidence & Root Cause)
 1. **外部 Agent 接入阻断 (0 编程调用通道)**：

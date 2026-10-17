@@ -215,16 +215,17 @@ BlockOS 现已原生打通 Model Context Protocol (MCP) 标准，使外部独立
     "blockos": {
       "command": "node",
       "args": [
-        "d:/Akko的项目文件/01_AI智能体与创新竞赛/BLOCKOS-with-taoke/scripts/blockos-mcp-stdio.js"
+        "/path/to/BLOCKOS/scripts/blockos-mcp-stdio.js"
       ],
       "env": {
         "BLOCKOS_URL": "https://blockos.hiakkocv.xyz/api/open/v1/mcp",
-        "BLOCKOS_API_KEY": "bk_live_antigravity_agent_probe_key"
+        "BLOCKOS_API_KEY": "your_blockos_api_key_here"
       }
     }
   }
 }
 ```
+*(注：请将 `/path/to/BLOCKOS` 替换为您本地克隆该项目的实际根目录路径)*
 
 #### 场景 B：自研 Python 脚本 / LangChain / AutoGPT (HTTP JSON-RPC)
 无需任何第三方私有库，直接通过标准 HTTP POST 请求调用：
@@ -234,7 +235,7 @@ import requests
 
 BLOCKOS_MCP_URL = "https://blockos.hiakkocv.xyz/api/open/v1/mcp"
 HEADERS = {
-    "Authorization": "Bearer bk_live_antigravity_agent_probe_key",
+    "Authorization": "Bearer your_blockos_api_key_here",
     "Content-Type": "application/json"
 }
 
@@ -319,7 +320,7 @@ print("创建结果:", res.json())
 ### 常见问题与排障备忘 (FAQ)
 
 **Q1：如何为外部 Agent 申请一个独立的 API Key？**
-> 向 `POST /api/open/keys` 发送请求（携带您的管理员 Session Cookie 或通过设置中心），即可生成带有 `bk_live_` 前缀的 64 位十六进制密钥。测试阶段亦可直接使用系统内置的探针 Key：`bk_live_antigravity_agent_probe_key`。
+> 登录 BlockOS 平台后向 `POST /api/open/keys` 发送请求（或通过系统设置中心一键生成），即可生成带有 `bk_live_` 前缀的 64 位安全随机密钥。请妥善保存您的私有 Key，切勿公开或提交至公共仓库。
 
 **Q2：如果我把父 Block 删除了，里面的子 Block 会丢吗？**
 > 绝对不会。BlockOS 实现了**级联安全解耦机制**。当父 Block 被删除时，其挂载的所有子 Block 会被自动安全提升为画布的独立卡片，绝不会发生数据隐式丢失或孤儿悬空。

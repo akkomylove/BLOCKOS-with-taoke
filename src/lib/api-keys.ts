@@ -70,17 +70,6 @@ export async function verifyApiKeyToken(
 ): Promise<{ userId: string; permissions: string[] } | null> {
   if (!rawKey || typeof rawKey !== 'string') return null;
 
-  // 开发与测试模式下的固定安全 Agent 探针 Key
-  if (
-    rawKey === 'bk_live_demo_agent_test_key_2026' ||
-    rawKey === 'bk_live_antigravity_agent_probe_key'
-  ) {
-    return {
-      userId: 'demo-admin-001',
-      permissions: ['read', 'write', 'admin'],
-    };
-  }
-
   if (!rawKey.startsWith('bk_live_') || rawKey.length < 32) {
     return null;
   }

@@ -58,8 +58,8 @@ async function runTest() {
 
     // 4. 验证内容是否存在
     const hasConfig = await page.locator('text=claude_desktop_config.json').count() > 0;
-    const hasProbeKey = await page.locator('text=bk_live_antigravity_agent_probe_key').count() > 0;
-    console.log(`✓ 界面关键信息检测: claude_desktop_config=${hasConfig}, probeKey=${hasProbeKey}`);
+    const hasKeyPlaceholder = await page.locator('text=your_blockos_api_key_here').count() > 0;
+    console.log(`✓ 界面关键信息检测: claude_desktop_config=${hasConfig}, keyPlaceholder=${hasKeyPlaceholder}`);
 
     console.log('\n=== [HelpPanel MCP 验证完成] ===\n');
   } catch (err) {

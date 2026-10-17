@@ -6,7 +6,11 @@
 const readline = require('readline');
 
 const BLOCKOS_URL = process.env.BLOCKOS_URL || 'https://blockos.hiakkocv.xyz/api/open/v1/mcp';
-const API_KEY = process.env.BLOCKOS_API_KEY || 'bk_live_antigravity_agent_probe_key';
+const API_KEY = process.env.BLOCKOS_API_KEY || '';
+
+if (!API_KEY) {
+  process.stderr.write('[BlockOS MCP Bridge] Notice: BLOCKOS_API_KEY environment variable is not set. Please provide a valid API Key in your MCP config.\n');
+}
 
 const rl = readline.createInterface({
   input: process.stdin,
