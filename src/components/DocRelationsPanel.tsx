@@ -24,6 +24,12 @@ export default function DocRelationsPanel({ isOpen, onClose }: DocRelationsPanel
   const setCurrentPage = useBlockStore((state) => state.setCurrentPage);
   const [candidates, setCandidates] = useState<DocCandidate[]>([]);
   const [showReadingGuide, setShowReadingGuide] = useState(true);
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } };
+    window.addEventListener('keydown', close, true);
+    return () => window.removeEventListener('keydown', close, true);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     const docs: DocCandidate[] = [];
@@ -144,13 +150,13 @@ export default function DocRelationsPanel({ isOpen, onClose }: DocRelationsPanel
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col border border-gray-200 dark:border-zinc-700">
+      <div role="dialog" aria-modal="true" aria-label="文档关联推荐" className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col border border-gray-200 dark:border-zinc-700">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-700">
           <div className="flex items-center gap-2">
             <Link2 className="w-5 h-5 text-indigo-500" />
             <h2 className="text-base font-semibold text-gray-900 dark:text-zinc-100">文档关联推荐</h2>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-500" /></button>
+          <button onClick={onClose} aria-label="关闭文档关联" className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-500" /></button>
         </div>
 
         <div className="flex-1 overflow-auto p-5 space-y-4">

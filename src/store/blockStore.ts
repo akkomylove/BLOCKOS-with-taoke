@@ -73,6 +73,7 @@ interface BlockStore {
   canRedo: () => boolean;
   saveHistory: (action?: string, pageId?: string) => void;
   restoreHistory: (index: number) => void;
+  restoreHistoryWithBackup: (index: number) => boolean;
 
   indentBlock: (id: string) => void;
   outdentBlock: (id: string) => void;
@@ -813,6 +814,24 @@ export const useBlockStore = create<BlockStore>()(
         set((state) => {
           state._hydrated = true;
         });
+      },
+
+      restoreHistoryWithBackup: (index) => {
+        const entry = get().history[index];
+        if (!entry || entry.pageId !== get().currentPageId) return false;
+        const target = JSON.parse(JSON.stringify(entry.blocks));
+        const backup = JSON.parse(JSON.stringify(get().blocks));
+        set(state => {
+          const pageId = state.currentPageId;
+          state.history = state.history.slice(-48);
+          state.history.push({ pageId, blocks: backup, timestamp: Date.now(), action: '恢复前备份', blockCount: backup.length });
+          state.history.push({ pageId, blocks: target, timestamp: Date.now() + 1, action: '恢复历史版本', blockCount: target.length });
+          state.blocks = target;
+          state.pageBlocks[pageId] = target;
+          state.historyIndex = state.history.length - 1;
+        });
+        triggerDebouncedSave();
+        return true;
       },
 
       restoreHistory: (index) => {

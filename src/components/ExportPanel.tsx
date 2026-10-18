@@ -3,8 +3,8 @@
 import { X, Download, FileCode, FileText, FileImage, Loader2, CheckCircle2, FileCode2, Table } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
 import { useCollaborationStore } from '@/store/collaborationStore';
-import { useState } from 'react';
-import { escapeHtml, sanitizeHtml } from '@/lib/sanitize';
+import { useState, useEffect, useRef } from 'react';
+import { createClientPdf } from '@/lib/client-pdf';
 
 interface ExportPanelProps {
   isOpen: boolean;
@@ -23,6 +23,25 @@ export default function ExportPanel({ isOpen, onClose }: ExportPanelProps) {
   const [done, setDone] = useState<string | null>(null);
   const [pdfNotice, setPdfNotice] = useState('');
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    dialogRef.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); }
+      if (event.key === 'Tab') {
+        const buttons = dialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
+        if (!buttons?.length) return;
+        const first = buttons[0], last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    };
+    window.addEventListener('keydown', handleKey, true);
+    return () => { window.removeEventListener('keydown', handleKey, true); if (previous?.isConnected) previous.focus(); };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const currentPage = pages.find((p) => p.id === currentPageId);
@@ -34,7 +53,7 @@ export default function ExportPanel({ isOpen, onClose }: ExportPanelProps) {
     a.href = url;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
   };
 
   const markDone = (key: string) => {
@@ -88,72 +107,30 @@ li { margin: 0.25em 0; }
     }, 300);
   };
 
-  const fallbackPrintPdf = (htmlContent: string, docTitle: string) => {
-    const printFrame = document.createElement('iframe');
-    printFrame.title = 'PDF 打印预览';
-    printFrame.setAttribute('sandbox', 'allow-same-origin allow-modals');
-    printFrame.setAttribute('aria-hidden', 'true');
-    printFrame.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:600px;border:0';
-    const fullHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>${escapeHtml(docTitle)}</title>
-<style>
-@media print {
-  @page { margin: 15mm; size: A4; }
-  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-}
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; padding: 24px; color: #1f2329; line-height: 1.6; font-size: 14px; max-width: 800px; margin: 0 auto; }
-h1, h2, h3 { color: #1f2329; margin-top: 1.2em; margin-bottom: 0.4em; }
-h1 { font-size: 22px; border-bottom: 1.5px solid #dee0e3; padding-bottom: 8px; }
-h2 { font-size: 18px; }
-h3 { font-size: 15px; }
-p { margin: 0.5em 0; }
-table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-th, td { border: 1px solid #dee0e3; padding: 8px 12px; text-align: left; }
-th { background: #f7f8fa; font-weight: 600; }
-code { background: #f2f3f5; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; }
-pre { background: #f7f8fa; padding: 12px; border-radius: 6px; border: 1px solid #dee0e3; overflow-x: auto; font-family: monospace; font-size: 12px; }
-blockquote { border-left: 3px solid #3370ff; padding-left: 12px; margin: 1em 0; color: #646a73; }
-img { max-width: 100%; height: auto; }
-</style>
-</head>
-<body>
-  ${sanitizeHtml(htmlContent)}
-</body>
-</html>`;
-    printFrame.addEventListener('load', () => {
-      printFrame.contentWindow?.addEventListener('afterprint', () => printFrame.remove(), { once: true });
-      printFrame.contentWindow?.focus();
-      printFrame.contentWindow?.print();
-      setPdfNotice('已打开浏览器打印窗口，请选择“另存为 PDF”。');
-    }, { once: true });
-    printFrame.srcdoc = fullHtml;
-    document.body.appendChild(printFrame);
-    setTimeout(() => printFrame.remove(), 60000);
-  };
-
   const handleExportPdf = async () => {
     setExporting('pdf');
-    setPdfNotice('');
+    setPdfNotice('正在生成 PDF…');
     const html = exportToHtml();
     try {
-      const res = await fetch('/api/export/pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, title }),
-      });
-      if (!res.ok) throw new Error('PDF 服务暂未就绪');
-      const blob = await res.blob();
+      let blob: Blob;
+      try {
+        const res = await fetch('/api/export/pdf', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html, title }), signal: AbortSignal.timeout(20000),
+        });
+        if (!res.ok) throw new Error();
+        blob = await res.blob();
+        if (!((await blob.slice(0, 5).text()).startsWith('%PDF-'))) throw new Error();
+      } catch {
+        setPdfNotice('正在浏览器中生成 PDF…');
+        blob = await createClientPdf(html, title);
+      }
       triggerDownload(blob, `${title}.pdf`);
       markDone('pdf');
-    } catch {
-      // 客户端平滑降级为原生打印另存为 PDF
-      fallbackPrintPdf(html, title);
-    } finally {
-      setExporting(null);
-    }
+      setPdfNotice('PDF 已生成并开始下载。');
+    } catch (error) {
+      setPdfNotice(error instanceof Error ? error.message : 'PDF 生成失败，请重试');
+    } finally { setExporting(null); }
   };
 
   const handleExportWord = () => {
@@ -278,15 +255,15 @@ img { max-width: 100%; height: auto; }
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+    <div className="fixed inset-0 z-[220] flex items-center justify-center" onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+      <div data-testid="export-backdrop" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" className="relative w-full max-w-md bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-800/60">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
               <Download className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">导出页面</h3>
+            <h3 id="export-dialog-title" className="text-sm font-semibold text-gray-900 dark:text-zinc-100">导出页面</h3>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300" aria-label="关闭导出">
             <X className="w-4 h-4" />
@@ -340,6 +317,7 @@ img { max-width: 100%; height: auto; }
               </button>
             ))}
           </div>
+          <div className="mt-4 flex justify-end"><button onClick={onClose} className="rounded-lg border border-line px-4 py-2 text-sm text-content-secondary">取消</button></div>
         </div>
       </div>
     </div>

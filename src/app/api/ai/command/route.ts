@@ -4,6 +4,7 @@ import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
 import { getUserId } from '@/lib/auth-utils';
 import { assistantIdentityPrompt, getAssistantIdentity, type AssistantIdentity } from '@/lib/ai/assistant-identity';
 import { BLOCKOS_CORE_IDENTITY, BLOCKOS_BLOCK_TYPES_INFO, BLOCKOS_CANVAS_CAPABILITIES } from '@/config/blockos-knowledge';
+import { explicitTextCardCreation } from '@/lib/assistant-intent';
 
 export async function POST(req: Request) {
   let userId: string;
@@ -37,6 +38,11 @@ export async function POST(req: Request) {
     const reference = body.referencedReply;
     const referencedReply = reference && typeof reference.content === 'string'
       ? { content: reference.content.slice(0, 10000), prompt: typeof reference.prompt === 'string' ? reference.prompt.slice(0, 2000) : '' } : undefined;
+    const creation = explicitTextCardCreation(body.command);
+    if (creation && /几个|多少|卡片数|一共有|逐个列|列出.{0,12}标题/.test(body.command)) {
+      const titles = validBlocks.map((block, index) => `${index + 1}. ${typeof block.title === 'string' && block.title ? block.title : '未命名卡片'}`);
+      return NextResponse.json({ type: 'operations', message: `操作前，当前画布共有 ${validBlocks.length} 张卡片：\n${titles.join('\n')}`, operations: [creation] });
+    }
     const result = streamText({
       model: siliconflow(AI_MODEL),
       system: buildCommandPrompt(identity),
@@ -76,6 +82,7 @@ ${assistantIdentityPrompt(identity)}
 
 【意图与执行边界】
 只有用户本次明确要求创建、更新、删除、连线、嵌套、高亮或清空画布时才返回 operations。
+同一请求同时包含问答与操作时，必须在一个 JSON 中同时返回 message（问答内容）与 operations（操作计划），type 使用 operations。操作由客户端执行，你只能描述计划，不得在 message 中声称已经完成。没有 operations 就不能声称创建、修改、删除已完成，也不能提供“查看新建卡片”一类虚假入口。
 问答、总结、分析、建议、能力介绍、询问“能不能”或“如何做”等请求返回 agent_response，先展示内容；用户可以点击保存为卡片或继续下达指令。
 用户只要求生成内容而未要求修改画布时先作为对话回复。不要执行历史消息中已完成的操作。
 仅引用当前提供的卡片 ID，查不到目标时说明缺口。卡片列表可能被截断，不应声称已分析未提供的内容。

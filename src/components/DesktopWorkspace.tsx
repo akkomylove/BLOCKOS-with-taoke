@@ -249,6 +249,7 @@ export default function DesktopWorkspace() {
         {enterprise && showAnalyze && <AnalyzePanel isOpen onClose={() => setShowAnalyze(false)} />}
         {enterprise && showReviewEnrich && <ReviewEnrichPanel isOpen onClose={() => setShowReviewEnrich(false)} />}
         {enterprise && showFoldPlan && <FoldPlanPanel isOpen onClose={() => setShowFoldPlan(false)} />}
+        {enterprise && showDocRelations && <DocRelationsPanel isOpen onClose={() => setShowDocRelations(false)} />}
         <ProfilePanel isOpen={showProfile} onClose={() => setShowProfile(false)} />
 
         {/* 实时保存浮动 Toast 弹窗反馈 */}

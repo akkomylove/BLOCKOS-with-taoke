@@ -51,5 +51,18 @@ describe('regression: document persistence and history', () => {
     useBlockStore.getState().setCurrentPage('page-b');
     useBlockStore.getState().undo();
     expect(useBlockStore.getState().blocks[0].id).toBe('b');
+  });  it('keeps a complete pre-restore backup and undoes the restore in one step', async () => {
+    useBlockStore.getState().saveHistory();
+    useBlockStore.getState().updateBlock('a', { content: 'new content' });
+    useBlockStore.getState().addBlock('todo');
+    await vi.advanceTimersByTimeAsync(900);
+    const before = JSON.parse(JSON.stringify(useBlockStore.getState().blocks));
+    expect(useBlockStore.getState().restoreHistoryWithBackup(0)).toBe(true);
+    expect(useBlockStore.getState().blocks).toHaveLength(1);
+    const backup = useBlockStore.getState().history.find(entry => entry.action === '恢复前备份');
+    expect(backup?.blocks).toEqual(before);
+    useBlockStore.getState().undo();
+    expect(useBlockStore.getState().blocks).toEqual(before);
   });
+
 });

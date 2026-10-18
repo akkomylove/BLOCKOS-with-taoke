@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBlockStore } from '@/store/blockStore';
 import { executeCanvasOperations, extractStreamingDisplay, type ActionSuggestion, type AgentResponsePayload, type Operation } from '@/lib/canvas-assistant';
+import { explicitTextCardCreation, requestsCanvasChange } from '@/lib/assistant-intent';
 
 export interface AssistantMessage {
   id: string;
@@ -39,6 +40,8 @@ export function useCanvasAssistant() {
       { id: assistantId, role: 'assistant', content: '', prompt: trimmed },
     ]);
     setLoading(true);
+    const requiredCreation = explicitTextCardCreation(trimmed);
+    const expectsChange = requestsCanvasChange(trimmed);
     const update = (patch: Partial<AssistantMessage>) => {
       if (requestRef.current !== controller) return;
       setMessages(previous => previous.map(message => message.id === assistantId ? { ...message, ...patch } : message));
@@ -76,7 +79,7 @@ export function useCanvasAssistant() {
         const { done, value } = await reader.read();
         if (done) break;
         raw += decoder.decode(value, { stream: true });
-        update({ content: extractStreamingDisplay(raw) });
+        update({ content: expectsChange ? '正在分析请求并准备画布操作…' : extractStreamingDisplay(raw) });
       }
       raw += decoder.decode();
       // Never apply operations from an interrupted request or to another document.
@@ -90,12 +93,14 @@ export function useCanvasAssistant() {
       try { payload = JSON.parse(text); }
       catch {
         if (text.startsWith('{') || text.startsWith('[')) throw new Error('AI 回复不完整，请重试；本次未执行画布操作');
-        update({ content: text || '未收到有效回复，请重试' });
+        update({ content: expectsChange ? '没有收到可执行的画布操作，本次未修改任何卡片，请重试。' : (text || '未收到有效回复，请重试'), error: expectsChange });
         return true;
       }
       if (!payload || typeof payload !== 'object') throw new Error('AI 回复格式异常，请重试');
-      if (Array.isArray(payload) || payload.type === 'operations') {
-        const operations = Array.isArray(payload) ? payload : payload.operations;
+      const operations = Array.isArray(payload) ? payload : (payload.operations ?? []);
+      if (!Array.isArray(operations)) throw new Error('AI 操作格式异常，本次未执行画布操作');
+      if (requiredCreation && !operations.some(op => op?.action === 'createBlock' && op.title === requiredCreation.title)) operations.push(requiredCreation);
+      if (operations.length > 0 || (!Array.isArray(payload) && payload.type === 'operations')) {
         if (!Array.isArray(operations) || operations.some(operation => !operation || typeof operation.action !== 'string')) {
           throw new Error('AI 操作格式异常，本次未执行画布操作');
         }
@@ -109,11 +114,22 @@ export function useCanvasAssistant() {
             });
           });
         }
-        update({ content: results.length ? '已处理画布操作' : '没有找到可执行的画布操作，请补充目标卡片或具体要求', operations: results });
+        const answer = !Array.isArray(payload) && typeof payload.message === 'string' ? payload.message : '';
+        update({ content: results.length ? [answer, '已处理画布操作'].filter(Boolean).join('\n\n') : '没有找到可执行的画布操作，请补充目标卡片或具体要求', operations: results });
       } else {
+        if (Array.isArray(payload)) throw new Error('没有收到可执行的画布操作');
+        if (expectsChange) {
+          update({ content: '没有收到可执行的画布操作，本次未修改任何卡片。请重试或把操作拆开描述。', error: true });
+          return false;
+        }
+        const answer = typeof payload.message === 'string' ? payload.message : (typeof payload.summary === 'string' ? payload.summary : '请补充一下你希望处理的内容。');
+        if (/(?:我(?:已经|已|刚刚)|已成功)[^。！\n]{0,15}(?:新建|创建|删除|修改|更新)/.test(answer)) {
+          update({ content: 'AI 没有返回可执行的画布操作，本次没有修改画布。请明确描述需要执行的操作后重试。', error: true });
+          return false;
+        }
         const suggestions = Array.isArray(payload.actionSuggestions)
-          ? payload.actionSuggestions.filter(item => item && typeof item.label === 'string' && typeof item.command === 'string').slice(0, 4) : [];
-        update({ content: typeof payload.message === 'string' ? payload.message : (typeof payload.summary === 'string' ? payload.summary : '请补充一下你希望处理的内容。'), suggestions });
+          ? payload.actionSuggestions.filter(item => item && typeof item.label === 'string' && typeof item.command === 'string' && !/查看.*(?:新建|创建)|跳转.*(?:新建|创建)/.test(item.label)).slice(0, 4) : [];
+        update({ content: answer, suggestions });
       }
       if (!Array.isArray(payload) && typeof payload.roleLabel === 'string') setRoleLabel(payload.roleLabel.slice(0, 60));
       return true;

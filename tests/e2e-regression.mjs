@@ -210,14 +210,22 @@ try {
     assert.equal((await response.body()).subarray(0, 5).toString(), '%PDF-');
     assert.match(response.headers()['content-disposition'], /filename\*/);
   });
-  await check('D-09 unavailable PDF service falls back to a printable document', async () => {
+  await check('D-09 HTTP 503 still downloads a real client PDF', async () => {
     await page.goto(base + '/');
     await page.getByTitle('导出', { exact: true }).click();
     await page.route('**/api/export/pdf', route => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
+    const downloading = page.waitForEvent('download', { timeout: 60000 });
     await page.getByRole('button', { name: /^PDF/ }).click();
-    await page.getByText('已打开浏览器打印窗口，请选择“另存为 PDF”。').waitFor();
-    const frame = page.frameLocator('iframe[title="PDF 打印预览"]');
-    await frame.locator('body').waitFor({ state: 'attached' });
+    const download = await downloading;
+    const output = 'scratch/regression-client-export.pdf';
+    await download.saveAs(output);
+    const { readFile } = await import('node:fs/promises');
+    const bytes = await readFile(output);
+    assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+    assert.ok(bytes.length > 5000);
+    assert.match(bytes.toString('latin1'), /\/Type\s*\/Page\b/);
+    await page.getByText('PDF 已生成并开始下载。').waitFor();
+    assert.equal(await page.getByText(/已打开浏览器打印/).count(), 0);
     await page.unroute('**/api/export/pdf');
   });
   await page.goto(base + '/');
@@ -266,6 +274,76 @@ try {
     await card.getByRole('button', { name: '运行', exact: true }).click();
     await card.getByText('undefined undefined undefined', { exact: true }).waitFor();
     assert.equal((await page.title()).includes('ISOL='), false);
+  });
+  await check('D-26 export dialog closes with Escape, backdrop and cancel', async () => {
+    await page.getByTitle('导出', { exact: true }).click();
+    await page.getByRole('dialog', { name: '导出页面' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: '导出页面' }).waitFor({ state: 'hidden' });
+    await page.getByTitle('导出', { exact: true }).click();
+    await page.mouse.click(10, 400);
+    await page.getByRole('dialog', { name: '导出页面' }).waitFor({ state: 'hidden' });
+    await page.getByTitle('导出', { exact: true }).click();
+    await page.getByRole('dialog', { name: '导出页面' }).getByRole('button', { name: '取消', exact: true }).click();
+    await page.getByRole('dialog', { name: '导出页面' }).waitFor({ state: 'hidden' });
+  });
+  await check('D-25 enterprise document relations mounts; personal mode hides its entry', async () => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.getByTitle('文档关联', { exact: true }).click();
+    await page.getByText('文档关联推荐', { exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    // The existing panel has a close icon; navigate out for the mode gate check.
+    await api('/api/account', 'PATCH', { mode: 'personal' });
+    await page.reload();
+    await page.getByTitle('AI 助手', { exact: true }).waitFor();
+    assert.equal(await page.getByTitle('文档关联', { exact: true }).count(), 0);
+  });
+  await check('D-28 compound query and named creation really execute through the API', async () => {
+    await page.unroute('**/api/ai/command');
+    const before = (await api(`/api/pages/${templateId}/blocks`)).blocks;
+    await page.getByTitle('AI 助手', { exact: true }).click();
+    await page.getByLabel('向 AI 助手提问或发送画布指令').fill('当前画布上一共有几个卡片？请逐个列出它们的标题，另外新建一个正文卡片，标题写 REG3-AGENT块');
+    const saved = waitResponse(response => response.url().endsWith(`/api/pages/${templateId}/blocks`) && response.request().method() === 'PUT');
+    const requested = waitResponse(response => response.url().endsWith('/api/ai/command'));
+    await page.getByRole('button', { name: '发送', exact: true }).click();
+    assert.ok((await requested).ok());
+    assert.ok((await saved).ok());
+    const after = (await api(`/api/pages/${templateId}/blocks`)).blocks;
+    assert.equal(after.length, before.length + 1);
+    assert.equal(after.filter(block => block.title === 'REG3-AGENT块').length, 1);
+    assert.ok(await page.evaluate(() => localStorage.getItem('block-os-storage').includes('REG3-AGENT块')));
+    await page.getByRole('button', { name: '关闭 AI 助手', exact: true }).click();
+  });
+  await check('D-28 model text-only false completion is repaired for explicit named creation', async () => {
+    await page.route('**/api/ai/command', route => route.fulfill({ json: { type: 'agent_response', message: '回答已整理，我已经新建了卡片', actionSuggestions: [{ label: '查看新建卡片', command: '查看刚才的卡片' }] } }));
+    await page.getByTitle('AI 助手', { exact: true }).click();
+    await page.getByLabel('向 AI 助手提问或发送画布指令').fill('总结当前内容，另外新建一个正文卡片，标题写 REG3-REPAIRED');
+    const saved = waitResponse(response => response.url().endsWith(`/api/pages/${templateId}/blocks`) && response.request().method() === 'PUT');
+    await page.getByRole('button', { name: '发送', exact: true }).click();
+    assert.ok((await saved).ok());
+    assert.ok((await api(`/api/pages/${templateId}/blocks`)).blocks.some(block => block.title === 'REG3-REPAIRED'));
+    assert.equal(await page.getByRole('button', { name: '查看新建卡片', exact: true }).count(), 0);
+    await page.getByRole('button', { name: '关闭 AI 助手', exact: true }).click();
+  });
+  await check('D-27 restore requires confirmation, preserves backup and supports undo', async () => {
+    const before = (await api(`/api/pages/${templateId}/blocks`)).blocks;
+    await page.getByTitle('历史版本', { exact: true }).click();
+    const entry = page.getByRole('button').filter({ hasText: '恢复此版本' }).last();
+    await entry.click();
+    await page.getByRole('alertdialog', { name: '确认恢复此版本？' }).waitFor();
+    assert.equal((await api(`/api/pages/${templateId}/blocks`)).blocks.length, before.length);
+    await page.getByRole('button', { name: '取消', exact: true }).click();
+    assert.equal((await api(`/api/pages/${templateId}/blocks`)).blocks.length, before.length);
+    await entry.click();
+    const saved = waitResponse(response => response.url().endsWith(`/api/pages/${templateId}/blocks`) && response.request().method() === 'PUT');
+    await page.getByRole('button', { name: '确认恢复', exact: true }).click();
+    assert.ok((await saved).ok());
+    await page.getByRole('button', { name: '撤销这次恢复', exact: true }).waitFor();
+    assert.ok(await page.evaluate(() => JSON.parse(localStorage.getItem('block-os-storage')).state.history.some(entry => entry.action === '恢复前备份')));
+    const undoSaved = waitResponse(response => response.url().endsWith(`/api/pages/${templateId}/blocks`) && response.request().method() === 'PUT');
+    await page.getByRole('button', { name: '撤销这次恢复', exact: true }).click();
+    assert.ok((await undoSaved).ok());
+    assert.deepEqual((await api(`/api/pages/${templateId}/blocks`)).blocks.map(block => block.id).sort(), before.map(block => block.id).sort());
   });
   assert.deepEqual(pageErrors, [], 'Unexpected browser page errors');
   await writeFile('scratch/regression-results.json', JSON.stringify({ results, pageErrors }, null, 2));

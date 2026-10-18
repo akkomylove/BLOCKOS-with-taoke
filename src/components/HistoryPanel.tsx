@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Clock, RotateCcw, ChevronLeft, ChevronRight, FileText, Plus, Trash2, Edit3, History } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
 
@@ -50,18 +50,22 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
 
   const currentPageId = useBlockStore((state) => state.currentPageId);
   const pages = useBlockStore((state) => state.pages);
+  const blocks = useBlockStore(state => state.blocks);
+  const [pendingRestore, setPendingRestore] = useState<(typeof history)[number] | null>(null);
+  const [restored, setRestored] = useState<{ pageId: string; index: number; blocks: typeof blocks } | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        e.stopPropagation();
+        if (pendingRestore) setPendingRestore(null); else onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, onClose, pendingRestore]);
 
   useEffect(() => {
     if (isOpen) {
@@ -78,8 +82,16 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
     .filter((entry) => entry.pageId === currentPageId);
 
   const handleRestore = (index: number) => {
-    useBlockStore.getState().restoreHistory(index);
-    onClose();
+    setPendingRestore(history[index]);
+  };
+  const confirmRestore = () => {
+    const state = useBlockStore.getState();
+    const index = state.history.indexOf(pendingRestore!);
+    if (state.restoreHistoryWithBackup(index)) {
+      const after = useBlockStore.getState();
+      setRestored({ pageId: after.currentPageId, index: after.historyIndex, blocks: after.blocks });
+    }
+    setPendingRestore(null);
   };
 
   const formatTime = (ts: number) => {
@@ -96,7 +108,11 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh]">
       <div className="absolute inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-xs" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#1a1c20] border border-line dark:border-zinc-800 rounded-2xl shadow-modal overflow-hidden flex flex-col max-h-[80vh] animate-scale-in">
+      <div role="dialog" aria-modal="true" aria-label="文档版本历史" className="relative w-full max-w-lg bg-white dark:bg-[#1a1c20] border border-line dark:border-zinc-800 rounded-2xl shadow-modal overflow-hidden flex flex-col max-h-[80vh] animate-scale-in">
+        {restored?.pageId === currentPageId && <div role="status" className="px-5 py-3 bg-blue-50 dark:bg-blue-950/30 text-sm text-blue-700 dark:text-blue-200">
+          已恢复历史版本，恢复前内容已备份。
+          {historyIndex === restored.index && blocks === restored.blocks && <button className="ml-2 underline" onClick={() => { useBlockStore.getState().undo(); setRestored(null); }}>撤销这次恢复</button>}
+        </div>}
         <div className="flex items-center justify-between px-6 py-4 border-b border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/60 dark:bg-zinc-900/40">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand-light dark:bg-blue-950/40 text-brand flex items-center justify-center shadow-xs">
@@ -167,7 +183,7 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-semibold text-content dark:text-zinc-200">{meta.label}</span>
+                      <span className="text-xs font-semibold text-content dark:text-zinc-200">{entry.action.startsWith('恢复') ? entry.action : meta.label}</span>
                       {isCurrent && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-brand text-white font-medium shadow-xs">
                           当前
@@ -203,6 +219,16 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
           <span>系统最多保留 50 个快照版本</span>
         </div>
       </div>
+      {pendingRestore && <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/40 p-4">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="restore-confirm-title" aria-describedby="restore-confirm-details" className="max-w-md rounded-xl bg-white dark:bg-zinc-900 border border-line p-5 shadow-modal">
+          <h3 id="restore-confirm-title" className="font-semibold text-content dark:text-zinc-100">确认恢复此版本？</h3>
+          <p id="restore-confirm-details" className="mt-3 text-sm leading-relaxed text-content-secondary dark:text-zinc-300">当前有 {blocks.length} 张卡片，目标版本有 {pendingRestore.blocks.length} 张卡片。恢复将替换当前内容，其中 {blocks.filter(block => !pendingRestore.blocks.some(target => target.id === block.id)).length} 张当前卡片不在目标版本中。恢复前会自动保存备份，并提供撤销入口。</p>
+          <div className="mt-5 flex justify-end gap-3">
+            <button autoFocus onClick={() => setPendingRestore(null)} className="rounded-lg border border-line px-4 py-2 text-sm">取消</button>
+            <button onClick={confirmRestore} className="rounded-lg bg-brand text-white px-4 py-2 text-sm">确认恢复</button>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }
