@@ -72,49 +72,53 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh]">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-zinc-800">
+      <div className="absolute inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-xs" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-white dark:bg-[#1a1c20] border border-line dark:border-zinc-800 rounded-2xl shadow-modal overflow-hidden flex flex-col max-h-[80vh] animate-scale-in">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/60 dark:bg-zinc-900/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-zinc-800 flex items-center justify-center">
-              <History className="w-5 h-5 text-gray-700 dark:text-zinc-300" />
+            <div className="w-9 h-9 rounded-xl bg-brand-light dark:bg-blue-950/40 text-brand flex items-center justify-center shadow-xs">
+              <History className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-zinc-100">版本历史</h2>
-              <p className="text-xs text-gray-400 dark:text-zinc-500">点击任意版本可恢复到该状态</p>
+              <h2 className="text-sm font-semibold text-content dark:text-zinc-100">文档版本历史</h2>
+              <p className="text-xs text-content-tertiary dark:text-zinc-500">点击任意快照版本可恢复到该时间点</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={undo}
               disabled={!canUndo()}
-              className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400 disabled:opacity-30 transition-colors"
-              title="撤销"
+              className="p-2 rounded-lg hover:bg-surface-hover dark:hover:bg-zinc-800 text-content-secondary dark:text-zinc-400 disabled:opacity-30 transition-colors"
+              title="撤销 (Ctrl+Z)"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={redo}
               disabled={!canRedo()}
-              className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-600 dark:text-zinc-400 disabled:opacity-30 transition-colors"
-              title="重做"
+              className="p-2 rounded-lg hover:bg-surface-hover dark:hover:bg-zinc-800 text-content-secondary dark:text-zinc-400 disabled:opacity-30 transition-colors"
+              title="重做 (Ctrl+Shift+Z)"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
-            <button onClick={onClose} className="p-2.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-xl text-gray-400 dark:text-zinc-500 transition-colors ml-1">
-              <X className="w-5 h-5" />
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors ml-1"
+              title="关闭"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-page/30 dark:bg-zinc-950/20">
           {pageHistory.length === 0 && (
             <div className="text-center py-16">
-              <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-6 h-6 text-gray-400 dark:text-zinc-500" />
+              <div className="w-12 h-12 rounded-2xl bg-brand-light dark:bg-blue-950/40 text-brand flex items-center justify-center mx-auto mb-3 shadow-xs">
+                <Clock className="w-6 h-6" />
               </div>
-              <p className="text-sm text-gray-500 dark:text-zinc-400">暂无历史记录</p>
-              <p className="text-xs text-gray-400 dark:text-zinc-600 mt-1">编辑文档后将自动保存版本</p>
+              <p className="text-sm font-medium text-content dark:text-zinc-400">暂无版本历史快照</p>
+              <p className="text-xs text-content-tertiary dark:text-zinc-600 mt-1">编辑画布文档后将自动生成版本</p>
             </div>
           )}
 
@@ -127,41 +131,41 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
               <button
                 key={entry.timestamp}
                 onClick={() => handleRestore(entry.index)}
-                className={`w-full text-left rounded-xl border transition-all duration-150 group ${
+                className={`w-full text-left rounded-xl border transition-all duration-150 group p-4 ${
                   isCurrent
-                    ? 'border-blue-400 dark:border-blue-500/50 bg-blue-50/80 dark:bg-blue-500/10 shadow-sm'
-                    : `border-gray-200 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600 bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-950`
+                    ? 'border-brand/50 dark:border-blue-700 bg-brand-light/70 dark:bg-blue-950/30 shadow-xs'
+                    : 'border-line dark:border-zinc-800 hover:border-brand/40 bg-white dark:bg-[#1a1c20] hover:bg-surface-hover'
                 }`}
               >
-                <div className="flex items-center gap-4 px-5 py-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.bg} ${meta.color} border ${meta.border}`}>
-                    {isCurrent ? <RotateCcw className="w-5 h-5 text-blue-600 dark:text-blue-400" /> : meta.icon}
+                <div className="flex items-center gap-3.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.bg} ${meta.color} border ${meta.border} shadow-xs`}>
+                    {isCurrent ? <RotateCcw className="w-4 h-4 text-brand dark:text-blue-400" /> : meta.icon}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-gray-800 dark:text-zinc-200">{meta.label}</span>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-semibold text-content dark:text-zinc-200">{meta.label}</span>
                       {isCurrent && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 font-semibold">
-                          当前版本
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-brand text-white font-medium shadow-xs">
+                          当前
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-zinc-500">
-                      <span className="flex items-center gap-1">
-                        <FileText className="w-3.5 h-3.5" />
-                        {page?.title || '未知页面'}
+                    <div className="flex items-center gap-2 text-xs text-content-tertiary dark:text-zinc-500">
+                      <span className="flex items-center gap-1 truncate max-w-[150px]">
+                        <FileText className="w-3 h-3" />
+                        {page?.title || '未命名文档'}
                       </span>
-                      <span className="text-gray-300 dark:text-zinc-700">·</span>
+                      <span>·</span>
                       <span>{entry.blockCount} 个 Block</span>
                     </div>
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <div className="text-sm text-gray-600 dark:text-zinc-400 font-medium">{formatTime(entry.timestamp)}</div>
+                    <div className="text-xs text-content-secondary dark:text-zinc-400 font-medium">{formatTime(entry.timestamp)}</div>
                     {!isCurrent && (
-                      <div className="text-xs text-gray-400 dark:text-zinc-600 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        点击恢复
+                      <div className="text-[11px] text-brand dark:text-blue-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                        恢复此版本
                       </div>
                     )}
                   </div>
@@ -171,9 +175,9 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
           })}
         </div>
 
-        <div className="px-6 py-4 bg-gray-50 dark:bg-zinc-950 border-t border-gray-100 dark:border-zinc-800 text-xs text-gray-400 dark:text-zinc-500 flex justify-between">
+        <div className="px-6 py-3 bg-[#f7f8fa] dark:bg-zinc-950/60 border-t border-line-subtle dark:border-zinc-800 text-xs text-content-tertiary flex justify-between">
           <span>共 {pageHistory.length} 条记录</span>
-          <span>最多保留 50 条</span>
+          <span>系统最多保留 50 个快照版本</span>
         </div>
       </div>
     </div>

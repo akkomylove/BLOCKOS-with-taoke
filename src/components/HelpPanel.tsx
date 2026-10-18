@@ -49,18 +49,18 @@ const FEATURES = [
 function AccordionItem({ icon: Icon, title, children, defaultOpen = false }: { icon: React.ElementType; title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 dark:border-zinc-700 rounded-xl overflow-hidden bg-white dark:bg-zinc-900">
+    <div className="border border-[#dee0e3] dark:border-[#2e3238] rounded-xl overflow-hidden bg-white dark:bg-[#1f2125] transition-all">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#f0f2f5] dark:hover:bg-[#252830] transition-colors"
       >
-        <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0">
-          <Icon className="w-3.5 h-3.5 text-gray-600 dark:text-zinc-400" />
+        <div className="w-7 h-7 rounded-lg bg-[#eff4ff] dark:bg-[#3370ff]/15 flex items-center justify-center flex-shrink-0">
+          <Icon className="w-3.5 h-3.5 text-[#3370ff] dark:text-[#5b8cff]" />
         </div>
-        <span className="text-sm font-medium text-gray-900 dark:text-zinc-100 flex-1">{title}</span>
-        {open ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-zinc-500" /> : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-zinc-500" />}
+        <span className="text-sm font-medium text-[#1f2329] dark:text-[#f7f8fa] flex-1">{title}</span>
+        {open ? <ChevronUp className="w-4 h-4 text-[#8f959e]" /> : <ChevronDown className="w-4 h-4 text-[#8f959e]" />}
       </button>
-      {open && <div className="px-4 pb-4">{children}</div>}
+      {open && <div className="px-4 pb-4 border-t border-[#eff0f2] dark:border-[#24272e] pt-3">{children}</div>}
     </div>
   );
 }
@@ -186,65 +186,68 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-700">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-2xl max-h-[85vh] bg-white dark:bg-[#1a1c20] border border-[#dee0e3] dark:border-[#2e3238] rounded-2xl shadow-modal overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#eff0f2] dark:border-[#24272e]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-purple-500/15 border border-blue-500/20 flex items-center justify-center">
-              <HelpCircle className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+            <div className="w-8 h-8 rounded-lg bg-[#eff4ff] dark:bg-[#3370ff]/15 border border-[#3370ff]/20 flex items-center justify-center">
+              <HelpCircle className="w-4 h-4 text-[#3370ff] dark:text-[#5b8cff]" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">帮助中心</h2>
-              <p className="text-[11px] text-gray-500 dark:text-zinc-500">BlockOS 使用指南与设置</p>
+              <h2 className="text-sm font-semibold text-[#1f2329] dark:text-[#f7f8fa]">帮助中心</h2>
+              <p className="text-[11px] text-[#8f959e]">BlockOS 使用指南与设置</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500"
+            className="p-1.5 hover:bg-[#f0f2f5] dark:hover:bg-[#252830] rounded-lg transition-colors text-[#646a73] dark:text-[#8f959e]"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex border-b border-gray-200 dark:border-zinc-700 px-3">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-medium transition-all border-b-2 -mb-px ${
-                activeTab === tab.id
-                  ? `${tab.color} border-current`
-                  : 'text-gray-500 dark:text-zinc-500 border-transparent hover:text-gray-800 dark:hover:text-zinc-300'
-              }`}
-            >
-              <div className={`w-5 h-5 rounded-md ${tab.bg} ${tab.color} flex items-center justify-center`}>
-                <tab.icon className="w-3 h-3" />
-              </div>
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex border-b border-[#eff0f2] dark:border-[#24272e] px-4 gap-1 bg-white dark:bg-[#1a1c20]">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-3 text-xs font-medium transition-all border-b-2 -mb-px ${
+                  isActive
+                    ? 'text-[#3370ff] dark:text-[#5b8cff] border-[#3370ff] dark:border-[#5b8cff]'
+                    : 'text-[#646a73] dark:text-[#8f959e] border-transparent hover:text-[#1f2329] dark:hover:text-[#f7f8fa]'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center ${isActive ? 'bg-[#eff4ff] dark:bg-[#3370ff]/20 text-[#3370ff] dark:text-[#5b8cff]' : 'bg-[#f0f2f5] dark:bg-[#252830] text-[#646a73] dark:text-[#8f959e]'}`}>
+                  <tab.icon className="w-3 h-3" />
+                </div>
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50 dark:bg-zinc-950">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#f7f8fa] dark:bg-[#141517]">
           {activeTab === 'guide' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/10">
+              <div className="p-4 rounded-xl bg-[#eff4ff] dark:bg-[#3370ff]/10 border border-[#3370ff]/20">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">快速开始</h3>
+                    <Lightbulb className="w-4 h-4 text-[#3370ff] dark:text-[#5b8cff]" />
+                    <h3 className="text-sm font-semibold text-[#1f2329] dark:text-[#f7f8fa]">快速开始</h3>
                   </div>
                   {onRestartTour && (
                     <button
                       onClick={onRestartTour}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3370ff] hover:bg-[#215fe9] text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
                       重新启动新手交互引导
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-700 dark:text-zinc-400 leading-relaxed">
+                <p className="text-xs text-[#646a73] dark:text-[#8f959e] leading-relaxed">
                   BlockOS 是一个 AI 原生的知识操作系统。在画布上创建不同类型的 Block 来自由组织想法，所有数据自动保存到本地。
                   点击任意 Block 顶部标题栏可自由移动，悬停点击右侧 Sparkles (✨) 按钮可使用 AI 功能。
                 </p>
@@ -593,9 +596,9 @@ print(res.json())`}</pre>
                   配置你自己的 API 密钥以使用自定义模型。留空则使用系统默认的阿里云百炼 API。
                 </p>
                 <div className="space-y-3">
-                  <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800">
-                    <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-400 mb-2">
-                      <Key className="w-3 h-3" />
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#2e3238]">
+                    <label className="flex items-center gap-2 text-xs text-[#646a73] dark:text-[#8f959e] mb-2">
+                      <Key className="w-3 h-3 text-[#3370ff]" />
                       API 密钥
                     </label>
                     <input
@@ -603,13 +606,13 @@ print(res.json())`}</pre>
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder="sk-..."
-                      className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-emerald-500/40 transition-colors"
+                      className="w-full bg-[#f7f8fa] dark:bg-[#141517] border border-[#dee0e3] dark:border-[#2e3238] rounded-lg px-3 py-2 text-sm text-[#1f2329] dark:text-[#f7f8fa] placeholder-[#8f959e] outline-none focus:border-[#3370ff] focus:ring-2 focus:ring-[#3370ff]/10 transition-colors"
                     />
                   </div>
 
-                  <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800">
-                    <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-400 mb-2">
-                      <Globe className="w-3 h-3" />
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#2e3238]">
+                    <label className="flex items-center gap-2 text-xs text-[#646a73] dark:text-[#8f959e] mb-2">
+                      <Globe className="w-3 h-3 text-[#3370ff]" />
                       基础 URL
                     </label>
                     <input
@@ -617,13 +620,13 @@ print(res.json())`}</pre>
                       value={baseURL}
                       onChange={(e) => setBaseURL(e.target.value)}
                       placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
-                      className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-emerald-500/40 transition-colors"
+                      className="w-full bg-[#f7f8fa] dark:bg-[#141517] border border-[#dee0e3] dark:border-[#2e3238] rounded-lg px-3 py-2 text-sm text-[#1f2329] dark:text-[#f7f8fa] placeholder-[#8f959e] outline-none focus:border-[#3370ff] focus:ring-2 focus:ring-[#3370ff]/10 transition-colors"
                     />
                   </div>
 
-                  <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800">
-                    <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-400 mb-2">
-                      <Cpu className="w-3 h-3" />
+                  <div className="p-3 rounded-xl bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#2e3238]">
+                    <label className="flex items-center gap-2 text-xs text-[#646a73] dark:text-[#8f959e] mb-2">
+                      <Cpu className="w-3 h-3 text-[#3370ff]" />
                       模型名称
                     </label>
                     <input
@@ -631,21 +634,21 @@ print(res.json())`}</pre>
                       value={model}
                       onChange={(e) => setModel(e.target.value)}
                       placeholder="qwen3.6-plus"
-                      className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 outline-none focus:border-emerald-500/40 transition-colors"
+                      className="w-full bg-[#f7f8fa] dark:bg-[#141517] border border-[#dee0e3] dark:border-[#2e3238] rounded-lg px-3 py-2 text-sm text-[#1f2329] dark:text-[#f7f8fa] placeholder-[#8f959e] outline-none focus:border-[#3370ff] focus:ring-2 focus:ring-[#3370ff]/10 transition-colors"
                     />
                   </div>
 
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={handleSaveSettings}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-xl transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#3370ff] hover:bg-[#215fe9] text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                     >
                       {saved ? <CheckCircle2 className="w-4 h-4" /> : null}
                       {saved ? '已保存' : '保存设置'}
                     </button>
                     <button
                       onClick={handleClearSettings}
-                      className="px-5 py-2.5 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-400 text-sm rounded-xl transition-colors"
+                      className="px-5 py-2.5 bg-[#f0f2f5] dark:bg-[#252830] hover:bg-[#e4e6eb] dark:hover:bg-[#2e3238] text-[#646a73] dark:text-[#8f959e] text-sm font-medium rounded-lg transition-colors"
                     >
                       恢复默认
                     </button>

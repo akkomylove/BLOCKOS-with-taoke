@@ -21,40 +21,40 @@ export default function ProjectBoardPage() {
   }, [projectId, setCurrentProject]);
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-zinc-900">
-      <div className="flex items-center gap-1 px-4 py-2 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700">
+    <div className="h-screen flex flex-col bg-page dark:bg-[#141517]">
+      <div className="flex items-center gap-1.5 px-6 py-2.5 bg-white dark:bg-[#1a1c20] border-b border-line dark:border-zinc-800">
         <button
           onClick={() => setActiveView('board')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
             activeView === 'board'
-              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-300'
+              ? 'bg-brand-light dark:bg-blue-950/40 text-brand dark:text-blue-300 shadow-xs'
+              : 'text-content-secondary dark:text-zinc-400 hover:text-content hover:bg-surface-hover dark:hover:bg-zinc-800'
           }`}
         >
-          <LayoutGrid className="w-4 h-4" />
-          看板
+          <LayoutGrid className="w-3.5 h-3.5" />
+          任务看板
         </button>
         <button
           onClick={() => setActiveView('gantt')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
             activeView === 'gantt'
-              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-300'
+              ? 'bg-brand-light dark:bg-blue-950/40 text-brand dark:text-blue-300 shadow-xs'
+              : 'text-content-secondary dark:text-zinc-400 hover:text-content hover:bg-surface-hover dark:hover:bg-zinc-800'
           }`}
         >
-          <BarChart3 className="w-4 h-4" />
+          <BarChart3 className="w-3.5 h-3.5" />
           甘特图
         </button>
         <button
           onClick={() => setActiveView('milestones')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
             activeView === 'milestones'
-              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-300'
+              ? 'bg-brand-light dark:bg-blue-950/40 text-brand dark:text-blue-300 shadow-xs'
+              : 'text-content-secondary dark:text-zinc-400 hover:text-content hover:bg-surface-hover dark:hover:bg-zinc-800'
           }`}
         >
-          <Flag className="w-4 h-4" />
-          里程碑
+          <Flag className="w-3.5 h-3.5" />
+          里程碑追踪
         </button>
       </div>
 
