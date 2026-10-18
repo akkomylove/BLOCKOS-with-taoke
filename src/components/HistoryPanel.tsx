@@ -113,7 +113,7 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
               disabled={!canUndo()}
               className="p-2 rounded-lg hover:bg-surface-hover dark:hover:bg-zinc-800 text-content-secondary dark:text-zinc-400 disabled:opacity-30 transition-colors"
               title="撤销 (Ctrl+Z)"
-            >
+             aria-label="撤销 (Ctrl+Z)">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
@@ -121,14 +121,14 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
               disabled={!canRedo()}
               className="p-2 rounded-lg hover:bg-surface-hover dark:hover:bg-zinc-800 text-content-secondary dark:text-zinc-400 disabled:opacity-30 transition-colors"
               title="重做 (Ctrl+Shift+Z)"
-            >
+             aria-label="重做 (Ctrl+Shift+Z)">
               <ChevronRight className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
               className="p-1.5 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors ml-1"
               title="关闭"
-            >
+             aria-label="关闭">
               <X className="w-4 h-4" />
             </button>
           </div>

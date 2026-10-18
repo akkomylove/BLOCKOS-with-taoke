@@ -71,9 +71,9 @@ export default function TextBlock({
   const [showGhost, setShowGhost] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('blockos-ai-autocomplete') !== 'false';
+      return localStorage.getItem('blockos-ai-autocomplete') === 'true';
     }
-    return true;
+    return false;
   });
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRequestTime = useRef(0);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import BlockEditor from '@/components/BlockEditor';
 import Toolbar from '@/components/Toolbar';
 import { Sidebar } from '@/components/Sidebar';
@@ -71,15 +72,67 @@ export default function DesktopWorkspace() {
     return () => controller.abort();
   }, [account?.id]);
 
+  const [saveToast, setSaveToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'saving' | 'success' | 'error';
+    isManual?: boolean;
+  } | null>(null);
+
+  const saveToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerSaveToast = (message: string, type: 'saving' | 'success' | 'error', isManual = false) => {
+    if (saveToastTimer.current) clearTimeout(saveToastTimer.current);
+    setSaveToast({ show: true, message, type, isManual });
+    if (type !== 'saving') {
+      saveToastTimer.current = setTimeout(() => {
+        setSaveToast((prev) => (prev ? { ...prev, show: false } : null));
+      }, 2500);
+    }
+  };
+
+  const handleManualSave = async () => {
+    triggerSaveToast('正在同步保存到云端...', 'saving', true);
+    try {
+      await useBlockStore.getState().syncToServer();
+      const nowTime = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      triggerSaveToast(`画布内容已实时保存到云端 (${nowTime})`, 'success', true);
+    } catch (err: unknown) {
+      triggerSaveToast(err instanceof Error ? err.message : '保存失败，已暂存本地队列', 'error', true);
+    }
+  };
+
+  // 监听云端自动保存完成事件，自动弹出轻量提示
+  const lastSavedAt = useBlockStore((state) => state.lastSavedAt);
+  const prevSavedAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (lastSavedAt && prevSavedAtRef.current !== null && lastSavedAt !== prevSavedAtRef.current) {
+      const timeStr = new Date(lastSavedAt).toLocaleTimeString('zh-CN', { hour12: false });
+      triggerSaveToast(`内容已自动保存到云端 (${timeStr})`, 'success', false);
+    }
+    prevSavedAtRef.current = lastSavedAt;
+  }, [lastSavedAt]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S / Cmd+S 手动保存快捷键
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleManualSave();
+        return;
+      }
+
+      // Ctrl+K / Cmd+K AI 助手中枢快捷键
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setShowAIAssistant((prev) => !prev);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, []);
 
   return (
@@ -164,9 +217,27 @@ export default function DesktopWorkspace() {
         {enterprise && showAnalyze && <AnalyzePanel isOpen onClose={() => setShowAnalyze(false)} />}
         {enterprise && showReviewEnrich && <ReviewEnrichPanel isOpen onClose={() => setShowReviewEnrich(false)} />}
         {enterprise && showFoldPlan && <FoldPlanPanel isOpen onClose={() => setShowFoldPlan(false)} />}
-        {enterprise && showDocRelations && <DocRelationsPanel isOpen onClose={() => setShowDocRelations(false)} />}
-      <ProfilePanel isOpen={showProfile} onClose={() => setShowProfile(false)} />
-    </div>
-  </ThemeProvider>
+        <ProfilePanel isOpen={showProfile} onClose={() => setShowProfile(false)} />
+
+        {/* 实时保存浮动 Toast 弹窗反馈 */}
+        {saveToast?.show && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="fixed top-14 left-1/2 -translate-x-1/2 z-[400] flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/95 dark:bg-[#1a1c20]/95 backdrop-blur-md border border-[#dee0e3] dark:border-zinc-700 shadow-modal text-xs font-medium text-[#1f2329] dark:text-zinc-100 animate-save-toast transition-all select-none"
+          >
+            {saveToast.type === 'saving' && <Loader2 className="w-3.5 h-3.5 text-brand animate-spin" />}
+            {saveToast.type === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+            {saveToast.type === 'error' && <AlertCircle className="w-3.5 h-3.5 text-red-500" />}
+            <span>{saveToast.message}</span>
+            {saveToast.isManual && (
+              <span className="text-[10px] text-content-tertiary bg-gray-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono border border-line-subtle dark:border-zinc-700">
+                Ctrl+S
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </ThemeProvider>
 );
 }

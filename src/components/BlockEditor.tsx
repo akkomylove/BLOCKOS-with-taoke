@@ -989,7 +989,7 @@ export default function BlockEditor({
                   className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] rounded bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-50 dark:hover:bg-blue-900/40 transition-colors"
                   title="移出子 Block（提升为画布顶级 Block）"
                   onMouseDown={(e) => e.stopPropagation()}
-                >
+                 aria-label="移出子 Block（提升为画布顶级 Block）">
                   <ArrowUpFromLine className="w-2.5 h-2.5" />
                   <span>移出</span>
                 </button>
@@ -1038,7 +1038,7 @@ export default function BlockEditor({
                     }}
                     className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-400 dark:text-zinc-500 transition-colors"
                     title="添加标签"
-                  >
+                   aria-label="添加标签">
                     <Tag className="w-3 h-3" />
                   </button>
                   {tagWheelBlockId === block.id && (
@@ -1284,7 +1284,7 @@ export default function BlockEditor({
           onClick={() => setZoom((z) => Math.max(0.3, Number((z - 0.1).toFixed(1))))}
           className="text-xs text-[#646a73] dark:text-[#9ca3af] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] hover:bg-[#eff0f2] dark:hover:bg-[#282a30] w-6 h-6 rounded-md flex items-center justify-center transition-colors"
           title="缩小"
-        >
+         aria-label="缩小">
           −
         </button>
         <span className="text-xs text-[#646a73] dark:text-[#9ca3af] font-medium w-10 text-center">{Math.round(zoom * 100)}%</span>
@@ -1292,7 +1292,7 @@ export default function BlockEditor({
           onClick={() => setZoom((z) => Math.min(2, Number((z + 0.1).toFixed(1))))}
           className="text-xs text-[#646a73] dark:text-[#9ca3af] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] hover:bg-[#eff0f2] dark:hover:bg-[#282a30] w-6 h-6 rounded-md flex items-center justify-center transition-colors"
           title="放大"
-        >
+         aria-label="放大">
           +
         </button>
         <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e] mx-0.5" />
@@ -1303,7 +1303,7 @@ export default function BlockEditor({
           }}
           className="text-xs text-[#646a73] dark:text-[#9ca3af] hover:text-[#3370ff] dark:hover:text-[#4b85ff] hover:bg-[#eff0f2] dark:hover:bg-[#282a30] px-1.5 py-0.5 rounded-md transition-colors font-medium"
           title="重置为 100% 原始比例与原点"
-        >
+         aria-label="重置为 100% 原始比例与原点">
           重置
         </button>
       </div>
@@ -1324,7 +1324,7 @@ export default function BlockEditor({
             onClick={() => addBlockAtCenter(type)}
             className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:text-[#3370ff] dark:hover:text-[#4b85ff] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 rounded-md transition-colors whitespace-nowrap font-medium"
             title={`添加 ${label}`}
-          >
+           aria-label={`添加 ${label}`}>
             <Plus className="w-3.5 h-3.5" />
             {label}
           </button>
@@ -1334,7 +1334,7 @@ export default function BlockEditor({
           onClick={openCommandMenuCentered}
           className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#eff4ff] text-[#3370ff] dark:bg-blue-500/15 dark:text-[#4b85ff] hover:bg-[#e0ebff] dark:hover:bg-blue-500/25 rounded-md transition-colors whitespace-nowrap"
           title="打开多维组件库与分类搜索"
-        >
+         aria-label="打开多维组件库与分类搜索">
           <Sparkles className="w-3.5 h-3.5" />
           更多组件
         </button>
@@ -1544,7 +1544,7 @@ export default function BlockEditor({
                 }}
                 className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#fef3e6] text-[#e37318] hover:bg-[#fde8cf] dark:bg-amber-950/30 dark:hover:bg-amber-900/40 rounded-full transition-colors font-medium"
                 title="移出子 Block（提升为画布独立 Block）"
-              >
+               aria-label="移出子 Block（提升为画布独立 Block）">
                 <ArrowUpFromLine className="w-3 h-3" />
                 移出子 Block
               </button>
@@ -1561,7 +1561,7 @@ export default function BlockEditor({
                   <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-h-48 overflow-y-auto bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-popover py-1">
                     <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#eff0f2] dark:border-[#2e3037]">
                       <span className="text-[11px] text-[#8f959e] dark:text-[#6b7280]">选择父 Block</span>
-                      <button onClick={() => setShowParentPicker(false)} className="text-[#8f959e] hover:text-[#1f2329] dark:hover:text-[#f2f3f5]">
+                      <button onClick={() => setShowParentPicker(false)} className="text-[#8f959e] hover:text-[#1f2329] dark:hover:text-[#f2f3f5]" aria-label="关闭面板">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -1590,7 +1590,7 @@ export default function BlockEditor({
               }}
               className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#fff5f4] text-[#d64b42] hover:bg-[#ffeceb] dark:bg-rose-950/30 dark:hover:bg-rose-900/40 rounded-full transition-colors font-medium"
               title="删除选中的 Block (快捷键 Delete / Backspace)"
-            >
+             aria-label="删除选中的 Block (快捷键 Delete / Backspace)">
               <Trash2 className="w-3 h-3" />
               删除
             </button>

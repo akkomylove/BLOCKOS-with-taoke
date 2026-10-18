@@ -111,7 +111,7 @@ export default function SortableBlock({
                     }}
                     className="hover:bg-red-100 dark:hover:bg-red-900/50 rounded p-0.5 text-blue-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                     title="断开此关联"
-                  >
+                   aria-label="断开此关联">
                     <X className="w-2.5 h-2.5" />
                   </button>
                 </span>
@@ -126,7 +126,7 @@ export default function SortableBlock({
         data-tour="block-ai-btn"
         title="调用 AI"
         className="mt-1.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-zinc-500 hover:text-blue-400 transition-all duration-150"
-      >
+       aria-label="调用 AI">
         <Sparkles className="w-3.5 h-3.5" />
       </button>
     </div>

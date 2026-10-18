@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { chromium } from 'playwright';
+import { chromium, type Browser } from 'playwright';
+import { getUserId } from '@/lib/auth-utils';
 
 export async function POST(req: NextRequest) {
+  try { await getUserId(req); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
+  let browser: Browser | undefined;
   try {
     const { html, title } = await req.json();
 
-    const browser = await chromium.launch();
-    const page = await browser.newPage();
+    if (typeof html !== 'string' || html.length > 2000000) return NextResponse.json({ error: '导出内容格式无效或过大' }, { status: 400 });
+    const candidates = process.env.BLOCKOS_PDF_BROWSER_EXECUTABLE
+      ? [{ executablePath: process.env.BLOCKOS_PDF_BROWSER_EXECUTABLE }, {}, { channel: 'chrome' }, { channel: 'msedge' }]
+      : [{}, { channel: 'chrome' }, { channel: 'msedge' }];
+    for (const candidate of candidates) {
+      try { browser = await chromium.launch({ ...candidate, timeout: 10000 }); break; } catch {}
+    }
+    if (!browser) return NextResponse.json({ error: 'PDF 导出服务暂不可用，可使用浏览器打印另存为 PDF' }, { status: 503 });
+    const page = await browser.newPage({ javaScriptEnabled: false });
+    await page.route('**/*', route => route.abort());
     await page.setContent(`
       <!DOCTYPE html>
       <html>
@@ -68,16 +79,15 @@ export async function POST(req: NextRequest) {
       margin: { top: '20mm', right: '20mm', bottom: '20mm', left: '20mm' },
     });
 
-    await browser.close();
 
     return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${title || 'export'}.pdf"`,
+        'Content-Disposition': `attachment; filename="export.pdf"; filename*=UTF-8''${encodeURIComponent(typeof title === 'string' ? title + '.pdf' : 'export.pdf')}`,
       },
     });
   } catch (error) {
     console.error('PDF export error:', error);
-    return NextResponse.json({ error: 'PDF generation failed' }, { status: 500 });
-  }
+    return NextResponse.json({ error: 'PDF 导出暂时失败，请使用浏览器打印另存为 PDF' }, { status: 500 });
+  } finally { await browser?.close(); }
 }

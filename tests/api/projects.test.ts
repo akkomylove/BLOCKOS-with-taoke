@@ -49,8 +49,8 @@ describe('GET /api/projects', () => {
   it('should return projects for authenticated user', async () => {
     const mockUserId = 'user-123';
     const mockProjects = [
-      { id: 'proj-1', name: 'Project Alpha', team_id: 'team-1' },
-      { id: 'proj-2', name: 'Project Beta', team_id: 'team-1' },
+      { id: 'proj-1', name: 'Project Alpha', team_id: 'team-1', teamId: 'team-1' },
+      { id: 'proj-2', name: 'Project Beta', team_id: 'team-1', teamId: 'team-1' },
     ];
 
     vi.mocked(auth).mockResolvedValue({ userId: mockUserId } as any);

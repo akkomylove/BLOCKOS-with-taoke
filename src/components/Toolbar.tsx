@@ -159,23 +159,31 @@ export default function Toolbar({
         )}
         {/* 保存状态胶囊 */}
         {saveStatus === 'saving' && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-[#e37318] bg-[#fef3e6] dark:bg-amber-950/20 px-2 py-0.5 rounded-full border border-[#fedbb2] dark:border-amber-800/40 shrink-0 font-medium">
+          <span className="inline-flex items-center gap-1 text-[11px] text-[#e37318] bg-[#fef3e6] dark:bg-amber-950/20 px-2.5 py-0.5 rounded-full border border-[#fedbb2] dark:border-amber-800/40 shrink-0 font-medium shadow-xs">
             <Loader2 className="w-3 h-3 animate-spin" />
             <span className="hidden md:inline">保存中</span>
           </span>
         )}
-        {saveStatus === 'saved' && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-[#2ba471] bg-[#e8f8f0] dark:bg-emerald-950/20 px-2 py-0.5 rounded-full border border-[#b7ebcf] dark:border-emerald-800/40 shrink-0 font-medium" title="已同步至云端">
+        {(saveStatus === 'saved' || saveStatus === 'idle') && (
+          <button
+            type="button"
+            onClick={() => {
+              useBlockStore.getState().syncToServer().catch(() => {});
+            }}
+            className="inline-flex items-center gap-1 text-[11px] text-[#2ba471] hover:text-[#188050] bg-[#e8f8f0] hover:bg-[#d8f3e5] dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 px-2.5 py-0.5 rounded-full border border-[#b7ebcf] dark:border-emerald-800/40 shrink-0 font-medium transition-colors cursor-pointer shadow-xs"
+            title="已同步至云端 (点击或按 Ctrl+S 手动保存)"
+           aria-label="已同步至云端 (点击或按 Ctrl+S 手动保存)">
             <Check className="w-3 h-3" />
             <span className="hidden md:inline">已保存</span>
-          </span>
+          </button>
         )}
         {saveStatus === 'error' && (
           <button
+            type="button"
             onClick={() => retrySave()}
-            className="inline-flex items-center gap-1 text-[11px] text-[#d64b42] bg-[#fff5f4] hover:bg-[#ffeceb] dark:bg-rose-950/20 px-2 py-0.5 rounded-full border border-[#ffd9d5] dark:border-rose-800/40 shrink-0 transition-colors cursor-pointer font-medium"
+            className="inline-flex items-center gap-1 text-[11px] text-[#d64b42] bg-[#fff5f4] hover:bg-[#ffeceb] dark:bg-rose-950/20 px-2.5 py-0.5 rounded-full border border-[#ffd9d5] dark:border-rose-800/40 shrink-0 transition-colors cursor-pointer font-medium"
             title={saveError || '云端同步失败，点击重新同步'}
-          >
+           aria-label={saveError || '云端同步失败，点击重新同步'}>
             <AlertCircle className="w-3 h-3" />
             <span>保存失败 (重试)</span>
           </button>
@@ -194,64 +202,64 @@ export default function Toolbar({
       {/* Center: Main Actions (响应式折叠，小屏自动收纳进「更多」) */}
       <div className="flex items-center gap-0.5 min-w-0" data-tour="toolbar-actions">
         {/* AI Group (核心常驻 + 进阶响应式) */}
-        <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手" aria-keyshortcuts="Control+k Meta+k">
+        <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手" aria-keyshortcuts="Control+k Meta+k" aria-label="AI 助手">
           <Sparkles className="w-4 h-4" />
         </button>
-        {enterprise && (<button onClick={onToggleCopilot} className={`${iconBtnBlue} hidden xl:flex`} title="AI Copilot">
+        {enterprise && (<button onClick={onToggleCopilot} className={`${iconBtnBlue} hidden xl:flex`} title="AI Copilot" aria-label="AI Copilot">
           <BrainCircuit className="w-4 h-4" />
         </button>)}
-        {enterprise && (<button onClick={onToggleAnalyze} className={`${iconBtnBlue} hidden xl:flex`} title="工作流分析">
+        {enterprise && (<button onClick={onToggleAnalyze} className={`${iconBtnBlue} hidden xl:flex`} title="工作流分析" aria-label="工作流分析">
           <BarChart3 className="w-4 h-4" />
         </button>)}
-        {enterprise && (<button onClick={onToggleReviewEnrich} className={`${iconBtnBlue} hidden 2xl:flex`} title="角色审阅">
+        {enterprise && (<button onClick={onToggleReviewEnrich} className={`${iconBtnBlue} hidden 2xl:flex`} title="角色审阅" aria-label="角色审阅">
           <ClipboardCheck className="w-4 h-4" />
         </button>)}
-        {enterprise && (<button onClick={onToggleDocRelations} className={`${iconBtnBlue} hidden 2xl:flex`} title="文档关联">
+        {enterprise && (<button onClick={onToggleDocRelations} className={`${iconBtnBlue} hidden 2xl:flex`} title="文档关联" aria-label="文档关联">
           <Link2 className="w-4 h-4" />
         </button>)}
 
         <div className="w-px h-4 bg-[#dee0e3] dark:bg-[#33363e] mx-1 shrink-0" />
 
         {/* Edit Group (撤销 / 重做常驻) */}
-        <button onClick={undo} disabled={!canUndo()} className={`${iconBtn} disabled:opacity-30`} title="撤销">
+        <button onClick={undo} disabled={!canUndo()} className={`${iconBtn} disabled:opacity-30`} title="撤销" aria-label="撤销">
           <Undo2 className="w-4 h-4" />
         </button>
-        <button onClick={redo} disabled={!canRedo()} className={`${iconBtn} disabled:opacity-30`} title="重做">
+        <button onClick={redo} disabled={!canRedo()} className={`${iconBtn} disabled:opacity-30`} title="重做" aria-label="重做">
           <Redo2 className="w-4 h-4" />
         </button>
 
         <div className="w-px h-4 bg-[#dee0e3] dark:bg-[#33363e] mx-1 shrink-0 hidden sm:block" />
 
         {/* View Group (搜索常驻，导航/关系/历史响应式展示) */}
-        <button onClick={onToggleSearch} className={iconBtn} title="全局搜索 (Cmd+K)">
+        <button onClick={onToggleSearch} className={iconBtn} title="全局搜索 (Cmd+K)" aria-label="全局搜索 (Cmd+K)">
           <Search className="w-4 h-4" />
         </button>
-        <button onClick={onToggleGroupPanel} className={`${showGroupPanel ? iconBtnActive : iconBtn} hidden lg:flex`} title="块级导航">
+        <button onClick={onToggleGroupPanel} className={`${showGroupPanel ? iconBtnActive : iconBtn} hidden lg:flex`} title="块级导航" aria-label="块级导航">
           <LayoutGrid className="w-4 h-4" />
         </button>
-        <button onClick={onToggleRelationDrawer} className={`${iconBtn} hidden lg:flex`} title="关系图谱">
+        <button onClick={onToggleRelationDrawer} className={`${iconBtn} hidden lg:flex`} title="关系图谱" aria-label="关系图谱">
           <GitBranch className="w-4 h-4" />
         </button>
-        <button onClick={onToggleHistory} className={`${iconBtn} hidden lg:flex`} title="历史版本">
+        <button onClick={onToggleHistory} className={`${iconBtn} hidden lg:flex`} title="历史版本" aria-label="历史版本">
           <History className="w-4 h-4" />
         </button>
 
         <div className="w-px h-4 bg-[#dee0e3] dark:bg-[#33363e] mx-1 shrink-0 hidden md:block" />
 
         {/* Tools Group (协作与日志中屏展开，导入/导出宽屏展开) */}
-        {enterprise && (<button onClick={() => router.push('/teams')} className={`${iconBtn} hidden md:flex`} title="协作看板">
+        {enterprise && (<button onClick={() => router.push('/teams')} className={`${iconBtn} hidden md:flex`} title="协作看板" aria-label="协作看板">
           <Users className="w-4 h-4" />
         </button>)}
-        {enterprise && (<button onClick={onToggleLogs} className={`${showLogs ? iconBtnActive : iconBtn} hidden md:flex`} title="执行日志">
+        {enterprise && (<button onClick={onToggleLogs} className={`${showLogs ? iconBtnActive : iconBtn} hidden md:flex`} title="执行日志" aria-label="执行日志">
           <Activity className="w-4 h-4" />
         </button>)}
-        <button onClick={onToggleExport} className={`${iconBtn} hidden xl:flex`} title="导出">
+        <button onClick={onToggleExport} className={`${iconBtn} hidden xl:flex`} title="导出" aria-label="导出">
           <Download className="w-4 h-4" />
         </button>
-        <button onClick={onToggleImport} className={`${iconBtn} hidden xl:flex`} title="导入">
+        <button onClick={onToggleImport} className={`${iconBtn} hidden xl:flex`} title="导入" aria-label="导入">
           <Upload className="w-4 h-4" />
         </button>
-        <button onClick={onToggleHelp} className={`${iconBtn} hidden lg:flex`} title="帮助">
+        <button onClick={onToggleHelp} className={`${iconBtn} hidden lg:flex`} title="帮助" aria-label="帮助">
           <HelpCircle className="w-4 h-4" />
         </button>
 
@@ -262,7 +270,7 @@ export default function Toolbar({
             onClick={() => setMoreMenuOpen(!moreMenuOpen)}
             className={`${moreMenuOpen ? iconBtnActive : iconBtn} ${moreMenuOpen ? '!bg-blue-500/15 !text-blue-600 dark:!text-blue-300' : ''}`}
             title="更多工具与功能"
-          >
+           aria-label="更多工具与功能">
             <MoreHorizontal className="w-4 h-4" />
           </button>
         </div>
@@ -273,10 +281,10 @@ export default function Toolbar({
             <div className="w-px h-4 bg-[#dee0e3] dark:bg-[#33363e] mx-1 shrink-0" />
             <div className="flex items-center gap-0.5 px-2 py-0.5 bg-[#eff4ff] dark:bg-blue-500/15 border border-[#c2d6ff] dark:border-blue-500/30 rounded-md shrink-0">
               <span className="text-[#3370ff] dark:text-[#4b85ff] font-medium text-xs min-w-[14px] text-center">{selectedIds.length}</span>
-              <button onClick={handleDuplicateSelected} className={`${iconBtn} !w-6 !h-6`} title="复制">
+              <button onClick={handleDuplicateSelected} className={`${iconBtn} !w-6 !h-6`} title="复制" aria-label="复制">
                 <CopyPlus className="w-3.5 h-3.5 text-[#3370ff] dark:text-[#4b85ff]" />
               </button>
-              <button onClick={handleDeleteSelected} className={`${iconBtn} !w-6 !h-6 hover:bg-[#fff5f4] dark:hover:bg-rose-950/20`} title="删除">
+              <button onClick={handleDeleteSelected} className={`${iconBtn} !w-6 !h-6 hover:bg-[#fff5f4] dark:hover:bg-rose-950/20`} title="删除" aria-label="删除">
                 <Trash2 className="w-3.5 h-3.5 text-[#d64b42]" />
               </button>
             </div>
@@ -284,7 +292,7 @@ export default function Toolbar({
         )}
 
         {isTextSelected && (
-          <button onClick={handleFormatDocument} disabled={formatting} className={`${iconBtnBlue} shrink-0`} title="AI 格式化">
+          <button onClick={handleFormatDocument} disabled={formatting} className={`${iconBtnBlue} shrink-0`} title="AI 格式化" aria-label="AI 格式化">
             <Wand2 className={`w-4 h-4 ${formatting ? 'animate-spin' : ''}`} />
           </button>
         )}
@@ -296,10 +304,10 @@ export default function Toolbar({
           onClick={onOpenProfile}
           className="rounded-md bg-[#eff4ff] dark:bg-blue-500/15 border border-[#c2d6ff]/70 dark:border-blue-500/30 px-2.5 py-1 text-xs font-medium text-[#3370ff] dark:text-[#4b85ff] hover:bg-[#e0ebff] dark:hover:bg-blue-500/25 transition-colors"
           title="切换使用模式"
-        >
+         aria-label={enterprise ? "企业模式" : "个人模式"}>
           {enterprise ? '企业模式' : '个人模式'}
         </button>
-        <button onClick={toggleTheme} className={iconBtn} title="切换主题">
+        <button onClick={toggleTheme} className={iconBtn} title="切换主题" aria-label="切换主题">
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-[#646a73]" />}
         </button>
 
@@ -309,7 +317,7 @@ export default function Toolbar({
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className={`${iconBtn} gap-1 px-2 w-auto`}
             title="个人中心"
-          >
+           aria-label="个人中心">
             <UserCircle className="w-4 h-4" />
             <span className="hidden sm:inline text-xs max-w-[60px] md:max-w-[80px] truncate text-[#1f2329] dark:text-[#f2f3f5] font-medium">
               {userName || '用户'}

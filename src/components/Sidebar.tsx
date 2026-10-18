@@ -93,7 +93,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           onClick={onToggleCollapse}
           className="p-1.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded-lg text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] transition-colors"
           title="展开侧边栏"
-        >
+         aria-label="展开侧边栏">
           <ChevronRight className="w-4 h-4" />
         </button>
         <div className="w-6 h-6 bg-[#3370ff] rounded-md flex items-center justify-center text-[11px] text-white font-bold shadow-xs">
@@ -103,7 +103,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           onClick={() => handleAddPage()}
           className="p-1.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded-lg text-[#8f959e] dark:text-[#6b7280] hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors"
           title="新建页面"
-        >
+         aria-label="新建页面">
           <Plus className="w-4 h-4" />
         </button>
       </div>
@@ -121,7 +121,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           onClick={onToggleCollapse}
           className="p-1 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded-md text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] transition-colors"
           title="折叠侧边栏"
-        >
+         aria-label="折叠侧边栏">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -134,14 +134,14 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
               onClick={() => setShowAddFolder(!showAddFolder)}
               className="p-1 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] transition-colors"
               title="新建文件夹"
-            >
+             aria-label="新建文件夹">
               <FolderPlus className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => handleAddPage()}
               className="p-1 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors"
               title="新建页面"
-            >
+             aria-label="新建页面">
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -212,14 +212,14 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                     onClick={() => handleAddPage(folder.id)}
                     className="p-0.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#3370ff] dark:hover:text-[#4b85ff]"
                     title="在此文件夹新建页面"
-                  >
+                   aria-label="在此文件夹新建页面">
                     <Plus className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => deleteFolder(folder.id)}
                     className="p-0.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#d64b42]"
                     title="删除文件夹"
-                  >
+                   aria-label="删除文件夹">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>

@@ -1326,11 +1326,12 @@ export const useBlockStore = create<BlockStore>()(
 
       loadFromServer: async (pageId) => {
         const userId = get().currentUserId;
+        const beforeLoad = get().pageBlocks[pageId];
         try {
           const response = await fetch(`/api/pages/${encodeURIComponent(pageId)}/blocks`);
           if (!response.ok) throw new Error('文档加载失败');
           const data = await response.json();
-          if (get().currentUserId !== userId || !Array.isArray(data.blocks)) return;
+          if (get().currentUserId !== userId || !Array.isArray(data.blocks) || get().pageBlocks[pageId] !== beforeLoad) return;
           set(state => {
             state.pageBlocks[pageId] = data.blocks;
             if (state.currentPageId === pageId) state.blocks = data.blocks;
@@ -1416,7 +1417,7 @@ export const useBlockStore = create<BlockStore>()(
         agentLogs: state.agentLogs.slice(0, 50),
         agentEnabled: state.agentEnabled,
         history: state.history.slice(-30),
-        historyIndex: state.historyIndex,
+        historyIndex: Math.max(-1, state.historyIndex - Math.max(0, state.history.length - 30)),
         blockDependencies: state.blockDependencies,
       }),
       onRehydrateStorage: () => (state) => {

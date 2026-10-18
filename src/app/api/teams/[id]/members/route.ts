@@ -31,6 +31,9 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    if (!['owner', 'admin'].includes(String(membership[0].role))) return NextResponse.json({ error: '只有团队管理员可以添加成员' }, { status: 403 });
+    if (!['member', 'admin'].includes(role)) return NextResponse.json({ error: '成员角色无效' }, { status: 400 });
+
     const targetInput = userId.trim();
     const targetUsers = query(
       'SELECT id, name, email FROM users WHERE id = ? OR lower(email) = lower(?)',

@@ -4,6 +4,7 @@ import { X, Download, FileCode, FileText, FileImage, Loader2, CheckCircle2, File
 import { useBlockStore } from '@/store/blockStore';
 import { useCollaborationStore } from '@/store/collaborationStore';
 import { useState } from 'react';
+import { escapeHtml, sanitizeHtml } from '@/lib/sanitize';
 
 interface ExportPanelProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export default function ExportPanel({ isOpen, onClose }: ExportPanelProps) {
   const blocks = useBlockStore((state) => state.blocks);
   const [exporting, setExporting] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [pdfNotice, setPdfNotice] = useState('');
 
   if (!isOpen) return null;
 
@@ -87,16 +89,16 @@ li { margin: 0.25em 0; }
   };
 
   const fallbackPrintPdf = (htmlContent: string, docTitle: string) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('浏览器阻止了弹出窗口，请允许弹出窗口以使用原生打印另存为 PDF');
-      return;
-    }
+    const printFrame = document.createElement('iframe');
+    printFrame.title = 'PDF 打印预览';
+    printFrame.setAttribute('sandbox', 'allow-same-origin allow-modals');
+    printFrame.setAttribute('aria-hidden', 'true');
+    printFrame.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:600px;border:0';
     const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<title>${docTitle}</title>
+<title>${escapeHtml(docTitle)}</title>
 <style>
 @media print {
   @page { margin: 15mm; size: A4; }
@@ -118,22 +120,23 @@ img { max-width: 100%; height: auto; }
 </style>
 </head>
 <body>
-  ${htmlContent}
-  <script>
-    window.onload = function() {
-      setTimeout(function() {
-        window.print();
-      }, 300);
-    };
-  </script>
+  ${sanitizeHtml(htmlContent)}
 </body>
 </html>`;
-    printWindow.document.write(fullHtml);
-    printWindow.document.close();
+    printFrame.addEventListener('load', () => {
+      printFrame.contentWindow?.addEventListener('afterprint', () => printFrame.remove(), { once: true });
+      printFrame.contentWindow?.focus();
+      printFrame.contentWindow?.print();
+      setPdfNotice('已打开浏览器打印窗口，请选择“另存为 PDF”。');
+    }, { once: true });
+    printFrame.srcdoc = fullHtml;
+    document.body.appendChild(printFrame);
+    setTimeout(() => printFrame.remove(), 60000);
   };
 
   const handleExportPdf = async () => {
     setExporting('pdf');
+    setPdfNotice('');
     const html = exportToHtml();
     try {
       const res = await fetch('/api/export/pdf', {
@@ -148,7 +151,6 @@ img { max-width: 100%; height: auto; }
     } catch {
       // 客户端平滑降级为原生打印另存为 PDF
       fallbackPrintPdf(html, title);
-      markDone('pdf');
     } finally {
       setExporting(null);
     }
@@ -286,12 +288,13 @@ img { max-width: 100%; height: auto; }
             </div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">导出页面</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300" aria-label="关闭导出">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="p-5">
+          {pdfNotice && <p role="status" className="mb-3 text-xs text-brand">{pdfNotice}</p>}
           <div className="flex items-center gap-4 mb-5 px-3 py-3 bg-gray-100/30 dark:bg-zinc-800/30 rounded-xl">
             <div className="flex-1 min-w-0">
               <div className="text-[10px] text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-0.5">页面名称</div>

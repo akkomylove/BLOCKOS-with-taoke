@@ -104,6 +104,7 @@ export function ProjectImportModal({ isOpen, onClose, projectId }: ProjectImport
             {step === 'upload' ? '导入项目计划书' : step === 'analyzing' ? 'AI 分析中...' : 'AI 分析结果'}
           </h2>
           <button
+            aria-label="关闭计划书导入"
             onClick={() => { reset(); onClose(); }}
             className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg text-gray-400 hover:text-gray-600"
           >
