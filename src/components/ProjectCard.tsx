@@ -130,7 +130,5 @@ export default function ProjectCard({ project, onEdit, onDelete }: ProjectCardPr
         进入看板与协作 →
       </Link>
     </div>
-      </Link>
-    </div>
   );
 }

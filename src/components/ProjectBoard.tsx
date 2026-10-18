@@ -15,17 +15,17 @@ interface ProjectBoardProps {
 const PAGE_SIZE = 10;
 
 const columns = [
-  { id: 'todo', title: '待办', color: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400' },
-  { id: 'in_progress', title: '进行中', color: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' },
-  { id: 'pending_review', title: '待验收', color: 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400' },
-  { id: 'done', title: '已完成', color: 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400' },
+  { id: 'todo', title: '待办', color: 'bg-[#fef3e6] text-[#e37318] dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/40' },
+  { id: 'in_progress', title: '进行中', color: 'bg-[#eff4ff] text-[#3370ff] dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/40' },
+  { id: 'pending_review', title: '待验收', color: 'bg-[#f7f4ff] text-[#8a73df] dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/40' },
+  { id: 'done', title: '已完成', color: 'bg-[#e8f8f0] text-[#2ba471] dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800/40' },
 ];
 
 const priorityColors: Record<string, string> = {
-  low: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
-  medium: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
-  high: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
-  urgent: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+  low: 'bg-[#f2f3f5] dark:bg-zinc-800 text-[#646a73] dark:text-zinc-400',
+  medium: 'bg-[#eff4ff] dark:bg-blue-950/40 text-[#3370ff] dark:text-blue-300',
+  high: 'bg-[#fef3e6] dark:bg-amber-950/40 text-[#e37318] dark:text-amber-300',
+  urgent: 'bg-[#fff5f4] dark:bg-red-950/40 text-[#d64b42] dark:text-red-300',
 };
 
 export default function ProjectBoard({ projectId }: ProjectBoardProps) {
@@ -123,57 +123,58 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900 p-6">
+    <div className="min-h-screen bg-page dark:bg-[#141517] p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/teams')}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-500 dark:text-zinc-400 transition-colors"
+              className="p-2 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-secondary dark:text-zinc-400 transition-colors"
               title="返回团队"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">看板</h1>
+            <h1 className="text-xl font-bold text-content dark:text-zinc-100">研发任务看板</h1>
           </div>
           <button
             onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-lg text-xs font-medium transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover active:bg-brand-active text-white rounded-lg text-xs font-medium transition-all shadow-xs"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            AI 导入
+            AI 计划书导入
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {columns.map((column) => (
             <div key={column.id} className="flex flex-col">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
-                  <div className={`px-3 py-1 rounded-full ${column.color} text-xs font-semibold`}>
+                  <div className={`px-2.5 py-0.5 rounded-full ${column.color} text-xs font-semibold shadow-xs`}>
                     {column.title}
                   </div>
-                  <span className="text-sm text-gray-500 dark:text-zinc-400">
+                  <span className="text-xs font-medium text-content-tertiary dark:text-zinc-400">
                     {getTasksByStatus(column.id).length}
                   </span>
                 </div>
                 <button
                   onClick={() => setAddingToColumn(addingToColumn === column.id ? null : column.id)}
-                  className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
+                  className="p-1.5 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary dark:hover:text-zinc-300 transition-colors"
+                  title="添加任务"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="flex-1 bg-gray-100 dark:bg-zinc-800 rounded-xl p-3 space-y-3">
+              <div className="flex-1 bg-surface-hover/70 dark:bg-zinc-900/60 rounded-xl p-3 space-y-2.5 border border-line-subtle dark:border-zinc-800/80 min-h-[400px]">
                 {addingToColumn === column.id && (
-                  <div className="bg-white dark:bg-zinc-700 rounded-lg p-3 border border-gray-200 dark:border-zinc-600">
+                  <div className="bg-white dark:bg-[#1a1c20] rounded-xl p-3 border border-brand/50 dark:border-blue-700 shadow-xs">
                     <input
                       autoFocus
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
                       placeholder="输入任务标题..."
-                      className="w-full bg-transparent text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 outline-none"
+                      className="w-full bg-transparent text-sm text-content dark:text-zinc-100 placeholder-content-tertiary outline-none"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleAddTask(column.id as 'todo' | 'in_progress' | 'done');
                         if (e.key === 'Escape') {
@@ -182,10 +183,10 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
                         }
                       }}
                     />
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2 mt-2 pt-2 border-t border-line-subtle dark:border-zinc-800">
                       <button
                         onClick={() => handleAddTask(column.id as 'todo' | 'in_progress' | 'done')}
-                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                        className="px-3 py-1 text-xs font-medium text-white bg-brand hover:bg-brand-hover rounded-md shadow-xs transition-colors"
                       >
                         添加
                       </button>
@@ -194,7 +195,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
                           setAddingToColumn(null);
                           setNewTaskTitle('');
                         }}
-                        className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-600 rounded-md"
+                        className="px-3 py-1 text-xs font-medium text-content-secondary dark:text-zinc-400 hover:bg-surface-hover dark:hover:bg-zinc-700 rounded-md transition-colors"
                       >
                         取消
                       </button>
@@ -215,7 +216,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
                 {getTasksByStatus(column.id).length > visibleCount[column.id] && (
                   <button
                     onClick={() => handleLoadMore(column.id)}
-                    className="w-full py-2 text-xs text-gray-500 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-300 flex items-center justify-center gap-1"
+                    className="w-full py-2 text-xs text-content-tertiary hover:text-content-secondary dark:hover:text-zinc-300 flex items-center justify-center gap-1 transition-colors"
                   >
                     <ChevronDown className="w-3 h-3" />
                     加载更多
@@ -223,7 +224,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
                 )}
 
                 {getTasksByStatus(column.id).length === 0 && !addingToColumn && (
-                  <div className="text-center py-8 text-gray-400 dark:text-zinc-500 text-sm">
+                  <div className="text-center py-12 text-content-tertiary dark:text-zinc-500 text-xs">
                     暂无任务
                   </div>
                 )}
@@ -261,32 +262,33 @@ function TaskCard({ task, onUpdateStatus, onUpdatePriority, onDelete }: TaskCard
   const [showMenu, setShowMenu] = useState(false);
 
   return (
-    <div className="bg-white dark:bg-zinc-700 rounded-lg p-4 border border-gray-200 dark:border-zinc-600 hover:shadow-md transition-all group">
+    <div className="bg-white dark:bg-[#1a1c20] rounded-xl p-3.5 border border-line dark:border-zinc-800 hover:border-brand/40 hover:shadow-card transition-all group">
       <div className="flex items-start justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-zinc-100 flex-1">{task.title}</h3>
+        <h3 className="text-sm font-medium text-content dark:text-zinc-100 flex-1 leading-snug">{task.title}</h3>
         <div className="relative">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowMenu(!showMenu);
             }}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-600 rounded text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300 transition-all"
+            className="p-1 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary dark:hover:text-zinc-300 transition-all"
+            title="更多操作"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {showMenu && (
             <div
-              className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-zinc-600 border border-gray-200 dark:border-zinc-500 rounded-md shadow-lg z-10 py-1"
+              className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-xl shadow-popover z-10 py-1"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-2 py-1 text-xs text-gray-500 dark:text-zinc-400">移动到</div>
+              <div className="px-3 py-1 text-[10px] font-medium text-content-tertiary dark:text-zinc-500 uppercase tracking-wider">移动到</div>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onUpdateStatus(task.id, 'todo');
                   setShowMenu(false);
                 }}
-                className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-500"
+                className="w-full px-3 py-1.5 text-left text-xs text-content-secondary dark:text-zinc-200 hover:bg-surface-hover dark:hover:bg-zinc-700 transition-colors"
               >
                 待办
               </button>
@@ -296,7 +298,7 @@ function TaskCard({ task, onUpdateStatus, onUpdatePriority, onDelete }: TaskCard
                   onUpdateStatus(task.id, 'in_progress');
                   setShowMenu(false);
                 }}
-                className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-500"
+                className="w-full px-3 py-1.5 text-left text-xs text-content-secondary dark:text-zinc-200 hover:bg-surface-hover dark:hover:bg-zinc-700 transition-colors"
               >
                 进行中
               </button>
@@ -306,12 +308,12 @@ function TaskCard({ task, onUpdateStatus, onUpdatePriority, onDelete }: TaskCard
                   onUpdateStatus(task.id, 'done');
                   setShowMenu(false);
                 }}
-                className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-500"
+                className="w-full px-3 py-1.5 text-left text-xs text-content-secondary dark:text-zinc-200 hover:bg-surface-hover dark:hover:bg-zinc-700 transition-colors"
               >
                 已完成
               </button>
-              <div className="border-t border-gray-200 dark:border-zinc-500 my-1" />
-              <div className="px-2 py-1 text-xs text-gray-500 dark:text-zinc-400">优先级</div>
+              <div className="border-t border-line-subtle dark:border-zinc-700/80 my-1" />
+              <div className="px-3 py-1 text-[10px] font-medium text-content-tertiary dark:text-zinc-500 uppercase tracking-wider">优先级</div>
               {(['low', 'medium', 'high', 'urgent'] as const).map((p) => (
                 <button
                   key={p}
@@ -320,24 +322,24 @@ function TaskCard({ task, onUpdateStatus, onUpdatePriority, onDelete }: TaskCard
                     onUpdatePriority(task.id, p);
                     setShowMenu(false);
                   }}
-                  className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gray-100 dark:hover:bg-zinc-500 flex items-center gap-2 ${
-                    task.priority === p ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-800 dark:text-zinc-200'
+                  className={`w-full px-3 py-1.5 text-left text-xs hover:bg-surface-hover dark:hover:bg-zinc-700 flex items-center gap-2 transition-colors ${
+                    task.priority === p ? 'text-brand dark:text-blue-300 font-medium' : 'text-content-secondary dark:text-zinc-200'
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${priorityColors[p].split(' ')[0]}`} />
                   {priorityLabels[p]}
                 </button>
               ))}
-              <div className="border-t border-gray-200 dark:border-zinc-500 my-1" />
+              <div className="border-t border-line-subtle dark:border-zinc-700/80 my-1" />
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete();
                   setShowMenu(false);
                 }}
-                className="w-full px-3 py-1.5 text-left text-xs text-red-500 hover:bg-gray-100 dark:hover:bg-zinc-500 flex items-center gap-2"
+                className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2 transition-colors"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3.5 h-3.5" />
                 删除
               </button>
             </div>
@@ -345,16 +347,16 @@ function TaskCard({ task, onUpdateStatus, onUpdatePriority, onDelete }: TaskCard
         </div>
       </div>
       {task.description && (
-        <p className="text-xs text-gray-500 dark:text-zinc-400 mb-3">{task.description}</p>
+        <p className="text-xs text-content-secondary dark:text-zinc-400 mb-2.5 line-clamp-2 leading-relaxed">{task.description}</p>
       )}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pt-1">
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${priorityColors[task.priority]}`}>
+          <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${priorityColors[task.priority]}`}>
             {priorityLabels[task.priority]}
           </span>
         </div>
         {task.dueDate && (
-          <div className="flex items-center gap-1 text-xs text-gray-400">
+          <div className="flex items-center gap-1 text-[11px] text-content-tertiary">
             <Calendar className="w-3 h-3" />
             <span>{new Date(task.dueDate).toLocaleDateString()}</span>
           </div>

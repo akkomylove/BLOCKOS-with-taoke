@@ -104,15 +104,15 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
   return (
     <div className="fixed inset-0 z-50 flex">
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-xs"
         onClick={onClose}
       />
-      <div className="relative ml-auto w-full max-w-lg bg-white dark:bg-zinc-800 shadow-2xl h-full overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 p-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">任务详情</h2>
+      <div className="relative ml-auto w-full max-w-lg bg-white dark:bg-[#1a1c20] shadow-modal h-full overflow-y-auto border-l border-line dark:border-zinc-800">
+        <div className="sticky top-0 bg-white dark:bg-[#1a1c20] border-b border-line-subtle dark:border-zinc-800 px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-base font-semibold text-content dark:text-zinc-100">任务详情</h2>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors"
+            className="p-1.5 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary dark:hover:text-zinc-300 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -122,33 +122,33 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
           {isEditing ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5">
+                <label className="block text-xs font-medium text-content-secondary dark:text-zinc-400 mb-1.5">
                   任务标题
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  className="w-full px-3.5 py-2 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-sm transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5 flex items-center gap-2">
-                  <AlignLeft className="w-3.5 h-3.5" />
+                <label className="block text-xs font-medium text-content-secondary dark:text-zinc-400 mb-1.5 flex items-center gap-2">
+                  <AlignLeft className="w-3.5 h-3.5 text-brand" />
                   任务描述
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
+                  className="w-full px-3.5 py-2 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-sm transition-all resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5 flex items-center gap-2">
-                  <Flag className="w-3.5 h-3.5" />
+                <label className="block text-xs font-medium text-content-secondary dark:text-zinc-400 mb-1.5 flex items-center gap-2">
+                  <Flag className="w-3.5 h-3.5 text-brand" />
                   优先级
                 </label>
                 <div className="flex gap-2">
@@ -157,10 +157,10 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
                       key={key}
                       type="button"
                       onClick={() => setPriority(key as 'low' | 'medium' | 'high' | 'urgent')}
-                      className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                         priority === key
-                          ? `${priorityColors[key as keyof typeof priorityColors]} text-white`
-                          : 'bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-600'
+                          ? `${priorityColors[key as keyof typeof priorityColors]} text-white shadow-xs`
+                          : 'bg-surface-hover dark:bg-zinc-800 text-content-secondary dark:text-zinc-400 hover:bg-line-subtle dark:hover:bg-zinc-700'
                       }`}
                     >
                       {label}
@@ -170,7 +170,7 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5">
+                <label className="block text-xs font-medium text-content-secondary dark:text-zinc-400 mb-1.5">
                   状态
                 </label>
                 <div className="flex gap-2">
@@ -179,10 +179,10 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
                       key={key}
                       type="button"
                       onClick={() => setStatus(key as 'todo' | 'in_progress' | 'done')}
-                      className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                         status === key
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-zinc-400 hover:bg-gray-200 dark:hover:bg-zinc-600'
+                          ? 'bg-brand text-white shadow-xs'
+                          : 'bg-surface-hover dark:bg-zinc-800 text-content-secondary dark:text-zinc-400 hover:bg-line-subtle dark:hover:bg-zinc-700'
                       }`}
                     >
                       {label}
@@ -192,32 +192,32 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5 flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5" />
+                <label className="block text-xs font-medium text-content-secondary dark:text-zinc-400 mb-1.5 flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-brand" />
                   截止日期
                 </label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  className="w-full px-3.5 py-2 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-sm transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 dark:text-zinc-400 mb-1.5 flex items-center gap-2">
-                  <CheckSquare className="w-3.5 h-3.5" />
+                <label className="block text-xs font-medium text-content-secondary dark:text-zinc-400 mb-1.5 flex items-center gap-2">
+                  <CheckSquare className="w-3.5 h-3.5 text-brand" />
                   完成标准 (DoD)
                 </label>
                 <textarea
                   value={dod}
                   onChange={(e) => setDod(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
+                  className="w-full px-3.5 py-2 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-sm transition-all resize-none"
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-2.5 pt-3 border-t border-line-subtle dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -229,7 +229,7 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
                     setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
                     setDod(task.dod || '');
                   }}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-content-secondary dark:text-zinc-300 bg-surface-hover dark:bg-zinc-800 hover:bg-line-subtle dark:hover:bg-zinc-700 rounded-lg transition-colors"
                 >
                   取消
                 </button>
@@ -237,7 +237,7 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
                   type="button"
                   onClick={handleSave}
                   disabled={isUpdating}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-brand hover:bg-brand-hover active:bg-brand-active disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 shadow-xs"
                 >
                   {isUpdating ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -251,16 +251,16 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
           ) : (
             <div className="space-y-6">
               <div>
-                <h3 className={`text-xl font-semibold text-gray-900 dark:text-zinc-100 ${task.status === 'done' ? 'line-through text-gray-400 dark:text-zinc-500' : ''}`}>
+                <h3 className={`text-xl font-semibold text-content dark:text-zinc-100 leading-snug ${task.status === 'done' ? 'line-through text-content-tertiary dark:text-zinc-500' : ''}`}>
                   {task.title}
                 </h3>
                 <div className="flex items-center gap-3 mt-3">
                   <div className={`w-2 h-2 rounded-full ${priorityColors[task.priority]}`} />
-                  <span className="text-sm text-gray-500 dark:text-zinc-400">
+                  <span className="text-xs text-content-secondary dark:text-zinc-400">
                     {priorityLabels[task.priority]}优先级
                   </span>
-                  <span className="text-sm text-gray-500 dark:text-zinc-400">·</span>
-                  <span className="text-sm text-gray-500 dark:text-zinc-400">
+                  <span className="text-xs text-content-tertiary">·</span>
+                  <span className="text-xs text-content-secondary dark:text-zinc-400">
                     {statusLabels[task.status]}
                   </span>
                 </div>
@@ -268,21 +268,21 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
 
               {task.description && (
                 <div>
-                  <div className="text-xs font-medium text-gray-500 dark:text-zinc-400 mb-2">描述</div>
-                  <p className="text-sm text-gray-700 dark:text-zinc-300 whitespace-pre-wrap">
+                  <div className="text-xs font-semibold text-content-tertiary dark:text-zinc-400 mb-2">描述</div>
+                  <p className="text-sm text-content dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
                     {task.description}
                   </p>
                 </div>
               )}
 
               {(task.dueDate || task.dod) && (
-                <div className="space-y-3">
+                <div className="space-y-3 p-3.5 bg-page dark:bg-zinc-900/50 rounded-xl border border-line-subtle dark:border-zinc-800">
                   {task.dueDate && (
                     <div className="flex items-center gap-3">
-                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <Calendar className="w-4 h-4 text-brand" />
                       <div>
-                        <div className="text-xs font-medium text-gray-500 dark:text-zinc-400">截止日期</div>
-                        <div className="text-sm text-gray-700 dark:text-zinc-300">
+                        <div className="text-[11px] font-medium text-content-tertiary dark:text-zinc-400">截止日期</div>
+                        <div className="text-xs font-medium text-content dark:text-zinc-200 mt-0.5">
                           {new Date(task.dueDate).toLocaleDateString()}
                         </div>
                       </div>
@@ -290,8 +290,8 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
                   )}
                   {task.dod && (
                     <div>
-                      <div className="text-xs font-medium text-gray-500 dark:text-zinc-400 mb-2">完成标准</div>
-                      <p className="text-sm text-gray-700 dark:text-zinc-300 whitespace-pre-wrap">
+                      <div className="text-[11px] font-medium text-content-tertiary dark:text-zinc-400 mb-1">完成标准 (DoD)</div>
+                      <p className="text-xs text-content dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
                         {task.dod}
                       </p>
                     </div>
@@ -301,21 +301,21 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
 
               <button
                 onClick={() => setIsEditing(true)}
-                className="w-full px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                className="w-full px-4 py-2 text-sm font-medium text-brand dark:text-blue-300 bg-brand-light dark:bg-blue-950/40 hover:bg-brand-light/80 rounded-lg transition-colors border border-brand/20"
               >
                 编辑任务
               </button>
 
-              <div className="border-t border-gray-200 dark:border-zinc-700 pt-6">
+              <div className="border-t border-line-subtle dark:border-zinc-800 pt-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <MessageSquare className="w-4 h-4 text-gray-400" />
-                  <div className="text-sm font-medium text-gray-900 dark:text-zinc-100">
-                    评论 ({comments.length})
+                  <MessageSquare className="w-4 h-4 text-brand" />
+                  <div className="text-sm font-medium text-content dark:text-zinc-100">
+                    任务讨论 ({comments.length})
                   </div>
                 </div>
 
-                <div className="flex gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                <div className="flex gap-2.5 mb-4">
+                  <div className="w-7 h-7 rounded-full bg-brand flex items-center justify-center text-white text-xs font-medium flex-shrink-0 shadow-xs">
                     我
                   </div>
                   <div className="flex-1 flex gap-2">
@@ -323,44 +323,45 @@ export default function TaskDetail({ task, onClose }: TaskDetailProps) {
                       type="text"
                       value={commentText}
                       onChange={(e) => setCommentText(e.target.value)}
-                      placeholder="添加评论..."
-                      className="flex-1 px-3 py-2 bg-gray-50 dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-sm"
+                      placeholder="添加讨论与备注..."
+                      className="flex-1 px-3.5 py-1.5 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-xs transition-all"
                       onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                     />
                     <button
                       onClick={handleAddComment}
                       disabled={!commentText.trim()}
-                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-hover disabled:opacity-40 transition-colors shadow-xs"
+                      title="发送评论"
                     >
-                      <Send className="w-4 h-4" />
+                      <Send className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                    <div key={comment.id} className="flex gap-2.5 p-2.5 rounded-lg bg-page/60 dark:bg-zinc-900/40 border border-line-subtle dark:border-zinc-800/60">
+                      <div className="w-6 h-6 rounded-full bg-brand-light dark:bg-blue-950/40 text-brand flex items-center justify-center text-xs font-medium flex-shrink-0">
                         {comment.author[0]}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900 dark:text-zinc-100">
+                          <span className="text-xs font-medium text-content dark:text-zinc-100">
                             {comment.author}
                           </span>
-                          <span className="text-xs text-gray-400">
-                            {new Date(comment.createdAt).toLocaleString()}
+                          <span className="text-[10px] text-content-tertiary">
+                            {new Date(comment.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700 dark:text-zinc-300 mt-1">
+                        <p className="text-xs text-content-secondary dark:text-zinc-300 mt-1 leading-relaxed">
                           {comment.content}
                         </p>
                       </div>
                     </div>
                   ))}
                   {comments.length === 0 && (
-                    <div className="text-center py-8 text-sm text-gray-500 dark:text-zinc-400">
-                      暂无评论，开始第一条评论吧
+                    <div className="text-center py-6 text-xs text-content-tertiary dark:text-zinc-500">
+                      暂无讨论记录
                     </div>
                   )}
                 </div>

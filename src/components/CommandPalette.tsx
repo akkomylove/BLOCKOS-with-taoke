@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Sparkles, Send, Loader2, X, Trash2, Zap, Mic, MicOff, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Send, Loader2, X, Zap, Mic, MicOff, CheckCircle2 } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { BlockType } from '@/types/block';

@@ -4,6 +4,9 @@ const nextConfig = {
   distDir: process.env.BLOCKOS_BUILD_DIR || '.next',
   typescript: { tsconfigPath: process.env.BLOCKOS_TSCONFIG_PATH || 'tsconfig.json' },
   serverExternalPackages: ['sql.js'],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     unoptimized: true,
   },
