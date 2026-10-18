@@ -275,6 +275,21 @@ try {
     await card.getByText('undefined undefined undefined', { exact: true }).waitFor();
     assert.equal((await page.title()).includes('ISOL='), false);
   });
+  await check('D-29 code card waits for asynchronous output and preserves output on timeout', async () => {
+    const card = page.locator('[data-block-id="reg-sandbox-ui"]').first();
+    await card.locator('textarea').fill('console.log("SYNC-OK"); setTimeout(function(){ console.log("ASYNC-OK"); }, 600);');
+    await card.getByRole('button', { name: '运行', exact: true }).click();
+    await card.getByText('SYNC-OK', { exact: true }).waitFor();
+    assert.equal(await card.getByText(/执行成功/).count(), 0, 'Must not report success while a timer is pending');
+    await card.getByText('SYNC-OK\nASYNC-OK', { exact: true }).waitFor();
+    await card.getByText(/执行成功/).waitFor();
+    await card.locator('textarea').fill('console.log("BEFORE-TIMEOUT"); setTimeout(() => console.log("TOO-LATE"), 10000);');
+    await card.getByRole('button', { name: '运行', exact: true }).click();
+    await card.getByText('BEFORE-TIMEOUT', { exact: true }).waitFor();
+    await card.getByText(/执行超时，未完成的异步任务或代码已终止/).waitFor();
+    assert.equal(await card.getByText('BEFORE-TIMEOUT', { exact: true }).count(), 1);
+    assert.equal(await card.getByText(/执行成功/).count(), 0);
+  });
   await check('D-26 export dialog closes with Escape, backdrop and cancel', async () => {
     await page.getByTitle('导出', { exact: true }).click();
     await page.getByRole('dialog', { name: '导出页面' }).waitFor();

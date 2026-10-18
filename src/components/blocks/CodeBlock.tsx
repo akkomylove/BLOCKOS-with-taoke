@@ -179,7 +179,9 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
           ${content.replace(/\/\/\s*@ref\s+\w+/g, '')}
         `;
 
-        setRunResult(await runJavaScriptSandbox(wrappedCode, refData));
+        setRunResult(await runJavaScriptSandbox(wrappedCode, refData, {
+          onOutput: output => setRunResult({ output, error: null, duration: Math.round(performance.now() - startTime) }),
+        }));
       } catch (error) {
         setRunResult({
           output: [],
@@ -364,21 +366,18 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
 
       {runResult && (
         <div className={`mt-2 p-3 rounded-lg text-xs font-mono max-h-60 overflow-y-auto overscroll-contain ${
-          runResult.error ? 'bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+          isRunning ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400' : runResult.error ? 'bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
         }`}>
           <div className="flex items-center justify-between mb-1">
             <span className="text-[10px] opacity-70">
-              {runResult.error ? '执行错误' : '执行成功'} · {runResult.duration}ms
+              {isRunning ? '执行中，正在等待代码及异步任务完成（最多 3 秒）' : runResult.error ? '执行错误' : '执行成功'} · {runResult.duration}ms
             </span>
             <button onClick={clearResult} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
               <X className="w-3 h-3" />
             </button>
           </div>
-          {runResult.error ? (
-            <pre className="whitespace-pre-wrap">{runResult.error}</pre>
-          ) : (
-            <pre className="whitespace-pre-wrap">{runResult.output.join('\n') || '无输出'}</pre>
-          )}
+          <pre className="whitespace-pre-wrap">{runResult.output.join('\n') || (isRunning ? '等待输出…' : runResult.error ? '' : '无输出')}</pre>
+          {runResult.error && <pre className="whitespace-pre-wrap mt-1">{runResult.error}</pre>}
         </div>
       )}
     </div>
