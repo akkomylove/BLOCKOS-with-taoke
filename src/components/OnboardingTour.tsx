@@ -112,8 +112,21 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
   }, [enterprise, currentStep]);
   const StepIcon = step.icon;
 
+  const getTargetElement = useCallback(() => {
+    let el = document.querySelector(step.targetSelector) as HTMLElement | null;
+    if (!el && step.targetSelector.includes('guide-block-')) {
+      const match = step.targetSelector.match(/guide-block-[a-z]+/);
+      if (match) {
+        el = document.querySelector(
+          `[data-tour^="${match[0]}"], [data-tour*="${match[0]}"], [data-block-id^="${match[0]}"]`
+        ) as HTMLElement | null;
+      }
+    }
+    return el;
+  }, [step.targetSelector]);
+
   const updateTargetAndCardPos = useCallback(() => {
-    const el = document.querySelector(step.targetSelector) as HTMLElement | null;
+    const el = getTargetElement();
     const cardWidth = Math.min(360, window.innerWidth - 32);
 
     if (!el) {
@@ -174,25 +187,50 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
       left: nextLeft,
       width: cardWidth,
     });
-  }, [currentStep, step]);
+  }, [currentStep, step, getTargetElement]);
 
   useEffect(() => {
     hasUserDraggedRef.current = false;
     const targetBlockMatch = step.targetSelector.match(/guide-block-[a-z]+/);
-    if (targetBlockMatch) {
+    const blockKey = targetBlockMatch ? targetBlockMatch[0] : null;
+
+    if (blockKey) {
       window.dispatchEvent(
-        new CustomEvent('blockos-scroll-to-block', { detail: { blockId: targetBlockMatch[0] } })
+        new CustomEvent('blockos-scroll-to-block', {
+          detail: { blockId: blockKey, tourId: blockKey, selector: step.targetSelector },
+        })
       );
     }
-    const timer = setTimeout(updateTargetAndCardPos, 80);
-    const timer2 = setTimeout(updateTargetAndCardPos, 220);
+
+    // 在平移滑动的 0~600ms 期间通过 rAF 连续同步定位，确保高亮聚焦框与卡片平滑跟随目标卡片飞入
+    let frameId: number;
+    const startTime = performance.now();
+    const duration = 600;
+
+    const trackTarget = (now: number) => {
+      updateTargetAndCardPos();
+      if (now - startTime < duration) {
+        frameId = requestAnimationFrame(trackTarget);
+      }
+    };
+
+    frameId = requestAnimationFrame(trackTarget);
+
+    const timer1 = setTimeout(updateTargetAndCardPos, 80);
+    const timer2 = setTimeout(updateTargetAndCardPos, 200);
+    const timer3 = setTimeout(updateTargetAndCardPos, 450);
+    const timer4 = setTimeout(updateTargetAndCardPos, 650);
+
     return () => {
-      clearTimeout(timer);
+      cancelAnimationFrame(frameId);
+      clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(timer3);
+      clearTimeout(timer4);
     };
   }, [currentStep, step, updateTargetAndCardPos]);
 
-  // 监听窗口 resize 与滚动
+  // 监听窗口 resize、滚动与画布平移变换
   useEffect(() => {
     let animId: number;
     const handleSync = () => {
@@ -201,10 +239,12 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
 
     window.addEventListener('resize', handleSync);
     window.addEventListener('scroll', handleSync, true);
+    window.addEventListener('blockos-canvas-transform', handleSync);
 
     return () => {
       window.removeEventListener('resize', handleSync);
       window.removeEventListener('scroll', handleSync, true);
+      window.removeEventListener('blockos-canvas-transform', handleSync);
       cancelAnimationFrame(animId);
     };
   }, [updateTargetAndCardPos]);

@@ -68,15 +68,51 @@ export default function BlockEditor({
     setZoom(1);
   }, [currentPageId]);
 
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigatingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 监听画布变换，通知导览与外围组件实时同步
+  useEffect(() => {
+    window.dispatchEvent(new Event('blockos-canvas-transform'));
+  }, [pan, zoom]);
+
   // 监听定位特定 Block 居中平移事件（用于教程定位与跳转）
   useEffect(() => {
     const handleScrollTo = (e: Event) => {
-      const customEvent = e as CustomEvent<{ blockId: string }>;
-      const blockId = customEvent.detail?.blockId;
-      if (!blockId) return;
-      const targetBlock = blocks.find((b) => b.id === blockId);
+      const customEvent = e as CustomEvent<{ blockId?: string; selector?: string; tourId?: string }>;
+      const { blockId, selector, tourId } = customEvent.detail || {};
+      const searchKey = blockId || tourId;
+      if (!searchKey && !selector) return;
+
+      // 1. 优先在状态 blocks 中匹配目标卡片（支持精确 ID、tourId、带 userId 后缀前缀匹配）
+      let targetBlock = blocks.find((b) =>
+        (searchKey && b.id === searchKey) ||
+        (searchKey && b.meta?.tourId === searchKey) ||
+        (searchKey && b.id.startsWith(searchKey)) ||
+        (tourId && b.id.includes(tourId)) ||
+        (blockId && b.id.includes(blockId))
+      );
+
+      // 2. 如果状态中没直接命中，且传入了 DOM 选择器，通过 DOM 属性反查
+      if (!targetBlock && selector) {
+        const domEl = document.querySelector(selector);
+        const domBlockId = domEl?.getAttribute('data-block-id');
+        if (domBlockId) {
+          targetBlock = blocks.find((b) => b.id === domBlockId);
+        }
+      }
+
+      const containerW = canvasRef.current?.clientWidth || window.innerWidth;
+
       if (targetBlock) {
-        const containerW = canvasRef.current?.clientWidth || window.innerWidth;
+        // 如果该 Block 是子 Block，自动将父 Block 展开以确保其可见渲染
+        if (targetBlock.parentId) {
+          const parent = blocks.find((p) => p.id === targetBlock.parentId);
+          if (parent && parent.collapsed) {
+            updateBlock(parent.id, { collapsed: false });
+          }
+        }
+
         // 确保目标 Block 处于左侧偏中位置，且右侧稳定留出 380px 空间容纳导览卡片，彻底根除横向跳跃与遮挡
         const targetW = (targetBlock.width || 760) * zoom;
         const totalContentWidth = targetW + 380;
@@ -87,15 +123,52 @@ export default function BlockEditor({
           idealPanX = Math.round(Math.max(20, (containerW - targetW) / 2) - targetBlock.x * zoom);
         }
 
+        // 纵向居中偏上（距顶部 70px），确保卡片与聚焦高亮框完整进入视口中央
+        const idealPanY = Math.round(70 - targetBlock.y * zoom);
+
+        if (navigatingTimerRef.current) clearTimeout(navigatingTimerRef.current);
+        setIsNavigating(true);
         setPan({
           x: idealPanX,
-          y: Math.round(60 - targetBlock.y * zoom),
+          y: idealPanY,
         });
+
+        navigatingTimerRef.current = setTimeout(() => {
+          setIsNavigating(false);
+        }, 450);
+      } else if (selector && canvasRef.current) {
+        // 3. 保底：直接根据 DOM 元素物理位置动态校正画布平移
+        const domEl = document.querySelector(selector) as HTMLElement | null;
+        if (domEl) {
+          const canvasRect = canvasRef.current.getBoundingClientRect();
+          const elRect = domEl.getBoundingClientRect();
+          const elCanvasX = (elRect.left - canvasRect.left - pan.x) / zoom;
+          const elCanvasY = (elRect.top - canvasRect.top - pan.y) / zoom;
+          const targetW = elRect.width;
+          const totalContentWidth = targetW + 380;
+          let idealPanX = 0;
+          if (containerW >= 1200) {
+            idealPanX = Math.round(Math.max(40, (containerW - totalContentWidth) / 2) - elCanvasX * zoom);
+          } else {
+            idealPanX = Math.round(Math.max(20, (containerW - targetW) / 2) - elCanvasX * zoom);
+          }
+          const idealPanY = Math.round(70 - elCanvasY * zoom);
+
+          if (navigatingTimerRef.current) clearTimeout(navigatingTimerRef.current);
+          setIsNavigating(true);
+          setPan({ x: idealPanX, y: idealPanY });
+          navigatingTimerRef.current = setTimeout(() => {
+            setIsNavigating(false);
+          }, 450);
+        }
       }
     };
     window.addEventListener('blockos-scroll-to-block', handleScrollTo);
-    return () => window.removeEventListener('blockos-scroll-to-block', handleScrollTo);
-  }, [blocks, zoom]);
+    return () => {
+      window.removeEventListener('blockos-scroll-to-block', handleScrollTo);
+      if (navigatingTimerRef.current) clearTimeout(navigatingTimerRef.current);
+    };
+  }, [blocks, zoom, pan.x, pan.y, updateBlock]);
 
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
@@ -848,7 +921,7 @@ export default function BlockEditor({
           ...(block.height ? { minHeight: `${block.height}px` } : {}),
         }}
         data-block-id={block.id}
-        data-tour={(block.meta?.tourId as string) || block.id}
+        data-tour={(block.meta?.tourId as string) || block.id.match(/(guide-block-[a-z]+)/)?.[1] || block.id}
       >
         <div className="h-full flex-1 flex flex-col min-h-0 w-full relative">
           {dropTargetId === block.id && (
@@ -1053,6 +1126,7 @@ export default function BlockEditor({
         className="absolute origin-top-left"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transition: isNavigating ? 'transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1)' : 'none',
           width: '10000px',
           height: '10000px',
         }}

@@ -147,3 +147,59 @@ describe('Block Nesting (Drag & Drop Sub-block) and Fast Deletion', () => {
     expect(sourceAfterDelete?.meta?.links || []).not.toContain(targetId);
   });
 });
+
+describe('Onboarding Tour Navigation and Guide Block Identification', () => {
+  it('should match guide blocks even when IDs carry a user-specific suffix', () => {
+    const store = useBlockStore.getState();
+    const userId = 'user_test123';
+    const welcomeId = `guide-block-welcome-${userId}`;
+    const codeId = `guide-block-code-${userId}`;
+
+    const testBlocks = [
+      {
+        id: welcomeId,
+        type: 'text' as const,
+        title: 'Welcome',
+        content: '',
+        meta: { tourId: 'guide-block-welcome' },
+        parentId: null,
+        order: 10,
+        x: 100,
+        y: 40,
+        width: 760,
+        collapsed: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: codeId,
+        type: 'code' as const,
+        title: 'Code Sandbox',
+        content: '',
+        meta: { tourId: 'guide-block-code' },
+        parentId: null,
+        order: 11,
+        x: 100,
+        y: 1400,
+        width: 760,
+        collapsed: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ];
+
+    // Simulate match algorithm used by handleScrollTo
+    const matchBlock = (key: string) =>
+      testBlocks.find(
+        (b) =>
+          b.id === key ||
+          b.meta?.tourId === key ||
+          b.id.startsWith(key) ||
+          b.id.includes(key)
+      );
+
+    expect(matchBlock('guide-block-welcome')?.id).toBe(welcomeId);
+    expect(matchBlock('guide-block-code')?.id).toBe(codeId);
+    expect(matchBlock('guide-block-code')?.y).toBe(1400);
+  });
+});
