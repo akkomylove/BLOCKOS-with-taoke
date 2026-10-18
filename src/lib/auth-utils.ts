@@ -84,18 +84,6 @@ export async function getUserId(req?: Request | { headers?: Headers | { get(name
     }
   }
 
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(ACCOUNT_COOKIE)?.value;
-    if (token) {
-      const userId = await verifyAccountSession(token);
-      if (!userId) throw new Error('Unauthorized: Session expired or revoked');
-      return userId;
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith('Unauthorized')) throw err;
-  }
-
   // 1. 校验 NextAuth 官方服务端 Session
   try {
     const session = await auth();
@@ -108,6 +96,18 @@ export async function getUserId(req?: Request | { headers?: Headers | { get(name
     }
   } catch {
     // 忽略并在下方继续检查安全 Signed Cookie
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(ACCOUNT_COOKIE)?.value;
+    if (token) {
+      const userId = await verifyAccountSession(token);
+      if (!userId) throw new Error('Unauthorized: Session expired or revoked');
+      return userId;
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('Unauthorized')) throw err;
   }
 
   // 2. 校验带 HMAC 签名的 session cookie

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFile } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -19,7 +19,8 @@ await new Promise(resolve => portProbe.close(resolve));
 const base = `http://127.0.0.1:${port}`;
 const endpoint = `${base}/api/open/v1/mcp`;
 const dbDir = await mkdtemp(path.join(tmpdir(), 'blockos-mcp-e2e-'));
-const tsconfigPath = path.join(dbDir, 'tsconfig.json');
+await mkdir('scratch', { recursive: true });
+const tsconfigPath = `scratch/tsconfig.mcp-${process.pid}.json`;
 await writeFile(tsconfigPath, JSON.stringify({ extends: path.resolve('tsconfig.json'), compilerOptions: { baseUrl: process.cwd(), paths: { '@/*': ['src/*'] } }, include: [path.resolve('src/**/*.ts'), path.resolve('src/**/*.tsx')], exclude: [path.resolve('node_modules')] }));
 const env = {
   ...process.env, NODE_ENV: 'development', BLOCKOS_DB_PATH: path.join(dbDir, 'test.db'),
@@ -43,7 +44,44 @@ async function api(route, { cookie, key, method = 'GET', body } = {}) {
     }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(60000),
   });
   assert.ok(res.ok, `${route}: HTTP ${res.status}`);
-  return { data: await res.json(), cookie: res.headers.get('set-cookie')?.split(';')[0] };
+  const cookies = res.headers.getSetCookie().map(value => value.split(';')[0]);
+  return { data: await res.json(), cookie: cookies.find(value => value.startsWith('blockos-session=') && value !== 'blockos-session=') || cookies.find(value => value.startsWith('demo-session=') && value !== 'demo-session=') };
+}
+
+async function exerciseAccount() {
+  const identity = { email: `http-probe-${Date.now()}@example.test`, name: 'HTTP account probe', password: 'local-integration-password' };
+  const registered = await api('/api/auth/register', { method: 'POST', body: identity });
+  const cookie = registered.cookie;
+  assert.equal(registered.data.user.mode, 'personal');
+  async function expectStatus(route, session, status) {
+    const res = await fetch(base + route, { headers: { Cookie: session } });
+    assert.equal(res.status, status, route);
+  }
+  await expectStatus('/api/teams', cookie, 403);
+  const page = await api('/api/pages', { cookie, method: 'POST', body: { title: 'retained personal document' } });
+  const personalKey = await api('/api/open/keys', { cookie, method: 'POST', body: { name: 'personal MCP probe' } });
+  const personalCanvas = await api('/api/open/v1/mcp', { key: personalKey.data.rawKey, method: 'POST', body: { jsonrpc: '2.0', id: 'personal-probe', method: 'tools/call', params: { name: 'read_canvas', arguments: { pageId: page.data.id } } } });
+  assert.equal(personalCanvas.data.result.isError, false);
+  await api('/api/account', { cookie, method: 'PATCH', body: { mode: 'enterprise' } });
+  const team = await api('/api/teams', { cookie, method: 'POST', body: { name: 'retained team' } });
+  const project = await api('/api/projects', { cookie, method: 'POST', body: { teamId: team.data.id, name: 'retained project' } });
+  await api('/api/user/profile', { cookie, method: 'PATCH', body: { bio: 'keep biography', title: 'Engineer' } });
+  await api('/api/user/profile', { cookie, method: 'PATCH', body: { displayName: 'Updated name' } });
+  assert.equal((await api('/api/user/profile', { cookie })).data.bio, 'keep biography');
+  await api('/api/account', { cookie, method: 'PATCH', body: { mode: 'personal' } });
+  await expectStatus(`/api/projects/${project.data.id}`, cookie, 403);
+  const pages = await api('/api/pages', { cookie });
+  assert.ok(pages.data.pages.some(item => item.id === page.data.id));
+  await api('/api/account', { cookie, method: 'PATCH', body: { mode: 'enterprise' } });
+  assert.equal((await api(`/api/projects/${project.data.id}`, { cookie })).data.project.id, project.data.id);
+  const secondLogin = await api('/api/auth/login', { method: 'POST', body: identity });
+  const changed = await api('/api/account/password', { cookie, method: 'POST', body: { currentPassword: identity.password, newPassword: 'rotated-integration-password' } });
+  await expectStatus('/api/auth/user', cookie, 401);
+  await expectStatus('/api/auth/user', secondLogin.cookie, 401);
+  assert.equal((await api('/api/auth/user', { cookie: changed.cookie })).data.name, 'Updated name');
+  await api('/api/auth/logout', { cookie: changed.cookie, method: 'POST' });
+  await expectStatus('/api/auth/user', changed.cookie, 401);
+  console.log('PASS account HTTP lifecycle: registration, login, mode gates, retained documents/team/project, partial profile update, password rotation, revoked sessions, logout');
 }
 
 async function exercise(label, transport, pageId) {
@@ -111,6 +149,7 @@ try {
     if (Date.now() > deadline) throw new Error('Next server startup timed out');
     await new Promise(resolve => setTimeout(resolve, 500));
   }
+  await exerciseAccount();
   const { cookie } = await api('/api/auth/simple-login', { method: 'POST', body: { userId: 'demo-admin-001' } });
   assert.ok(cookie);
   const { data: issued } = await api('/api/open/keys', { cookie, method: 'POST', body: { name: 'MCP integration probe', permissions: ['read', 'write'], ttlDays: 1 } });

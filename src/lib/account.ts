@@ -2,6 +2,7 @@ import { randomBytes, createHash } from 'crypto';
 import { getDb, query, run, saveDb } from './db';
 import type { AccountMode, AccountUser } from '@/types/account';
 import type { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export const ACCOUNT_COOKIE = 'blockos-session';
 const SESSION_DURATION = 7 * 24 * 3600 * 1000;
@@ -58,10 +59,17 @@ export async function verifyAccountSession(token: string): Promise<string | null
   return row ? String(row.user_id) : null;
 }
 
-export function setAccountCookie(response: NextResponse, token: string) {
-  for (const name of ['demo-session', 'authjs.session-token', '__Secure-authjs.session-token', 'next-auth.session-token']) {
-    response.cookies.set(name, '', { path: '/', maxAge: 0, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+export async function clearLoginCookies(response: NextResponse) {
+  const names = new Set([ACCOUNT_COOKIE, 'demo-session', 'authjs.session-token', '__Secure-authjs.session-token', 'next-auth.session-token']);
+  const store = await cookies();
+  for (const cookie of store.getAll()) {
+    if (/^(?:__Secure-)?(?:authjs|next-auth)\.session-token(?:\.\d+)?$/.test(cookie.name)) names.add(cookie.name);
   }
+  for (const name of names) response.cookies.set(name, '', { path: '/', maxAge: 0, httpOnly: true, secure: name.startsWith('__Secure-') || process.env.NODE_ENV === 'production', sameSite: 'lax' });
+}
+
+export async function setAccountCookie(response: NextResponse, token: string) {
+  await clearLoginCookies(response);
   response.cookies.set(ACCOUNT_COOKIE, token, { path: '/', maxAge: SESSION_DURATION / 1000, httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
 }
 

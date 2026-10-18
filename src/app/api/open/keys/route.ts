@@ -3,6 +3,7 @@ import { getUserId } from '@/lib/auth-utils';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/lib/api-keys';
 
 export async function GET(req: NextRequest) {
+  if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话管理 API Key' }, { status: 403 });
   let userId: string;
   try {
     userId = await getUserId(req);
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话管理 API Key' }, { status: 403 });
   let userId: string;
   try {
     userId = await getUserId(req);
@@ -42,6 +44,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话管理 API Key' }, { status: 403 });
   let userId: string;
   try {
     userId = await getUserId(req);

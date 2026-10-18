@@ -12,6 +12,7 @@ const empty = { displayName: '', bio: '', title: '', functions: [] as string[] }
 export function ProfilePanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user, switchMode, logout, updateName } = useAccountStore();
   const [draft, setDraft] = useState(empty);
+  const [functionsText, setFunctionsText] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -23,7 +24,7 @@ export function ProfilePanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
     if (!isOpen) return;
     const controller = new AbortController();
     setLoaded(false); setError(''); setMessage(''); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-    fetch('/api/user/profile', { signal: controller.signal }).then(async res => { if (!res.ok) throw new Error('资料加载失败，请关闭后重试'); return res.json(); }).then(data => { setDraft(data); setLoaded(true); }).catch(err => { if (!controller.signal.aborted) setError(err.message); });
+    fetch('/api/user/profile', { signal: controller.signal }).then(async res => { if (!res.ok) throw new Error('资料加载失败，请关闭后重试'); return res.json(); }).then(data => { setDraft(data); setFunctionsText(data.functions.join(', ')); setLoaded(true); }).catch(err => { if (!controller.signal.aborted) setError(err.message); });
     return () => controller.abort();
   }, [isOpen, user?.id]);
   if (!isOpen || !user) return null;
@@ -44,10 +45,10 @@ export function ProfilePanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
       <div className="space-y-6 overflow-y-auto p-5">
         <section><h3 className="mb-3 font-medium">使用模式</h3><div className="grid grid-cols-2 gap-3">{(['personal', 'enterprise'] as const).map(mode => <button key={mode} aria-pressed={user.mode === mode} disabled={busy} onClick={() => void perform(() => changeMode(mode), `已切换至${mode === 'personal' ? '个人' : '企业'}模式`)} className={`rounded-xl border p-4 text-left disabled:opacity-60 ${user.mode === mode ? 'border-blue-500 bg-blue-500/5' : 'border-gray-200 dark:border-zinc-700'}`}>{mode === 'personal' ? <User size={20} /> : <Building2 size={20} />}<strong className="mt-2 block text-sm">{mode === 'personal' ? '个人模式' : '企业模式'}</strong><span className="mt-1 block text-xs text-gray-500">{mode === 'personal' ? '专注知识、文档与 AI' : '团队、项目与成员协作'}</span></button>)}</div><p className="mt-2 text-xs text-gray-500">切换会保留文档、团队和项目。企业模式内的操作权限由成员角色决定。</p>{enterprise && <Link href="/teams" className="mt-3 inline-block text-sm text-blue-500">进入企业协作 →</Link>}</section>
         <form className="space-y-3" onSubmit={e => { e.preventDefault(); void perform(async () => {
-          const res = await fetch('/api/user/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) });
+          const res = await fetch('/api/user/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...draft, ...(enterprise ? { functions: functionsText.split(/[,，]/).map(value => value.trim()).filter(Boolean) } : {}) }) });
           const data = await res.json(); if (!res.ok) throw new Error(data.error || '保存失败');
           updateName(draft.displayName.trim());
-        }, '个人资料已保存'); }}><h3 className="font-medium">个人资料</h3><label className="block text-sm">昵称<input required maxLength={60} className={input} value={draft.displayName} onChange={e => setDraft({ ...draft, displayName: e.target.value })} /></label><label className="block text-sm">个人简介<textarea maxLength={1000} className={input} value={draft.bio} onChange={e => setDraft({ ...draft, bio: e.target.value })} /></label>{enterprise && <><label className="block text-sm">职务<input maxLength={80} className={input} value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label><label className="block text-sm">职能（逗号分隔）<input className={input} value={draft.functions.join(', ')} onChange={e => setDraft({ ...draft, functions: e.target.value.split(/[,，]/).map(value => value.trim()).filter(Boolean) })} /></label><p className="text-xs text-gray-500">成员权限以具体团队和项目中的角色为准。</p></>}<button disabled={busy || !loaded} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">保存资料</button></form>
+        }, '个人资料已保存'); }}><h3 className="font-medium">个人资料</h3><label className="block text-sm">昵称<input required maxLength={60} className={input} value={draft.displayName} onChange={e => setDraft({ ...draft, displayName: e.target.value })} /></label><label className="block text-sm">个人简介<textarea maxLength={1000} className={input} value={draft.bio} onChange={e => setDraft({ ...draft, bio: e.target.value })} /></label>{enterprise && <><label className="block text-sm">职务<input maxLength={80} className={input} value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label><label className="block text-sm">职能（逗号分隔）<input className={input} value={functionsText} onChange={e => setFunctionsText(e.target.value)} /></label><p className="text-xs text-gray-500">成员权限以具体团队和项目中的角色为准。</p></>}<button disabled={busy || !loaded} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">保存资料</button></form>
         <section className="space-y-3"><h3 className="flex items-center gap-2 font-medium"><Shield size={16} />账号安全</h3>{user.hasPassword ? <form className="space-y-3" onSubmit={e => { e.preventDefault(); void perform(async () => {
           if (newPassword !== confirmPassword) throw new Error('两次输入的新密码不一致');
           const res = await fetch('/api/account/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) });

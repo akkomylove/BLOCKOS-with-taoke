@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeDocument } from '@/lib/ai';
 import type { AnalyzeRequest } from '@/lib/ai';
-import { getUserId } from '@/lib/auth-utils';
 import { withEnterprise } from '@/lib/enterprise-access';
 
 async function POSTHandler(req: NextRequest) {
-  let userId: string;
-  try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
-
   try {
     const body = (await req.json()) as AnalyzeRequest;
     if (!body.documentName || !body.documentContent || !body.workflow?.length) {

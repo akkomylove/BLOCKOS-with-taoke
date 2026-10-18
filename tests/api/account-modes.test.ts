@@ -13,6 +13,7 @@ import { POST as register } from '@/app/api/auth/register/route';
 import { POST as login } from '@/app/api/auth/login/route';
 import { POST as password } from '@/app/api/account/password/route';
 import { POST as logout } from '@/app/api/auth/logout/route';
+import { POST as demoLogin } from '@/app/api/auth/simple-login/route';
 import { GET as getUser } from '@/app/api/auth/user/route';
 import { PATCH as changeMode } from '@/app/api/account/route';
 import { GET as profile, PATCH as updateProfile } from '@/app/api/user/profile/route';
@@ -21,6 +22,7 @@ import { POST as createProject } from '@/app/api/projects/route';
 import { getDb, query, run } from '@/lib/db';
 import { getAccountMode, verifyAccountSession } from '@/lib/account';
 import { generateApiKey } from '@/lib/api-keys';
+import { GET as getKeys, POST as postKeys, DELETE as deleteKeys } from '@/app/api/open/keys/route';
 
 const request = (path: string, body: unknown = {}, method = 'POST', headers: Record<string, string> = {}) => new NextRequest(`http://localhost${path}`, { method, headers: { 'Content-Type': 'application/json', ...headers }, ...(method === 'GET' ? {} : { body: JSON.stringify(body) }) });
 const payload = () => ({ email: `probe-${nanoid()}@example.test`, name: '独立账号', password: 'secure-password-123' });
@@ -61,6 +63,18 @@ describe('Account lifecycle and mode boundaries (real DB)', () => {
     const res = await login(request('/api/auth/login', { ...input, email: `  ${input.email.toUpperCase()} ` }));
     expect(res.status).toBe(200);
     expect(await verifyAccountSession(useCookie(res))).toBe((await res.json()).user.id);
+  });
+
+  it('does not allow arbitrary user ids through the demo login endpoint', async () => {
+    expect((await demoLogin(request('/api/auth/simple-login', { userId: 'forged-user' }))).status).toBe(403);
+  });
+
+  it('disables public demo login in production unless explicitly enabled', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('ALLOW_DEMO_LOGIN', 'false');
+    try {
+      expect((await demoLogin(request('/api/auth/simple-login', { userId: 'demo-admin-001' }))).status).toBe(403);
+    } finally { vi.unstubAllEnvs(); }
   });
 
   it('keeps documents, teams and projects across personal/enterprise switches', async () => {
@@ -140,6 +154,14 @@ describe('Account lifecycle and mode boundaries (real DB)', () => {
     const { user } = await res.json();
     const key = await generateApiKey(user.id, 'read', ['read']);
     expect((await changeMode(request('/api/account', { mode: 'enterprise' }, 'PATCH', { Authorization: `Bearer ${key.rawKey}` }))).status).toBe(403);
+  });
+
+  it('does not let API keys issue stronger keys or modify personal profile', async () => {
+    const headers = { Authorization: 'Bearer bk_live_test' };
+    for (const [handler, method] of [[getKeys, 'GET'], [postKeys, 'POST'], [deleteKeys, 'DELETE']] as const) {
+      expect((await handler(request('/api/open/keys', {}, method, headers))).status).toBe(403);
+    }
+    expect((await updateProfile(request('/api/user/profile', { displayName: 'forged' }, 'PATCH', headers))).status).toBe(403);
   });
 
   it('rejects personal accounts at every enterprise route and HTTP method', async () => {

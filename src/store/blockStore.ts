@@ -602,8 +602,25 @@ export const useBlockStore = create<BlockStore>()(
 
       deleteBlock: (id) => {
         set((state) => {
-          state.blocks = state.blocks.filter((b) => b.id !== id);
-          state.selectedIds = state.selectedIds.filter((sid) => sid !== id);
+          // 级联收集所有子孙 block
+          const idsToDelete = new Set<string>([id]);
+          let added = true;
+          while (added) {
+            added = false;
+            state.blocks.forEach((b) => {
+              if (b.parentId && idsToDelete.has(b.parentId) && !idsToDelete.has(b.id)) {
+                idsToDelete.add(b.id);
+                added = true;
+              }
+            });
+          }
+          state.blocks = state.blocks.filter((b) => !idsToDelete.has(b.id));
+          state.selectedIds = state.selectedIds.filter((sid) => !idsToDelete.has(sid));
+          state.blocks.forEach((b) => {
+            if (b.meta?.links) {
+              b.meta.links = b.meta.links.filter((linkId) => !idsToDelete.has(linkId));
+            }
+          });
         });
         get().saveHistory();
       },

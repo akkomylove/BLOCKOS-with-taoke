@@ -20,6 +20,7 @@ export async function GET() {
   return NextResponse.json(await profile(id));
 }
 export async function PATCH(req: Request) {
+  if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话修改个人资料' }, { status: 403 });
   let id: string;
   try { id = await getUserId(req); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
   const body = await req.json().catch(() => null);

@@ -21,6 +21,6 @@ export async function POST(req: Request) {
   const token = createAccountSession(String(row.id));
   saveDb();
   const res = NextResponse.json({ user: await getAccountUser(String(row.id)) });
-  setAccountCookie(res, token);
+  await setAccountCookie(res, token);
   return res;
 }

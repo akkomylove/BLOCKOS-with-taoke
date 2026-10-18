@@ -9,7 +9,7 @@ import AIResultCard from './AIResultCard';
 import AIActionMenu from './AIActionMenu';
 import CommandPalette from './CommandPalette';
 import RelationDrawer from './RelationDrawer';
-import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, ArrowUpFromLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon, Sparkles } from 'lucide-react';
+import { Link2, Move, ChevronDown, ChevronRight, Plus, ArrowDownToLine, ArrowUpFromLine, X, CopyPlus, Wand2, Ungroup, Group, Tag, X as XIcon, Sparkles, Trash2 } from 'lucide-react';
 import type { BlockType, Block } from '@/types/block';
 import TagWheelPicker, { getTagStyle } from './TagWheelPicker';
 import CanvasMinimap from './CanvasMinimap';
@@ -33,6 +33,7 @@ export default function BlockEditor({
   const setSelection = useBlockStore((state) => state.setSelection);
   const toggleSelection = useBlockStore((state) => state.toggleSelection);
   const clearSelection = useBlockStore((state) => state.clearSelection);
+  const deleteBlock = useBlockStore((state) => state.deleteBlock);
   const addBlock = useBlockStore((state) => state.addBlock);
   const createLink = useBlockStore((state) => state.createLink);
   const removeLink = useBlockStore((state) => state.removeLink);
@@ -134,12 +135,39 @@ export default function BlockEditor({
     position: { top: number; left: number };
   } | null>(null);
 
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const dropTargetIdRef = useRef<string | null>(null);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const clearSelectionRef = useRef(clearSelection);
-  
+  const selectedIdsRef = useRef(selectedIds);
+  const deleteBlockRef = useRef(deleteBlock);
+
   useEffect(() => {
     clearSelectionRef.current = clearSelection;
   }, [clearSelection]);
+
+  useEffect(() => {
+    selectedIdsRef.current = selectedIds;
+  }, [selectedIds]);
+
+  useEffect(() => {
+    deleteBlockRef.current = deleteBlock;
+  }, [deleteBlock]);
+
+  // 检查 candidateId 是否为 potentialAncestorId 的后代节点（防循环归属）
+  const isDescendantOf = useCallback(
+    (candidateId: string, potentialAncestorId: string) => {
+      let current = blocks.find((b) => b.id === candidateId);
+      while (current?.parentId) {
+        if (current.parentId === potentialAncestorId) return true;
+        const parentId = current.parentId;
+        current = blocks.find((b) => b.id === parentId);
+      }
+      return false;
+    },
+    [blocks]
+  );
 
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
@@ -388,6 +416,19 @@ export default function BlockEditor({
         setContextMenu(null);
         setContextTargetId(null);
         setShowParentPicker(false);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        const target = e.target as HTMLElement | null;
+        const isEditingText = !!target?.closest(
+          'input, textarea, [contenteditable="true"], .monaco-editor, [data-slate-editor]'
+        );
+        const isInDialog = !!target?.closest('[role="dialog"], .modal, [data-modal]');
+        if (!isEditingText && !isInDialog && selectedIdsRef.current.length > 0) {
+          e.preventDefault();
+          const toDelete = [...selectedIdsRef.current];
+          toDelete.forEach((id) => deleteBlockRef.current(id));
+          clearSelectionRef.current();
+          useBlockStore.getState().saveHistory();
+        }
       }
     };
 
@@ -483,6 +524,34 @@ export default function BlockEditor({
         } else {
           moveBlockTo(draggingId, Math.round(newX), Math.round(newY));
         }
+
+        // 探测鼠标是否滑入其他顶级卡片区域（快捷拖入成为子 Block 目标判定）
+        let hoverParent: Block | null = null;
+        for (let i = blocks.length - 1; i >= 0; i--) {
+          const candidate = blocks[i];
+          if (movingIds.has(candidate.id)) continue;
+          if (candidate.parentId) continue; // 目标必须为顶级容器
+          if (isDescendantOf(candidate.id, draggingId)) continue; // 杜绝循环
+
+          const el = document.querySelector(`[data-block-id="${candidate.id}"]`);
+          if (!el) continue;
+          const rect = el.getBoundingClientRect();
+          if (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom
+          ) {
+            hoverParent = candidate;
+            break;
+          }
+        }
+
+        const newTargetId = hoverParent ? hoverParent.id : null;
+        if (dropTargetIdRef.current !== newTargetId) {
+          dropTargetIdRef.current = newTargetId;
+          setDropTargetId(newTargetId);
+        }
       }
     }
     if (resizeState) {
@@ -500,7 +569,7 @@ export default function BlockEditor({
 
       resizeBlock(resizeState.id, newW, newH);
     }
-  }, [isPanning, panStart, panOrigin, selectionBox, draggingId, dragOffset, resizeState, blocks, pan, zoom, moveBlockTo, resizeBlock]);
+  }, [isPanning, panStart, panOrigin, selectionBox, draggingId, dragOffset, resizeState, blocks, pan, zoom, moveBlockTo, resizeBlock, updateBlock, isDescendantOf]);
 
   const handleCanvasMouseUp = useCallback(() => {
     setIsPanning(false);
@@ -546,12 +615,45 @@ export default function BlockEditor({
     }
 
     if (draggingId) {
-      if (!dragHasMoved.current && wasMultiSelectedRef.current) {
-        setSelection([draggingId]);
+      const targetId = dropTargetIdRef.current;
+      if (targetId && dragHasMoved.current) {
+        // 拖入目标 Block，快捷成为子 Block！
+        const movingBlockIds = dragGroupMembers.current.length > 0
+          ? dragGroupMembers.current.map((m) => m.id)
+          : [draggingId];
+
+        const targetBlock = blocks.find((b) => b.id === targetId);
+
+        movingBlockIds.forEach((id) => {
+          if (id !== targetId && !isDescendantOf(targetId, id)) {
+            updateBlock(id, { parentId: targetId });
+          }
+        });
+
+        if (targetBlock) {
+          updateBlock(targetId, { collapsed: false });
+          const maxChildW = Math.max(
+            targetBlock.width || 760,
+            ...movingBlockIds.map((id) => blocks.find((b) => b.id === id)?.width || 760)
+          );
+          if (maxChildW > (targetBlock.width || 760)) {
+            updateBlock(targetId, { width: maxChildW });
+          }
+        }
+
+        setSelection(movingBlockIds);
+        useBlockStore.getState().saveHistory();
+      } else {
+        if (!dragHasMoved.current && wasMultiSelectedRef.current) {
+          setSelection([draggingId]);
+        }
+        useBlockStore.getState().saveHistory();
       }
+
       setDraggingId(null);
+      setDropTargetId(null);
+      dropTargetIdRef.current = null;
       dragGroupMembers.current = [];
-      useBlockStore.getState().saveHistory();
     }
     if (resizeState) {
       setResizeState(null);
@@ -559,7 +661,7 @@ export default function BlockEditor({
       window.getSelection()?.removeAllRanges();
       useBlockStore.getState().saveHistory();
     }
-  }, [selectionBox, draggingId, resizeState, blocks, pan, zoom, selectedIds, setSelection]);
+  }, [selectionBox, draggingId, resizeState, blocks, pan, zoom, selectedIds, setSelection, updateBlock, isDescendantOf]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     const target = e.target as HTMLElement | null;
@@ -585,12 +687,19 @@ export default function BlockEditor({
       const block = blocks.find((b) => b.id === id);
       if (!block) return;
       const canvasRect = canvasRef.current!.getBoundingClientRect();
-      const blockScreenX = block.x * zoom + pan.x + canvasRect.left;
-      const blockScreenY = block.y * zoom + pan.y + canvasRect.top;
+      const blockEl = document.querySelector(`[data-block-id="${id}"]`) as HTMLElement | null;
+      const rect = blockEl?.getBoundingClientRect();
+      const blockScreenX = rect ? rect.left : (block.x * zoom + pan.x + canvasRect.left);
+      const blockScreenY = rect ? rect.top : (block.y * zoom + pan.y + canvasRect.top);
       setDraggingId(id);
       setDragOffset({ x: e.clientX - blockScreenX, y: e.clientY - blockScreenY });
-      dragOriginPos.current = { x: block.x, y: block.y };
+      dragOriginPos.current = {
+        x: rect ? (rect.left - canvasRect.left - pan.x) / zoom : block.x,
+        y: rect ? (rect.top - canvasRect.top - pan.y) / zoom : block.y,
+      };
       dragHasMoved.current = false;
+      setDropTargetId(null);
+      dropTargetIdRef.current = null;
 
       const isModifierKey = e.shiftKey || e.metaKey || e.ctrlKey;
       const isAlreadyMultiSelected = selectedIds.includes(id) && selectedIds.length > 1;
@@ -741,21 +850,30 @@ export default function BlockEditor({
         data-block-id={block.id}
         data-tour={(block.meta?.tourId as string) || block.id}
       >
-        <div className="h-full flex-1 flex flex-col min-h-0 w-full">
+        <div className="h-full flex-1 flex flex-col min-h-0 w-full relative">
+          {dropTargetId === block.id && (
+            <div className="absolute inset-x-2 -top-3.5 z-30 flex items-center justify-center pointer-events-none">
+              <span className="px-2.5 py-1 text-[11px] font-semibold bg-blue-600 text-white rounded-full shadow-lg border border-blue-400 flex items-center gap-1.5 animate-bounce">
+                <span>📥 松开鼠标：快捷归属为子 Block</span>
+              </span>
+            </div>
+          )}
           <div
             className={`h-full flex-1 flex flex-col min-h-0 rounded-lg border transition-all ${
-              selectedIds.includes(block.id)
-                ? 'border-blue-500 ring-2 ring-blue-500/25 shadow-lg shadow-blue-500/10'
-                : isChild
-                  ? 'border-blue-300/60 dark:border-zinc-700/80 bg-gray-50/95 dark:bg-zinc-900/95 shadow-xs'
-                  : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60 bg-white dark:bg-zinc-900'
+              dropTargetId === block.id
+                ? 'border-blue-500 ring-4 ring-blue-500/35 bg-blue-50/40 dark:bg-blue-950/20 shadow-xl shadow-blue-500/20'
+                : selectedIds.includes(block.id)
+                  ? 'border-blue-500 ring-2 ring-blue-500/25 shadow-lg shadow-blue-500/10'
+                  : isChild
+                    ? 'border-blue-300/60 dark:border-zinc-700/80 bg-gray-50/95 dark:bg-zinc-900/95 shadow-xs'
+                    : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60 bg-white dark:bg-zinc-900'
             } backdrop-blur-sm`}
           >
             <div
               className={`shrink-0 flex items-center gap-1.5 h-8 px-2.5 cursor-grab active:cursor-grabbing border-b ${
                 isChild ? 'border-blue-200/60 bg-blue-50/60 dark:border-zinc-800 dark:bg-zinc-800/80' : 'border-gray-200/40 dark:border-zinc-700/40'
               }`}
-              onMouseDown={(e) => depth === 0 && startDragBlock(block.id, e)}
+              onMouseDown={(e) => startDragBlock(block.id, e)}
             >
               {depth === 0 ? (
                 <Move className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
@@ -902,7 +1020,7 @@ export default function BlockEditor({
         )}
       </div>
     );
-  }, [sortedBlocks, selectedIds, childCountMap, updateBlock, startDragBlock, handleSelect, handleOpenAIMenu, linkMode, linkSource, startResizeBlock, tagWheelBlockId, tagWheelRect, handleAddTag, handleRemoveTag, outdentBlock]);
+  }, [sortedBlocks, selectedIds, childCountMap, updateBlock, startDragBlock, handleSelect, handleOpenAIMenu, linkMode, linkSource, startResizeBlock, tagWheelBlockId, tagWheelRect, handleAddTag, handleRemoveTag, outdentBlock, dropTargetId]);
 
   return (
     <div
@@ -1172,20 +1290,39 @@ export default function BlockEditor({
             <Wand2 className="w-3 h-3 text-purple-400" />
             AI 生成内容
           </button>
-          {contextTargetId && selectedIds.length > 0 && selectedIds.some((id) => id !== contextTargetId) && (
+          {contextTargetId && (
             <>
               <div className="border-t border-gray-200 dark:border-zinc-700 my-1" />
               <div className="px-3 py-1 text-[11px] text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-700 mb-1">Block 操作</div>
+              {selectedIds.length > 0 && selectedIds.some((id) => id !== contextTargetId) && (
+                <button
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSetAsChild(contextTargetId);
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
+                >
+                  <ArrowDownToLine className="w-3 h-3 text-blue-400" />
+                  设为子 Block
+                </button>
+              )}
               <button
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleSetAsChild(contextTargetId);
+                  if (selectedIds.includes(contextTargetId)) {
+                    selectedIds.forEach((id) => deleteBlock(id));
+                  } else {
+                    deleteBlock(contextTargetId);
+                  }
+                  clearSelection();
+                  setContextMenu(null);
                 }}
-                className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
+                className="w-full text-left px-3 py-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors flex items-center gap-2"
               >
-                <ArrowDownToLine className="w-3 h-3 text-blue-400" />
-                设为子 Block
+                <Trash2 className="w-3 h-3" />
+                删除 Block (Del)
               </button>
             </>
           )}
@@ -1285,7 +1422,6 @@ export default function BlockEditor({
               创建链接
             </button>
             <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
-            <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
             {selectedIds.some((id) => blocks.find((b) => b.id === id)?.parentId) ? (
               <button
                 onClick={() => {
@@ -1331,6 +1467,18 @@ export default function BlockEditor({
                 )}
               </div>
             )}
+            <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+            <button
+              onClick={() => {
+                selectedIds.forEach((id) => deleteBlock(id));
+                clearSelection();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-500/25 rounded-full transition-colors font-medium"
+              title="删除选中的 Block (快捷键 Delete / Backspace)"
+            >
+              <Trash2 className="w-3 h-3" />
+              删除
+            </button>
           </div>
       )}
 

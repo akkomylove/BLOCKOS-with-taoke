@@ -25,6 +25,6 @@ export async function POST(req: Request) {
   });
   saveDb();
   const res = NextResponse.json({ success: true });
-  setAccountCookie(res, token);
+  await setAccountCookie(res, token);
   return res;
 }

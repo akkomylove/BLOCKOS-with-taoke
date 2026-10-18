@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { DEMO_USERS } from '@/lib/demo-users';
 import { createSignedSessionToken } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
+import { clearLoginCookies } from '@/lib/account';
 
 export async function POST(request: Request) {
   try {
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
       },
     });
 
+    await clearLoginCookies(response);
     response.cookies.set({
       name: 'demo-session',
       value: signedToken,

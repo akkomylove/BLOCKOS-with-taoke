@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAccountStore } from '@/store/accountStore';
 import {
   X, Sparkles, Move, Layers, Code, Compass,
@@ -105,9 +105,11 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
   const hasUserDraggedRef = useRef(false);
 
   const enterprise = useAccountStore(state => state.user?.mode === 'enterprise');
-  const base = TOUR_STEPS[currentStep];
-  const step = !enterprise && currentStep === 1 ? { ...base, title: '用待办记录下一步', description: '把一个目标写成待办，完成后勾选。也可以将相关卡片设为子 Block，整理出清晰的知识层级。', actionHint: '试一试：勾选一项待办，或整理卡片的父子关系。' }
-    : !enterprise && currentStep === 4 ? { ...base, category: '个人工作台', title: '文档、AI 与个人账号', description: '使用顶部 AI 助手、搜索、导入导出与历史版本。点击「个人模式」打开账号中心，管理资料和密码；需要协作时再开启企业模式。' } : base;
+  const step = useMemo(() => {
+    const base = TOUR_STEPS[currentStep];
+    return !enterprise && currentStep === 1 ? { ...base, title: '用待办记录下一步', description: '把一个目标写成待办，完成后勾选。也可以将相关卡片设为子 Block，整理出清晰的知识层级。', actionHint: '试一试：勾选一项待办，或整理卡片的父子关系。' }
+      : !enterprise && currentStep === 4 ? { ...base, category: '个人工作台', title: '文档、AI 与个人账号', description: '使用顶部 AI 助手、搜索、导入导出与历史版本。点击「个人模式」打开账号中心，管理资料和密码；需要协作时再开启企业模式。' } : base;
+  }, [enterprise, currentStep]);
   const StepIcon = step.icon;
 
   const updateTargetAndCardPos = useCallback(() => {

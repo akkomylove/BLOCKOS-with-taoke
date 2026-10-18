@@ -69,3 +69,81 @@ describe('Multi-Selection and Batch Move Logic', () => {
     }
   });
 });
+
+describe('Block Nesting (Drag & Drop Sub-block) and Fast Deletion', () => {
+  beforeEach(() => {
+    const store = useBlockStore.getState();
+    store.clearSelection();
+  });
+
+  it('should nest a block into another block as a sub-block and expand the parent', () => {
+    const store = useBlockStore.getState();
+    const parentId = store.addBlock('table', 100, 100);
+    const childId = store.addBlock('markdown', 400, 400);
+
+    // Initial state: child is top level
+    let child = useBlockStore.getState().blocks.find((b) => b.id === childId);
+    expect(child?.parentId).toBeNull();
+
+    // Drag-and-drop nests childId into parentId
+    store.updateBlock(childId, { parentId });
+    store.updateBlock(parentId, { collapsed: false });
+
+    const updatedParent = useBlockStore.getState().blocks.find((b) => b.id === parentId);
+    const updatedChild = useBlockStore.getState().blocks.find((b) => b.id === childId);
+
+    expect(updatedChild?.parentId).toBe(parentId);
+    expect(updatedParent?.collapsed).toBe(false);
+
+    // Outdent restores child to canvas
+    store.outdentBlock(childId);
+    const outdentedChild = useBlockStore.getState().blocks.find((b) => b.id === childId);
+    expect(outdentedChild?.parentId).toBeNull();
+  });
+
+  it('should recursively cascade delete all descendant sub-blocks when deleting parent', () => {
+    const store = useBlockStore.getState();
+    const grandParentId = store.addBlock('table', 100, 100);
+    const parentId = store.addBlock('markdown', 200, 200);
+    const leafId = store.addBlock('mindmap', 300, 300);
+
+    // Build hierarchy: grandParent -> parent -> leaf
+    store.updateBlock(parentId, { parentId: grandParentId });
+    store.updateBlock(leafId, { parentId: parentId });
+
+    expect(useBlockStore.getState().blocks.find((b) => b.id === grandParentId)).toBeDefined();
+    expect(useBlockStore.getState().blocks.find((b) => b.id === parentId)).toBeDefined();
+    expect(useBlockStore.getState().blocks.find((b) => b.id === leafId)).toBeDefined();
+
+    // Select all of them
+    store.setSelection([grandParentId, parentId]);
+
+    // Delete grandParent
+    store.deleteBlock(grandParentId);
+
+    const remainingBlocks = useBlockStore.getState().blocks;
+    expect(remainingBlocks.find((b) => b.id === grandParentId)).toBeUndefined();
+    expect(remainingBlocks.find((b) => b.id === parentId)).toBeUndefined();
+    expect(remainingBlocks.find((b) => b.id === leafId)).toBeUndefined();
+
+    // Ensure selectedIds is cleaned
+    expect(useBlockStore.getState().selectedIds).toEqual([]);
+  });
+
+  it('should clean up cross-block links when a linked block is deleted', () => {
+    const store = useBlockStore.getState();
+    const sourceId = store.addBlock('table', 100, 100);
+    const targetId = store.addBlock('markdown', 200, 200);
+
+    store.createLink(sourceId, targetId);
+
+    const sourceWithLink = useBlockStore.getState().blocks.find((b) => b.id === sourceId);
+    expect(sourceWithLink?.meta?.links).toContain(targetId);
+
+    // Delete target block
+    store.deleteBlock(targetId);
+
+    const sourceAfterDelete = useBlockStore.getState().blocks.find((b) => b.id === sourceId);
+    expect(sourceAfterDelete?.meta?.links || []).not.toContain(targetId);
+  });
+});

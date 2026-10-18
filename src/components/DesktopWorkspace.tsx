@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import BlockEditor from '@/components/BlockEditor';
 import Toolbar from '@/components/Toolbar';
 import AgentLogPanel from '@/components/AgentLogPanel';
@@ -25,10 +25,12 @@ import { useAgent } from '@/hooks/useAgent';
 import { useBlockStore } from '@/store/blockStore';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { getAccountGuide } from '@/config/account-guide';
+import { initializeWorkspace } from '@/lib/initialize-workspace';
 
 export default function DesktopWorkspace() {
   const account = useAccountStore(state => state.user);
   const enterprise = account?.mode === 'enterprise';
+  const initialMode = useRef(account?.mode || 'personal');
   const [showLogs, setShowLogs] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [showRelationDrawer, setShowRelationDrawer] = useState(false);
@@ -47,131 +49,19 @@ export default function DesktopWorkspace() {
   const [showFoldPlan, setShowFoldPlan] = useState(false);
   const [showDocRelations, setShowDocRelations] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const hydrate = useBlockStore((state) => state.hydrate);
+  const [workspaceError, setWorkspaceError] = useState('');
 
   useAgent();
 
-  const syncPages = useBlockStore((state) => state.syncPages);
-  const loadFromServer = useBlockStore((state) => state.loadFromServer);
-
   useEffect(() => {
-    let active = true;
-    useBlockStore.persist.rehydrate();
-    if (account?.id) useBlockStore.getState().setCurrentUserId(account.id);
-    hydrate();
-
-    // 飞书/钉钉风格官方新手入门系统保障与激活机制
-    const GUIDE_ID = 'doc-guide';
-    const GUIDE_TITLE = '👋 欢迎使用 BlockOS ｜ 新手快速入门指南';
-    const GUIDE_VERSION_KEY = `blockos-guide-v14-account:${account?.id}`;
-    const hasUpgraded = localStorage.getItem(GUIDE_VERSION_KEY);
-
-    const state = useBlockStore.getState();
-    const freshGuideBlocks = getAccountGuide(account?.mode || 'personal');
-
-    // 检查当前指南文档卡片是否丢失或为空（如被旧版本同步冲掉）
-    const curGuideBlocks = state.pageBlocks[GUIDE_ID] || (state.currentPageId === GUIDE_ID ? state.blocks : []);
-    const isGuideEmpty = !curGuideBlocks || curGuideBlocks.length === 0;
-
-    // 清除可能残留在 localStorage 中的旧演示规则与开关
-    if (state.agentEnabled || (state.agentRules && state.agentRules.length > 0)) {
-      useBlockStore.setState({
-        agentEnabled: false,
-        agentRules: [],
-      });
-    }
-
-    if (!hasUpgraded || isGuideEmpty) {
-      const LEGACY_PRESET_IDS = new Set(['doc-prd', 'doc-tech', 'doc-ui', 'doc-data', 'doc-test']);
-      const isLegacySample = (p: { id: string; title: string }) =>
-        LEGACY_PRESET_IDS.has(p.id) ||
-        ['产品需求文档', '技术方案设计', 'UI 设计规范', 'UI设计规范', '数据流与架构图', '测试计划与用例'].some((t) => p.title.includes(t));
-
-      const isGuidePage = (p: { id: string; title: string }) =>
-        p.id === GUIDE_ID ||
-        p.id.startsWith('doc-guide-') ||
-        p.title.includes('新手') ||
-        p.title.includes('入门') ||
-        p.title.includes('欢迎使用 BlockOS');
-
-      const existingGuide = state.pages.find(isGuidePage);
-
-      useBlockStore.setState((prev) => {
-        // 过滤掉旧的 5 个预置样板文档，仅保留用户自定义页面与唯一样板新手指南文档
-        const seenIds = new Set<string>();
-        const userCustomPages = prev.pages.filter((p) => {
-          if (isGuidePage(p) || isLegacySample(p)) return false;
-          if (seenIds.has(p.id)) return false;
-          seenIds.add(p.id);
-          return true;
-        });
-        const cleanPageBlocks = { ...prev.pageBlocks };
-        LEGACY_PRESET_IDS.forEach((id) => delete cleanPageBlocks[id]);
-
-        const guideId = existingGuide?.id || GUIDE_ID;
-        const guidePage = {
-          id: guideId,
-          title: GUIDE_TITLE,
-          icon: '👋',
-          createdAt: existingGuide?.createdAt || Date.now(),
-          updatedAt: Date.now(),
-        };
-
-        return {
-          pages: [guidePage, ...userCustomPages],
-          pageBlocks: {
-            ...cleanPageBlocks,
-            [guideId]: freshGuideBlocks,
-          },
-          currentPageId: guideId,
-          blocks: freshGuideBlocks,
-        };
-      });
-
-      localStorage.setItem(GUIDE_VERSION_KEY, 'true');
-      setShowOnboarding(true);
-      setTimeout(() => {
-        useBlockStore.getState().syncToServer();
-      }, 300);
-    } else {
-      // 检查当前是否仍停留在旧的“产品需求文档”上，若是则切到新手指南
-      const guidePage = state.pages.find(
-        (p) => p.id === GUIDE_ID || p.title.includes('新手') || p.title.includes('入门')
-      );
-      if (guidePage && state.currentPageId !== guidePage.id) {
-        const curPage = state.pages.find((p) => p.id === state.currentPageId);
-        if (curPage && (curPage.title.includes('需求') || curPage.title.includes('PRD'))) {
-          state.setCurrentPage(guidePage.id);
-        }
-      }
-    }
-
-    const loadServerData = async () => {
-      if (account?.id) useBlockStore.getState().setCurrentUserId(account.id);
-      if (!active) return;
-      await syncPages();
-      if (!active) return;
-      const st = useBlockStore.getState();
-      if (st.currentPageId) {
-        await loadFromServer(st.currentPageId);
-      }
-      // 防御校验：服务端加载完成后，若当前页面为新手指南但卡片依然为 0，强制恢复官方预置并同步上云
-      const postSt = useBlockStore.getState();
-      if ((postSt.currentPageId === GUIDE_ID || postSt.currentPageId.includes('guide')) && postSt.blocks.length === 0) {
-        useBlockStore.setState((prev) => ({
-          blocks: freshGuideBlocks,
-          pageBlocks: {
-            ...prev.pageBlocks,
-            [GUIDE_ID]: freshGuideBlocks,
-          },
-        }));
-        setShowOnboarding(true);
-        postSt.syncToServer();
-      }
-    };
-    loadServerData();
-    return () => { active = false; };
-  }, [hydrate, syncPages, loadFromServer, account?.id]);
+    if (!account?.id) return;
+    const controller = new AbortController();
+    setWorkspaceError('');
+    initializeWorkspace(account.id, initialMode.current, controller.signal)
+      .then(created => { if (!controller.signal.aborted && created) setShowOnboarding(true); })
+      .catch(err => { if (!controller.signal.aborted) setWorkspaceError(err instanceof Error ? err.message : '文档加载失败'); });
+    return () => controller.abort();
+  }, [account?.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -209,6 +99,7 @@ export default function DesktopWorkspace() {
             onToggleFoldPlan={() => setShowFoldPlan(true)}
             onToggleDocRelations={() => setShowDocRelations(true)}
           />
+          <div role="status" className="text-sm text-red-500">{workspaceError}</div>
           <AgentLogPanel isOpen={showLogs} onClose={() => setShowLogs(false)} />
           <BlockEditor
             commandPaletteOpen={showAIAssistant}
