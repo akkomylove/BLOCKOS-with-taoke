@@ -65,105 +65,130 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-end pt-16 pr-4">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col border border-gray-200 dark:border-zinc-700">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-700">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-blue-500" />
-            <h2 className="text-base font-semibold text-gray-900 dark:text-zinc-100">AI 对话</h2>
+    <div className="fixed inset-0 z-[100] flex items-start justify-end pt-16 pr-4 sm:pr-6 pointer-events-none">
+      <div className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-xs pointer-events-auto transition-opacity" onClick={onClose} />
+      <div className="pointer-events-auto relative bg-white dark:bg-[#1a1c20] rounded-2xl shadow-modal w-full max-w-md max-h-[82vh] overflow-hidden flex flex-col border border-line dark:border-zinc-800 transition-all">
+        {/* 顶部标题栏 */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-subtle dark:border-zinc-800 bg-white dark:bg-[#1a1c20]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-brand-light dark:bg-blue-950/50 flex items-center justify-center text-brand">
+              <MessageSquare className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-content dark:text-zinc-100">AI 对话助手</h2>
+              <p className="text-[11px] text-content-tertiary dark:text-zinc-500">基于当前画布内容上下文协同</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-500" /></button>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary transition-colors"
+            title="关闭对话"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* 角色选择 */}
         {enterprise && (
-        <div className="px-4 py-2 border-b border-gray-200 dark:border-zinc-700">
-          <div className="relative">
-            <button
-              onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 rounded-lg text-sm text-gray-700 dark:text-zinc-300"
-            >
-              <span className={`w-2 h-2 rounded-full ${currentRole.color}`} />
-              {currentRole.label}
-              <ChevronDown className="w-3 h-3" />
-            </button>
-            {showRoleDropdown && (
-              <div className="absolute z-10 mt-1 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-lg">
-                {ROLE_PRESETS.map((role) => (
-                  <button
-                    key={role.key}
-                    onClick={() => { setRolePreset(role.key); setShowRoleDropdown(false); }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-zinc-700 w-full text-left"
-                  >
-                    <span className={`w-2 h-2 rounded-full ${role.color}`} />
-                    {role.label}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="px-4 py-2 border-b border-line-subtle dark:border-zinc-800 bg-page/50 dark:bg-zinc-900/50">
+            <div className="relative">
+              <button
+                onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+                className="flex items-center gap-2 px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-line dark:border-zinc-700/80 hover:bg-surface-hover rounded-lg text-xs font-medium text-content-secondary dark:text-zinc-300 transition-colors shadow-xs"
+              >
+                <span className={`w-2 h-2 rounded-full ${currentRole.color}`} />
+                {currentRole.label}
+                <ChevronDown className="w-3 h-3 text-content-tertiary" />
+              </button>
+              {showRoleDropdown && (
+                <div className="absolute z-10 mt-1.5 w-44 bg-white dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-xl shadow-popover py-1">
+                  {ROLE_PRESETS.map((role) => (
+                    <button
+                      key={role.key}
+                      onClick={() => { setRolePreset(role.key); setShowRoleDropdown(false); }}
+                      className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-hover dark:hover:bg-zinc-700/60 w-full text-left text-content-secondary dark:text-zinc-200 transition-colors"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${role.color}`} />
+                      {role.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {/* 消息列表 */}
-        <div ref={scrollRef} className="flex-1 overflow-auto p-4 space-y-3 min-h-0">
+        <div ref={scrollRef} className="flex-1 overflow-auto p-4 space-y-3 min-h-0 bg-page/40 dark:bg-zinc-950/40">
           {messages.length === 0 && (
-            <div className="text-center text-sm text-gray-400 py-8">
-              <Bot className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p>{enterprise ? '选择角色后开始对话' : '直接提问，或让我帮你整理思路'}</p>
-              <p className="text-xs mt-1">AI 会结合当前文档内容回答</p>
+            <div className="text-center py-10">
+              <div className="w-12 h-12 rounded-2xl bg-brand-light dark:bg-blue-950/40 text-brand flex items-center justify-center mx-auto mb-3 shadow-xs">
+                <Bot className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-medium text-content dark:text-zinc-200">
+                {enterprise ? '选择角色后开始对话' : '直接提问，或让我帮你整理思路'}
+              </p>
+              <p className="text-xs text-content-tertiary dark:text-zinc-500 mt-1">
+                AI 会实时结合当前文档与画布节点内容回答
+              </p>
             </div>
           )}
           {messages.map((msg, i) => (
-            <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Bot className="w-3.5 h-3.5 text-blue-500" />
+                <div className="w-6 h-6 rounded-full bg-brand-light dark:bg-blue-950/50 flex items-center justify-center flex-shrink-0 mt-0.5 text-brand shadow-xs">
+                  <Bot className="w-3.5 h-3.5" />
                 </div>
               )}
-              <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
-                msg.role === 'user'
-                  ? 'bg-blue-500 text-white rounded-br-md'
-                  : 'bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-zinc-200 rounded-bl-md'
-              }`}>
+              <div
+                className={`max-w-[82%] px-3.5 py-2.5 text-xs sm:text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-brand text-white rounded-2xl rounded-br-sm shadow-xs font-normal'
+                    : 'bg-white dark:bg-zinc-800 border border-line dark:border-zinc-700/80 text-content dark:text-zinc-100 rounded-2xl rounded-bl-sm shadow-xs'
+                }`}
+              >
                 {msg.content}
               </div>
               {msg.role === 'user' && (
-                <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User className="w-3.5 h-3.5 text-gray-500" />
+                <div className="w-6 h-6 rounded-full bg-surface-hover dark:bg-zinc-700 flex items-center justify-center flex-shrink-0 mt-0.5 text-content-secondary shadow-xs">
+                  <User className="w-3.5 h-3.5" />
                 </div>
               )}
             </div>
           ))}
           {loading && (
-            <div className="flex gap-2">
-              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-3.5 h-3.5 text-blue-500" />
+            <div className="flex gap-2.5">
+              <div className="w-6 h-6 rounded-full bg-brand-light dark:bg-blue-950/50 flex items-center justify-center flex-shrink-0 text-brand">
+                <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="px-3 py-2 bg-gray-100 dark:bg-zinc-800 rounded-xl rounded-bl-md">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+              <div className="px-3.5 py-2.5 bg-white dark:bg-zinc-800 border border-line dark:border-zinc-700/80 rounded-2xl rounded-bl-sm shadow-xs">
+                <Loader2 className="w-4 h-4 animate-spin text-brand" />
               </div>
             </div>
           )}
-          {error && <div className="text-xs text-red-500 text-center">{error}</div>}
+          {error && (
+            <div className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-lg p-2 text-center">
+              {error}
+            </div>
+          )}
         </div>
 
         {/* 输入 */}
-        <div className="p-3 border-t border-gray-200 dark:border-zinc-700">
+        <div className="p-3 border-t border-line-subtle dark:border-zinc-800 bg-white dark:bg-[#1a1c20]">
           <div className="flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
-              placeholder="输入问题..."
-              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm text-gray-900 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-blue-500/20"
+              placeholder="输入问题或协同需求..."
+              className="flex-1 px-3.5 py-2 rounded-xl border border-line dark:border-zinc-700 bg-page dark:bg-zinc-800 text-xs sm:text-sm text-content dark:text-zinc-100 placeholder-content-tertiary outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
             />
             <button
               onClick={handleSend}
               disabled={loading || !input.trim()}
-              className="px-3 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-lg transition-colors"
+              className="px-3.5 py-2 bg-brand hover:bg-brand-hover active:bg-brand-active disabled:opacity-40 text-white rounded-xl transition-all shadow-xs flex items-center justify-center"
+              title="发送"
             >
               <Send className="w-4 h-4" />
             </button>

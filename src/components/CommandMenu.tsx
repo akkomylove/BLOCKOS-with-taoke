@@ -141,12 +141,12 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200/80 dark:border-zinc-700/80 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden animate-scale-in text-gray-900 dark:text-zinc-100 flex flex-col max-h-[460px]"
+      className="fixed z-50 w-80 bg-white dark:bg-[#1a1c20] border border-line dark:border-zinc-800 rounded-2xl shadow-popover overflow-hidden animate-scale-in text-content dark:text-zinc-100 flex flex-col max-h-[460px]"
       style={{ top: position.top, left: position.left }}
     >
       {/* Search Bar */}
-      <div className="p-3 border-b border-gray-200/70 dark:border-zinc-800/80 flex items-center gap-2 bg-gray-50/50 dark:bg-zinc-900/50">
-        <Search className="w-4 h-4 text-gray-400 dark:text-zinc-500 shrink-0" />
+      <div className="p-3 border-b border-line-subtle dark:border-zinc-800 flex items-center gap-2 bg-[#f7f8fa]/60 dark:bg-zinc-900/60">
+        <Search className="w-4 h-4 text-content-tertiary dark:text-zinc-500 shrink-0" />
         <input
           type="text"
           value={search}
@@ -155,13 +155,13 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
             setActiveIndex(0);
           }}
           placeholder="搜索 Block 类型 (如: 倒计时, 流程图, 提示)..."
-          className="w-full bg-transparent outline-none text-xs text-gray-900 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-500"
+          className="w-full bg-transparent outline-none text-xs text-content dark:text-zinc-100 placeholder-content-tertiary dark:placeholder-zinc-500"
           autoFocus
         />
         {search && (
           <button
             onClick={() => setSearch('')}
-            className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300"
+            className="text-[11px] text-content-tertiary hover:text-content-secondary dark:hover:text-zinc-300 transition-colors"
           >
             清除
           </button>
@@ -169,7 +169,7 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
       </div>
 
       {/* Category Filter Tabs */}
-      <div className="flex items-center gap-1 px-2.5 py-1.5 border-b border-gray-100 dark:border-zinc-800 overflow-x-auto no-scrollbar text-[11px]">
+      <div className="flex items-center gap-1 px-2.5 py-1.5 border-b border-line-subtle dark:border-zinc-800 overflow-x-auto no-scrollbar text-[11px] bg-white dark:bg-[#1a1c20]">
         {[
           { id: 'all', label: '全部' },
           { id: 'basic', label: '基础' },
@@ -185,8 +185,8 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
             }}
             className={`px-2 py-0.5 rounded-md whitespace-nowrap transition-colors ${
               selectedCategory === tab.id
-                ? 'bg-blue-500 text-white font-medium shadow-xs'
-                : 'text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                ? 'bg-brand text-white font-medium shadow-xs'
+                : 'text-content-secondary dark:text-zinc-400 hover:bg-surface-hover dark:hover:bg-zinc-800'
             }`}
           >
             {tab.label}
@@ -195,17 +195,17 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
       </div>
 
       {/* Grouped Block List */}
-      <div className="flex-1 overflow-y-auto p-1.5 space-y-2">
+      <div className="flex-1 overflow-y-auto p-1.5 space-y-2 bg-[#f7f8fa]/30 dark:bg-zinc-950/20">
         {displayCategories.length === 0 ? (
-          <div className="py-8 text-center text-xs text-gray-400 dark:text-zinc-500">
+          <div className="py-8 text-center text-xs text-content-tertiary dark:text-zinc-500">
             未找到匹配的 Block 类型
           </div>
         ) : (
           displayCategories.map((category) => (
             <div key={category.id} className="space-y-0.5">
-              <div className="px-2.5 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+              <div className="px-2.5 py-1 text-[10px] font-semibold text-content-tertiary dark:text-zinc-500 uppercase tracking-wider flex items-center justify-between">
                 <span>{category.title}</span>
-                <span className="text-[9px] font-normal text-gray-400/80 lowercase">{category.items.length} 项</span>
+                <span className="text-[9px] font-normal text-content-tertiary/80 lowercase">{category.items.length} 项</span>
               </div>
               {category.items.map((item) => {
                 const itemIndex = currentIndexTracker++;
@@ -221,15 +221,15 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
                     onMouseEnter={() => setActiveIndex(itemIndex)}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all text-left ${
                       isSelected
-                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 shadow-xs'
-                        : 'hover:bg-gray-100/60 dark:hover:bg-zinc-800/60 text-gray-800 dark:text-zinc-200'
+                        ? 'bg-brand-light dark:bg-blue-950/40 text-brand dark:text-blue-300 font-medium shadow-xs'
+                        : 'hover:bg-surface-hover dark:hover:bg-zinc-800/60 text-content dark:text-zinc-200'
                     }`}
                   >
                     <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-colors ${
                         isSelected
-                          ? 'bg-white dark:bg-zinc-800 border-blue-200 dark:border-blue-800 shadow-xs'
-                          : 'bg-gray-50 dark:bg-zinc-800/70 border-gray-200/60 dark:border-zinc-700/60'
+                          ? 'bg-white dark:bg-zinc-800 border-brand/30 dark:border-blue-800 shadow-xs'
+                          : 'bg-white dark:bg-zinc-800/70 border-line dark:border-zinc-700/60'
                       }`}
                     >
                       {BLOCK_ICONS[item.type]}
@@ -243,7 +243,7 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-gray-400 dark:text-zinc-500 truncate leading-tight">
+                      <div className="text-[11px] text-content-tertiary dark:text-zinc-500 truncate leading-tight mt-0.5">
                         {item.description}
                       </div>
                     </div>
@@ -256,10 +256,10 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
       </div>
 
       {/* Footer shortcut helper */}
-      <div className="px-3 py-1.5 border-t border-gray-100 dark:border-zinc-800 bg-gray-50/70 dark:bg-zinc-900/70 text-[10px] text-gray-400 dark:text-zinc-500 flex items-center justify-between">
+      <div className="px-3 py-1.5 border-t border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/80 dark:bg-zinc-900/80 text-[10px] text-content-tertiary dark:text-zinc-500 flex items-center justify-between">
         <span>↑↓ 切换 · Enter 确认创建</span>
-        <span className="flex items-center gap-1">
-          <Sparkles className="w-2.5 h-2.5 text-blue-500" />
+        <span className="flex items-center gap-1 text-brand">
+          <Sparkles className="w-2.5 h-2.5" />
           <span>飞书式多维分类</span>
         </span>
       </div>

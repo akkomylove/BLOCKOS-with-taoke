@@ -548,21 +548,21 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200 dark:border-zinc-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-scale-in">
+      <div className="absolute inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-xs" onClick={onClose} />
+      <div className="relative w-full max-w-2xl bg-white dark:bg-[#1a1c20] border border-line dark:border-zinc-800 rounded-2xl shadow-modal overflow-hidden animate-scale-in">
         {/* 顶部标题栏 */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-200 dark:border-zinc-800/60 bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-sm">
-            <Zap className="w-3.5 h-3.5 text-white" />
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/80 dark:bg-[#141517]/80">
+          <div className="w-7 h-7 rounded-lg bg-[#f7f4ff] dark:bg-purple-950/40 text-ai-purple flex items-center justify-center shadow-xs">
+            <Zap className="w-3.5 h-3.5 text-ai-purple" />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-800 dark:text-zinc-200">AI 助手</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-medium">Canvas Agent</span>
+            <span className="text-sm font-semibold text-content dark:text-zinc-100">AI 画布操作助手</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-ai-purple-light dark:bg-purple-950/40 text-ai-purple dark:text-purple-300 border border-ai-purple-border font-medium">Canvas Agent</span>
           </div>
         </div>
 
         {/* 指令输入框 */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-zinc-800/60">
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-line-subtle dark:border-zinc-800 bg-white dark:bg-[#1a1c20]">
           <input
             ref={inputRef}
             type="text"
@@ -573,13 +573,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
               if (e.key === 'Escape') onClose();
             }}
             placeholder="输入指令或提问，例如：你能在此完成什么工作？、创建需求与3个子任务、清空画布..."
-            className="flex-1 bg-transparent outline-none text-gray-800 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 text-sm"
+            className="flex-1 bg-transparent outline-none text-content dark:text-zinc-100 placeholder-content-tertiary text-sm py-1"
           />
           {isSupported && (
             <button
               onClick={isListening ? stopListening : startListening}
               className={`p-2 rounded-lg transition-colors ${
-                isListening ? 'bg-red-500/15 text-red-400' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-500 dark:text-zinc-500'
+                isListening ? 'bg-red-500/15 text-red-500' : 'hover:bg-surface-hover dark:hover:bg-zinc-800 text-content-tertiary hover:text-content-secondary'
               }`}
               title={isListening ? '停止录音' : '语音输入'}
             >
@@ -587,19 +587,21 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             </button>
           )}
           {isLoading ? (
-            <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />
+            <Loader2 className="w-4 h-4 text-brand animate-spin" />
           ) : (
             <button
               onClick={handleSubmit}
               disabled={!input.trim()}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors disabled:opacity-30 text-purple-600 dark:text-purple-400"
+              className="p-2 bg-brand hover:bg-brand-hover active:bg-brand-active text-white rounded-lg transition-all shadow-xs disabled:opacity-30"
+              title="发送指令"
             >
               <Send className="w-4 h-4" />
             </button>
           )}
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500"
+            className="p-1.5 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg transition-colors text-content-tertiary hover:text-content-secondary"
+            title="关闭"
           >
             <X className="w-4 h-4" />
           </button>
@@ -607,15 +609,15 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
         {/* 画布操作成功反馈 */}
         {executedOps.length > 0 && (
-          <div className="px-5 py-3 border-t border-emerald-500/20 bg-emerald-500/10 dark:bg-emerald-950/20">
+          <div className="px-5 py-3 border-t border-emerald-200 dark:border-emerald-800/40 bg-[#e8f8f0] dark:bg-emerald-950/20">
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">画布操作已执行</span>
+              <CheckCircle2 className="w-4 h-4 text-[#2ba471]" />
+              <span className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold">画布操作已执行</span>
             </div>
             <div className="space-y-1">
               {executedOps.map((op, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  <Sparkles className="w-3 h-3 text-emerald-500" />
+                  <Sparkles className="w-3 h-3 text-[#2ba471]" />
                   <span>{op}</span>
                 </div>
               ))}
@@ -625,11 +627,11 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
         {/* 智能体文本输出与解答展示 */}
         {(streamText || result) && !executedOps.length && (
-          <div className="px-5 py-4 text-sm text-gray-700 dark:text-zinc-300 border-t border-gray-200 dark:border-zinc-800/60 bg-gray-50/40 dark:bg-zinc-950/40 max-h-64 overflow-y-auto">
+          <div className="px-5 py-4 text-sm text-content dark:text-zinc-200 border-t border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/50 dark:bg-zinc-950/40 max-h-64 overflow-y-auto">
             <div className="whitespace-pre-wrap leading-relaxed font-sans text-xs sm:text-sm">
               {streamText || result}
               {isLoading && (
-                <span className="inline-block w-1 h-4 bg-purple-500 ml-1 align-text-bottom animate-pulse" />
+                <span className="inline-block w-1.5 h-4 bg-brand ml-1 align-text-bottom animate-pulse" />
               )}
             </div>
           </div>
@@ -637,9 +639,9 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
         {/* 一键快捷操作建议芯片 */}
         {actionSuggestions.length > 0 && (
-          <div className="px-5 py-3 border-t border-purple-200/60 dark:border-purple-900/40 bg-purple-50/30 dark:bg-purple-950/20">
-            <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+          <div className="px-5 py-3 border-t border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/60 dark:bg-zinc-900/40">
+            <div className="text-xs font-semibold text-ai-purple dark:text-purple-300 mb-2 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-ai-purple" />
               <span>推荐操作（点击直接在画布中执行生效）：</span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -647,7 +649,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                 <button
                   key={idx}
                   onClick={() => handleExecuteSuggestion(sug.command)}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-purple-200 dark:border-purple-800/60 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-800 dark:text-zinc-200 transition-all shadow-sm flex items-center gap-1.5 active:scale-95 text-left font-medium"
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-line dark:border-zinc-700 hover:border-brand hover:bg-brand-light hover:text-brand dark:hover:bg-blue-950/30 text-content-secondary dark:text-zinc-200 transition-all shadow-xs active:scale-95 text-left font-medium"
                 >
                   <span>{sug.label}</span>
                 </button>
@@ -658,10 +660,10 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
         {/* 文本类回复的底部保留操作 */}
         {!isLoading && streamText && !executedOps.length && actionSuggestions.length === 0 && (
-          <div className="flex gap-2 px-5 py-3 border-t border-gray-200 dark:border-zinc-800/60">
+          <div className="flex gap-2 px-5 py-3 border-t border-line-subtle dark:border-zinc-800">
             <button
               onClick={handleKeep}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-brand hover:bg-brand-hover text-white text-sm font-medium rounded-lg transition-colors shadow-xs"
             >
               创建为 Block
             </button>
@@ -670,7 +672,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                 setStreamText('');
                 setResult('');
               }}
-              className="flex-1 px-3 py-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-400 text-sm rounded-lg transition-colors"
+              className="flex-1 px-3 py-2 bg-surface-hover dark:bg-zinc-800 hover:bg-line-subtle dark:hover:bg-zinc-700 text-content-secondary dark:text-zinc-400 text-sm rounded-lg transition-colors"
             >
               清除
             </button>
@@ -678,8 +680,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         )}
 
         {/* 底部功能提示与真实示例 */}
-        <div className="px-5 py-2.5 bg-gray-50 dark:bg-zinc-950/60 text-[11px] text-gray-500 dark:text-zinc-400 border-t border-gray-100 dark:border-zinc-800/40">
-          <span className="font-semibold text-gray-600 dark:text-zinc-300">示例：</span>
+        <div className="px-5 py-2.5 bg-[#f7f8fa] dark:bg-zinc-950/60 text-[11px] text-content-tertiary dark:text-zinc-400 border-t border-line-subtle dark:border-zinc-800/40">
+          <span className="font-semibold text-content-secondary dark:text-zinc-300">示例：</span>
           「你能在此完成什么工作？」「创建1个需求并创建3个子任务」「创建代码沙箱」「画一个微服务架构流程图」「高亮所有包含待办的Block」
         </div>
       </div>

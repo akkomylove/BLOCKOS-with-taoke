@@ -49,21 +49,23 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={handleOverlayClick}
     >
-      <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md mx-4 animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-800">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">创建新团队</h3>
+      <div className="bg-white dark:bg-[#1a1c20] rounded-2xl shadow-modal w-full max-w-md mx-4 border border-line dark:border-zinc-800 animate-scale-in overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/60 dark:bg-zinc-900/40">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-brand-light dark:bg-blue-950/40 text-brand flex items-center justify-center shadow-xs">
+              <Users className="w-4 h-4" />
+            </div>
+            <h3 className="text-sm font-semibold text-content dark:text-zinc-100">创建新团队</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300"
+            className="p-1.5 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
         
-        <form role="form" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="p-4 space-y-4">
+        <form role="form" onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="p-5 space-y-4">
           {error && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
@@ -71,7 +73,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-medium text-content-secondary dark:text-zinc-300 mb-1.5">
               团队名称
             </label>
             <input
@@ -79,14 +81,14 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="输入团队名称"
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent"
+              className="w-full px-3 py-2 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 placeholder-content-tertiary dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm"
               autoFocus
               required
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-medium text-content-secondary dark:text-zinc-300 mb-1.5">
               团队描述（可选）
             </label>
             <textarea
@@ -94,18 +96,18 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="描述一下这个团队"
               rows={3}
-              className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 placeholder-content-tertiary dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm resize-none"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-medium text-content-secondary dark:text-zinc-300 mb-1.5">
               团队头像（可选）
             </label>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white text-xl font-semibold">
+              <div className="w-11 h-11 bg-brand-light dark:bg-blue-950/40 text-brand border border-line dark:border-zinc-700 rounded-xl flex items-center justify-center text-lg font-semibold shadow-xs">
                 {avatar ? (
-                  <img src={avatar} alt="预览" className="w-12 h-12 rounded-lg object-cover" />
+                  <img src={avatar} alt="预览" className="w-11 h-11 rounded-xl object-cover" />
                 ) : (
                   name.charAt(0)?.toUpperCase() || '?'
                 )}
@@ -116,24 +118,24 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                   value={avatar}
                   onChange={(e) => setAvatar(e.target.value)}
                   placeholder="输入图片URL"
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-gray-900 dark:text-zinc-100 placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 bg-page dark:bg-zinc-800 border border-line dark:border-zinc-700 rounded-lg text-content dark:text-zinc-100 placeholder-content-tertiary dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-sm"
                 />
               </div>
             </div>
           </div>
           
-          <div className="flex items-center justify-end gap-2 pt-4">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-line-subtle dark:border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 text-content-secondary dark:text-zinc-300 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-sm font-medium transition-colors"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={loading || !name.trim()}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-brand hover:bg-brand-hover active:bg-brand-active disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors shadow-xs flex items-center gap-2"
             >
               {loading ? (
                 <>
