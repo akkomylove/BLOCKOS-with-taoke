@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { postJsonCompletion, parseJsonContent, safeText, safeList } from '@/lib/ai/client';
-import { getUserId } from '@/lib/auth-utils';
+import { withEnterprise } from '@/lib/enterprise-access';
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
-    let userId: string;
-    try {
-      userId = await getUserId();
-    } catch {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { systemPrompt, userPrompt } = await req.json();
 
     if (!systemPrompt || !userPrompt) {
@@ -49,3 +42,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);

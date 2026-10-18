@@ -1,6 +1,7 @@
 import { postJsonCompletion, parseJsonContent } from './client';
 import type { ChatRequest, ChatResponse } from './types';
 import { validateInputSafety, sanitizeAiOutput } from './safety-filter';
+import { PERSONAL_CHAT_PRESET } from '@/config/ai-modes';
 
 const CHAT_ROLE_PRESETS: Record<string, { title: string; style: string }> = {
   '专业产品经理': {
@@ -31,14 +32,16 @@ export async function chat(payload: ChatRequest): Promise<ChatResponse> {
   });
 
   const preset = CHAT_ROLE_PRESETS[payload.rolePreset] || { title: payload.rolePreset, style: '请以清晰、专业、直接的方式回答。' };
+  const personal = payload.rolePreset === PERSONAL_CHAT_PRESET;
 
   const systemPrompt = (
-    '你是 FDoc 的侧边栏 AI 对话助手。'
+    '你是 BlockOS 的侧边栏 AI 对话助手。'
     + '只输出合法 JSON，不要 markdown，不要解释。'
-    + ' 你的回答必须结合用户选中的文本和当前文档上下文。'
-    + ` 当前角色设定：${payload.rolePreset}。${preset.style}`
+    + (personal
+      ? '你是通用个人助手，帮助用户日常问答、学习、记录和整理思路。根据问题需要参考文档，不要默认套用职业角色、团队审阅或项目工作流。'
+      : `你的回答必须结合用户选中的文本和当前文档上下文。当前角色设定：${payload.rolePreset}。${preset.style}`)
     + ' 如果用户提供了多个上下文片段，要优先引用选中文本内容。'
-    + ' 对话内容要简洁、可执行、面向文档协作。'
+    + (personal ? '回答要清晰自然，贴合用户的问题。' : ' 对话内容要简洁、可执行、面向文档协作。')
   );
 
   const userPrompt = (
@@ -50,11 +53,10 @@ export async function chat(payload: ChatRequest): Promise<ChatResponse> {
     + '4. 不要输出 markdown 代码块。\n'
     + '5. role_preset 原样返回。\n\n'
     + `文档名称：${payload.documentName}\n`
-    + `当前角色：${payload.currentRole}\n`
-    + `工作流：${JSON.stringify(payload.workflow)}\n`
+    + (personal ? '' : `当前角色：${payload.currentRole}\n工作流：${JSON.stringify(payload.workflow)}\n`)
     + `文档摘要：${payload.documentSummary || ''}\n`
     + `角色设定：${payload.rolePreset}\n`
-    + `角色提示：${payload.personaNote || ''}\n`
+    + (personal ? '' : `角色提示：${payload.personaNote || ''}\n`)
     + `选中文本：${JSON.stringify(payload.selectedContexts)}\n`
     + `历史对话：${JSON.stringify(payload.messages.slice(-6))}\n`
     + `用户本次提问：${payload.userMessage}`
@@ -84,7 +86,7 @@ export async function chat(payload: ChatRequest): Promise<ChatResponse> {
 
   return {
     assistantMessage: safeAssistantMessage || '我已经看过你选中的内容，建议你再补充一下目标、限制条件或希望我重点分析的方面。',
-    rolePreset: typeof parsed.role_preset === 'string' ? parsed.role_preset : payload.rolePreset,
+    rolePreset: personal ? PERSONAL_CHAT_PRESET : (typeof parsed.role_preset === 'string' ? parsed.role_preset : payload.rolePreset),
     selectedContextCount: payload.selectedContexts.length,
   };
 }

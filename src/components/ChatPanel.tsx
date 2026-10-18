@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { X, MessageSquare, Send, Loader2, User, Bot, ChevronDown } from 'lucide-react';
 import { useChat } from '@/hooks/useTaokeAI';
 import { useBlockStore } from '@/store/blockStore';
+import { useAccountStore } from '@/store/accountStore';
+import { PERSONAL_CHAT_PRESET } from '@/config/ai-modes';
 import type { ChatMessageItem, ChatContextItem } from '@/lib/ai';
 
 const ROLE_PRESETS = [
@@ -16,13 +18,15 @@ const ROLE_PRESETS = [
 interface ChatPanelProps { isOpen: boolean; onClose: () => void; }
 
 export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
+  const enterprise = useAccountStore((state) => state.user?.mode === 'enterprise');
   const [rolePreset, setRolePreset] = useState('专业产品经理');
+  const effectiveRole = enterprise ? rolePreset : PERSONAL_CHAT_PRESET;
   const [messages, setMessages] = useState<ChatMessageItem[]>([]);
   const [input, setInput] = useState('');
-  const [selectedContexts, setSelectedContexts] = useState<ChatContextItem[]>([]);
+  const [selectedContexts] = useState<ChatContextItem[]>([]);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { data, loading, error, execute } = useChat();
+  const { loading, error, execute } = useChat();
   const blocks = useBlockStore((state) => state.blocks);
 
   useEffect(() => {
@@ -43,9 +47,9 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     const res = await execute({
       documentName: '当前文档',
       documentSummary: content.slice(0, 500),
-      workflow: ['作者'],
-      currentRole: rolePreset,
-      rolePreset,
+      workflow: enterprise ? ['作者'] : [],
+      currentRole: effectiveRole,
+      rolePreset: effectiveRole,
       selectedContexts,
       messages: newMessages,
       userMessage: userMsg,
@@ -73,6 +77,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         </div>
 
         {/* 角色选择 */}
+        {enterprise && (
         <div className="px-4 py-2 border-b border-gray-200 dark:border-zinc-700">
           <div className="relative">
             <button
@@ -99,13 +104,14 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             )}
           </div>
         </div>
+        )}
 
         {/* 消息列表 */}
         <div ref={scrollRef} className="flex-1 overflow-auto p-4 space-y-3 min-h-0">
           {messages.length === 0 && (
             <div className="text-center text-sm text-gray-400 py-8">
               <Bot className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p>选择角色后开始对话</p>
+              <p>{enterprise ? '选择角色后开始对话' : '直接提问，或让我帮你整理思路'}</p>
               <p className="text-xs mt-1">AI 会结合当前文档内容回答</p>
             </div>
           )}

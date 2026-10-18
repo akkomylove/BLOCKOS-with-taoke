@@ -10,7 +10,7 @@ export function getAccountGuide(mode: AccountMode) {
     'guide-block-ai': { title: '3. 让 AI 帮你整理内容', content: '悬停卡片，使用 AI 按钮总结、扩写或改写。也可以打开顶部 AI 对话，围绕当前文档提问。' },
   };
   return blocks.map(block => ({ ...block, ...(copy[block.id] || {}),
-    ...(block.type === 'text' && block.content.includes('企业级协同中心') ? { title: '个人工具与账号中心', content: '## 从一个想法开始\n\n- 在左侧新建文档或文件夹，整理学习、生活和工作内容。\n- 使用 AI 助手、Copilot、搜索和历史版本。\n- 点击「个人模式」打开账号中心，编辑资料、修改密码。\n- 需要团队、成员和项目协作时，可切换企业模式；切换会保留已有内容。' } : {}),
+    ...(block.type === 'text' && block.content.includes('企业级协同中心') ? { title: '个人工具与账号中心', content: '## 从一个想法开始\n\n- 在左侧新建文档或文件夹，整理学习、生活和工作内容。\n- 使用通用 AI 对话、内容整理、搜索和历史版本。\n- 点击「个人模式」打开账号中心，编辑资料、修改密码。\n- 需要团队、成员和项目协作时，可切换企业模式；切换会保留已有内容。' } : {}),
     meta: { ...block.meta, tags: block.meta.tags?.filter(tag => !tag.includes('协同')) },
     ...(block.type === 'table' ? { content: personalTable(block.content) } : {}),
   }));

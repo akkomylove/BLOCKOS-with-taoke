@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runCopilot } from '@/lib/ai';
 import type { CopilotRequest } from '@/lib/ai';
-import { getUserId } from '@/lib/auth-utils';
+import { withEnterprise } from '@/lib/enterprise-access';
 
-export async function POST(req: NextRequest) {
-  let userId: string;
-  try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
-
+async function POSTHandler(req: NextRequest) {
   try {
     const body = (await req.json()) as CopilotRequest;
     if (!body.action || !body.documentName || !body.documentContent || !body.workflow?.length) {
@@ -26,3 +23,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message, code }, { status: statusCode });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);

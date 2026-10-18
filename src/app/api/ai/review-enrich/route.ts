@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reviewEnrich } from '@/lib/ai/review-enrich';
-import { getUserId } from '@/lib/auth-utils';
+import { withEnterprise } from '@/lib/enterprise-access';
 
-export async function POST(req: NextRequest) {
-  let userId: string;
-  try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
-
+async function POSTHandler(req: NextRequest) {
   try {
     const body = await req.json();
     const result = await reviewEnrich(body);
@@ -15,3 +12,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Review enrich failed' }, { status: 500 });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);

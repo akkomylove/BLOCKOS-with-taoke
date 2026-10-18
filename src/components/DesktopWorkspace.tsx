@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import BlockEditor from '@/components/BlockEditor';
 import Toolbar from '@/components/Toolbar';
-import AgentLogPanel from '@/components/AgentLogPanel';
 import { Sidebar } from '@/components/Sidebar';
 import OnboardingTour from '@/components/OnboardingTour';
 import HelpPanel from '@/components/HelpPanel';
@@ -12,14 +11,15 @@ import GroupPanel from '@/components/GroupPanel';
 import ImportPanel from '@/components/ImportPanel';
 import ExportPanel from '@/components/ExportPanel';
 import HistoryPanel from '@/components/HistoryPanel';
-import CopilotPanel from '@/components/CopilotPanel';
 import dynamic from 'next/dynamic';
 import { useAccountStore } from '@/store/accountStore';
 const AnalyzePanel = dynamic(() => import('@/components/AnalyzePanel'), { ssr: false });
+const AgentLogPanel = dynamic(() => import('@/components/AgentLogPanel'), { ssr: false });
+const CopilotPanel = dynamic(() => import('@/components/CopilotPanel'), { ssr: false });
+const ReviewEnrichPanel = dynamic(() => import('@/components/ReviewEnrichPanel'), { ssr: false });
+const FoldPlanPanel = dynamic(() => import('@/components/FoldPlanPanel'), { ssr: false });
+const DocRelationsPanel = dynamic(() => import('@/components/DocRelationsPanel'), { ssr: false });
 import ChatPanel from '@/components/ChatPanel';
-import ReviewEnrichPanel from '@/components/ReviewEnrichPanel';
-import FoldPlanPanel from '@/components/FoldPlanPanel';
-import DocRelationsPanel from '@/components/DocRelationsPanel';
 import { ProfilePanel } from '@/components/collaboration/ProfilePanel';
 import { useAgent } from '@/hooks/useAgent';
 import { useBlockStore } from '@/store/blockStore';
@@ -54,6 +54,16 @@ export default function DesktopWorkspace() {
   useAgent();
 
   useEffect(() => {
+    if (enterprise) return;
+    setShowLogs(false);
+    setShowCopilot(false);
+    setShowAnalyze(false);
+    setShowReviewEnrich(false);
+    setShowFoldPlan(false);
+    setShowDocRelations(false);
+  }, [enterprise]);
+
+  useEffect(() => {
     if (!account?.id) return;
     const controller = new AbortController();
     setWorkspaceError('');
@@ -80,7 +90,7 @@ export default function DesktopWorkspace() {
         <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} />
         <div className="flex-1 flex flex-col min-w-0">
           <Toolbar
-            onToggleLogs={() => setShowLogs(!showLogs)}
+            onToggleLogs={() => { if (enterprise) setShowLogs(!showLogs); }}
             showLogs={showLogs}
             onToggleAIAssistant={() => setShowAIAssistant(true)}
             onToggleRelationDrawer={() => setShowRelationDrawer(!showRelationDrawer)}
@@ -92,15 +102,15 @@ export default function DesktopWorkspace() {
             showGroupPanel={showGroupPanel}
             onToggleHistory={() => setShowHistory(true)}
             onOpenProfile={() => setShowProfile(true)}
-            onToggleCopilot={() => setShowCopilot(true)}
-            onToggleAnalyze={() => setShowAnalyze(true)}
+            onToggleCopilot={() => { if (enterprise) setShowCopilot(true); }}
+            onToggleAnalyze={() => { if (enterprise) setShowAnalyze(true); }}
             onToggleChat={() => setShowChat(true)}
-            onToggleReviewEnrich={() => setShowReviewEnrich(true)}
-            onToggleFoldPlan={() => setShowFoldPlan(true)}
-            onToggleDocRelations={() => setShowDocRelations(true)}
+            onToggleReviewEnrich={() => { if (enterprise) setShowReviewEnrich(true); }}
+            onToggleFoldPlan={() => { if (enterprise) setShowFoldPlan(true); }}
+            onToggleDocRelations={() => { if (enterprise) setShowDocRelations(true); }}
           />
           <div role="status" className="text-sm text-red-500">{workspaceError}</div>
-          <AgentLogPanel isOpen={showLogs} onClose={() => setShowLogs(false)} />
+          {enterprise && showLogs && <AgentLogPanel isOpen onClose={() => setShowLogs(false)} />}
           <BlockEditor
             commandPaletteOpen={showAIAssistant}
             relationDrawerOpen={showRelationDrawer}
@@ -147,12 +157,12 @@ export default function DesktopWorkspace() {
         <ImportPanel isOpen={showImport} onClose={() => setShowImport(false)} />
         <ExportPanel isOpen={showExport} onClose={() => setShowExport(false)} />
         <HistoryPanel isOpen={showHistory} onClose={() => setShowHistory(false)} />
-        <CopilotPanel isOpen={showCopilot} onClose={() => setShowCopilot(false)} />
+        {enterprise && showCopilot && <CopilotPanel isOpen onClose={() => setShowCopilot(false)} />}
         {enterprise && showAnalyze && <AnalyzePanel isOpen onClose={() => setShowAnalyze(false)} />}
-        <ChatPanel isOpen={showChat} onClose={() => setShowChat(false)} />
-        <ReviewEnrichPanel isOpen={showReviewEnrich} onClose={() => setShowReviewEnrich(false)} />
-        <FoldPlanPanel isOpen={showFoldPlan} onClose={() => setShowFoldPlan(false)} />
-        <DocRelationsPanel isOpen={showDocRelations} onClose={() => setShowDocRelations(false)} />
+        <ChatPanel key={`${account?.id}:${account?.mode}`} isOpen={showChat} onClose={() => setShowChat(false)} />
+        {enterprise && showReviewEnrich && <ReviewEnrichPanel isOpen onClose={() => setShowReviewEnrich(false)} />}
+        {enterprise && showFoldPlan && <FoldPlanPanel isOpen onClose={() => setShowFoldPlan(false)} />}
+        {enterprise && showDocRelations && <DocRelationsPanel isOpen onClose={() => setShowDocRelations(false)} />}
       <ProfilePanel isOpen={showProfile} onClose={() => setShowProfile(false)} />
     </div>
   </ThemeProvider>

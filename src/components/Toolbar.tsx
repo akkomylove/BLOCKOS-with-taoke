@@ -201,18 +201,18 @@ export default function Toolbar({
         <button onClick={onToggleChat} className={iconBtnBlue} title="AI 对话">
           <MessageSquare className="w-4 h-4" />
         </button>
-        <button onClick={onToggleCopilot} className={`${iconBtnBlue} hidden xl:flex`} title="AI Copilot">
+        {enterprise && (<button onClick={onToggleCopilot} className={`${iconBtnBlue} hidden xl:flex`} title="AI Copilot">
           <BrainCircuit className="w-4 h-4" />
-        </button>
+        </button>)}
         {enterprise && (<button onClick={onToggleAnalyze} className={`${iconBtnBlue} hidden xl:flex`} title="工作流分析">
           <BarChart3 className="w-4 h-4" />
         </button>)}
-        <button onClick={onToggleReviewEnrich} className={`${iconBtnBlue} hidden 2xl:flex`} title="角色审阅">
+        {enterprise && (<button onClick={onToggleReviewEnrich} className={`${iconBtnBlue} hidden 2xl:flex`} title="角色审阅">
           <ClipboardCheck className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleDocRelations} className={`${iconBtnBlue} hidden 2xl:flex`} title="文档关联">
+        </button>)}
+        {enterprise && (<button onClick={onToggleDocRelations} className={`${iconBtnBlue} hidden 2xl:flex`} title="文档关联">
           <Link2 className="w-4 h-4" />
-        </button>
+        </button>)}
 
         <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-0.5 sm:mx-1 shrink-0" />
 
@@ -246,9 +246,9 @@ export default function Toolbar({
         {enterprise && (<button onClick={() => router.push('/teams')} className={`${iconBtn} hidden md:flex`} title="协作看板">
           <Users className="w-4 h-4" />
         </button>)}
-        <button onClick={onToggleLogs} className={`${showLogs ? iconBtnActive : iconBtn} hidden md:flex`} title="执行日志">
+        {enterprise && (<button onClick={onToggleLogs} className={`${showLogs ? iconBtnActive : iconBtn} hidden md:flex`} title="执行日志">
           <Activity className="w-4 h-4" />
-        </button>
+        </button>)}
         <button onClick={onToggleExport} className={`${iconBtn} hidden xl:flex`} title="导出">
           <Download className="w-4 h-4" />
         </button>
@@ -369,6 +369,7 @@ export default function Toolbar({
         >
           <div className="space-y-2 text-xs">
             {/* AI 进阶套件 */}
+            {enterprise && (<>
             <div>
               <div className="px-2 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">AI 进阶套件</div>
               <div className="space-y-0.5">
@@ -411,6 +412,7 @@ export default function Toolbar({
             </div>
 
             <div className="h-px bg-gray-100 dark:bg-zinc-800" />
+            </>)}
 
             {/* 视图与图谱 */}
             <div>
@@ -467,13 +469,13 @@ export default function Toolbar({
                   <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span>敏捷看板</span>
                 </button>)}
-                <button
+                {enterprise && (<button
                   onClick={() => { setMoreMenuOpen(false); onToggleLogs(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Activity className="w-4 h-4 text-rose-500 shrink-0" />
                   <span>执行审计</span>
-                </button>
+                </button>)}
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleHelp(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
