@@ -7,7 +7,7 @@ import {
   Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
   Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
   LogOut, UserCircle, LayoutGrid, BarChart3, BrainCircuit,
-  ClipboardCheck, Link2, MoreHorizontal, Loader2, Check, AlertCircle, MessageSquare, WifiOff
+  ClipboardCheck, Link2, MoreHorizontal, Loader2, Check, AlertCircle, WifiOff
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useAccountStore } from '@/store/accountStore';
@@ -30,7 +30,6 @@ interface ToolbarProps {
   onOpenProfile: () => void;
   onToggleCopilot: () => void;
   onToggleAnalyze: () => void;
-  onToggleChat: () => void;
   onToggleReviewEnrich: () => void;
   onToggleFoldPlan: () => void;
   onToggleDocRelations: () => void;
@@ -40,7 +39,7 @@ export default function Toolbar({
   onToggleLogs, showLogs, onToggleAIAssistant, onToggleRelationDrawer,
   onToggleHelp, onToggleSearch, onToggleImport, onToggleExport,
   onToggleGroupPanel, showGroupPanel, onToggleHistory, onOpenProfile,
-  onToggleCopilot, onToggleAnalyze, onToggleChat, onToggleReviewEnrich,
+  onToggleCopilot, onToggleAnalyze, onToggleReviewEnrich,
   onToggleFoldPlan, onToggleDocRelations,
 }: ToolbarProps) {
   const router = useRouter();
@@ -195,11 +194,8 @@ export default function Toolbar({
       {/* Center: Main Actions (响应式折叠，小屏自动收纳进「更多」) */}
       <div className="flex items-center gap-0.5 min-w-0" data-tour="toolbar-actions">
         {/* AI Group (核心常驻 + 进阶响应式) */}
-        <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手">
+        <button onClick={onToggleAIAssistant} className={iconBtnBlue} title="AI 助手" aria-keyshortcuts="Control+k Meta+k">
           <Sparkles className="w-4 h-4" />
-        </button>
-        <button onClick={onToggleChat} className={iconBtnBlue} title="AI 对话">
-          <MessageSquare className="w-4 h-4" />
         </button>
         {enterprise && (<button onClick={onToggleCopilot} className={`${iconBtnBlue} hidden xl:flex`} title="AI Copilot">
           <BrainCircuit className="w-4 h-4" />

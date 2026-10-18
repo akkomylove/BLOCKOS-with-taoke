@@ -21,7 +21,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<Any | null>(null);
 
-  const isSupported = typeof window !== 'undefined' && 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+  const isSupported = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   useEffect(() => {
     if (!isSupported) return;

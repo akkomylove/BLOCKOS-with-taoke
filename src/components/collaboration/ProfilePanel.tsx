@@ -130,7 +130,7 @@ export function ProfilePanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                   专业职能（逗号分隔，如：前端开发, 架构师）
                   <input className={input} value={functionsText} onChange={e => setFunctionsText(e.target.value)} />
                 </label>
-                <p className="text-xs text-content-tertiary">职能标签将展示于团队成员列表中，权限仍以实际分配角色为准。</p>
+                <p className="text-xs text-content-tertiary">AI 助手会根据已保存的职务和职能自动适配专业视角。职能标签也会展示在团队成员列表中，权限以实际分配角色为准。</p>
               </>
             )}
             <button disabled={busy || !loaded} className="rounded-lg bg-brand hover:bg-brand-hover active:bg-brand-active px-4 py-2 text-xs font-medium text-white disabled:opacity-50 transition-colors shadow-xs">

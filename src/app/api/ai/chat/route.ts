@@ -2,23 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { chat } from '@/lib/ai/chat';
 import { AIServiceError } from '@/lib/ai/client';
 import { getUserId } from '@/lib/auth-utils';
-import { getAccountMode } from '@/lib/account';
-import { PERSONAL_CHAT_PRESET } from '@/config/ai-modes';
+import { getAssistantIdentity } from '@/lib/ai/assistant-identity';
+import { PERSONAL_CHAT_PRESET, ENTERPRISE_AUTO_CHAT_PRESET } from '@/config/ai-modes';
 
 export async function POST(req: NextRequest) {
   let userId: string;
-  try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
+  try { userId = await getUserId(req); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
   try {
     const body = await req.json();
-    const personal = await getAccountMode(userId) !== 'enterprise';
-    const result = await chat(personal ? {
+    if (!body || typeof body.userMessage !== 'string' || !body.userMessage.trim()) {
+      return NextResponse.json({ error: '请输入问题' }, { status: 400 });
+    }
+    const identity = await getAssistantIdentity(userId);
+    const rolePreset = identity.mode === 'enterprise' ? ENTERPRISE_AUTO_CHAT_PRESET : PERSONAL_CHAT_PRESET;
+    const result = await chat({
       ...body,
-      currentRole: PERSONAL_CHAT_PRESET,
-      rolePreset: PERSONAL_CHAT_PRESET,
+      currentRole: rolePreset,
+      rolePreset,
       workflow: [],
       personaNote: '',
-    } : body);
+      messages: Array.isArray(body.messages) ? body.messages : [],
+      selectedContexts: Array.isArray(body.selectedContexts) ? body.selectedContexts : [],
+    }, identity);
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof AIServiceError) {

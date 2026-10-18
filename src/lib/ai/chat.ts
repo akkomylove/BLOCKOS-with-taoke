@@ -3,6 +3,7 @@ import type { ChatRequest, ChatResponse } from './types';
 import { validateInputSafety, sanitizeAiOutput } from './safety-filter';
 import { PERSONAL_CHAT_PRESET } from '@/config/ai-modes';
 import { BLOCKOS_CORE_IDENTITY } from '@/config/blockos-knowledge';
+import { assistantIdentityPrompt, type AssistantIdentity } from './assistant-identity';
 
 const CHAT_ROLE_PRESETS: Record<string, { title: string; style: string }> = {
   '专业产品经理': {
@@ -23,7 +24,7 @@ const CHAT_ROLE_PRESETS: Record<string, { title: string; style: string }> = {
   },
 };
 
-export async function chat(payload: ChatRequest): Promise<ChatResponse> {
+export async function chat(payload: ChatRequest, identity?: AssistantIdentity): Promise<ChatResponse> {
   // 1. 安全合规前置扫描 (Pre-flight Security Inspection)
   validateInputSafety({
     userMessage: payload.userMessage,
@@ -38,10 +39,11 @@ export async function chat(payload: ChatRequest): Promise<ChatResponse> {
   const systemPrompt = (
     '你是 BlockOS 的侧边栏 AI 对话助手。'
     + BLOCKOS_CORE_IDENTITY
+    + (identity ? assistantIdentityPrompt(identity) : '')
     + ' 只输出合法 JSON，不要 markdown，不要解释。'
     + (personal
       ? ' 你是通用个人助手，帮助用户日常问答、学习、记录和整理思路。根据问题需要参考文档，不要默认套用职业角色、团队审阅或项目工作流。'
-      : ` 你的回答必须结合用户选中的文本和当前文档上下文。当前角色设定：${payload.rolePreset}。${preset.style}`)
+      : identity ? '结合问题与当前文档，从自动分析的专业视角回答。' : ` 你的回答必须结合用户选中的文本和当前文档上下文。当前角色设定：${payload.rolePreset}。${preset.style}`)
     + ' 如果用户提供了多个上下文片段，要优先引用选中文本内容。'
     + (personal ? ' 回答要清晰自然，贴合用户的问题。' : ' 对话内容要简洁、可执行、面向文档协作。')
   );
@@ -53,7 +55,7 @@ export async function chat(payload: ChatRequest): Promise<ChatResponse> {
     + '2. 回答时优先使用已选中的文本片段。\n'
     + '3. 如果信息不足，明确指出缺口并给出下一步建议。\n'
     + '4. 不要输出 markdown 代码块。\n'
-    + '5. role_preset 原样返回。\n\n'
+    + (identity?.mode === 'enterprise' ? '5. role_preset 返回根据已保存岗位分析出的简短专业视角；资料不足返回“通用视角”。\n\n' : '5. role_preset 原样返回。\n\n')
     + `文档名称：${payload.documentName}\n`
     + (personal ? '' : `当前角色：${payload.currentRole}\n工作流：${JSON.stringify(payload.workflow)}\n`)
     + `文档摘要：${payload.documentSummary || ''}\n`

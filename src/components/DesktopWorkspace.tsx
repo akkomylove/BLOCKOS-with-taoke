@@ -19,7 +19,6 @@ const CopilotPanel = dynamic(() => import('@/components/CopilotPanel'), { ssr: f
 const ReviewEnrichPanel = dynamic(() => import('@/components/ReviewEnrichPanel'), { ssr: false });
 const FoldPlanPanel = dynamic(() => import('@/components/FoldPlanPanel'), { ssr: false });
 const DocRelationsPanel = dynamic(() => import('@/components/DocRelationsPanel'), { ssr: false });
-import ChatPanel from '@/components/ChatPanel';
 import { ProfilePanel } from '@/components/collaboration/ProfilePanel';
 import { useAgent } from '@/hooks/useAgent';
 import { useBlockStore } from '@/store/blockStore';
@@ -44,7 +43,6 @@ export default function DesktopWorkspace() {
   const [showProfile, setShowProfile] = useState(false);
   const [showCopilot, setShowCopilot] = useState(false);
   const [showAnalyze, setShowAnalyze] = useState(false);
-  const [showChat, setShowChat] = useState(false);
   const [showReviewEnrich, setShowReviewEnrich] = useState(false);
   const [showFoldPlan, setShowFoldPlan] = useState(false);
   const [showDocRelations, setShowDocRelations] = useState(false);
@@ -104,7 +102,6 @@ export default function DesktopWorkspace() {
             onOpenProfile={() => setShowProfile(true)}
             onToggleCopilot={() => { if (enterprise) setShowCopilot(true); }}
             onToggleAnalyze={() => { if (enterprise) setShowAnalyze(true); }}
-            onToggleChat={() => setShowChat(true)}
             onToggleReviewEnrich={() => { if (enterprise) setShowReviewEnrich(true); }}
             onToggleFoldPlan={() => { if (enterprise) setShowFoldPlan(true); }}
             onToggleDocRelations={() => { if (enterprise) setShowDocRelations(true); }}
@@ -165,7 +162,6 @@ export default function DesktopWorkspace() {
         <HistoryPanel isOpen={showHistory} onClose={() => setShowHistory(false)} />
         {enterprise && showCopilot && <CopilotPanel isOpen onClose={() => setShowCopilot(false)} />}
         {enterprise && showAnalyze && <AnalyzePanel isOpen onClose={() => setShowAnalyze(false)} />}
-        <ChatPanel key={`${account?.id}:${account?.mode}`} isOpen={showChat} onClose={() => setShowChat(false)} />
         {enterprise && showReviewEnrich && <ReviewEnrichPanel isOpen onClose={() => setShowReviewEnrich(false)} />}
         {enterprise && showFoldPlan && <FoldPlanPanel isOpen onClose={() => setShowFoldPlan(false)} />}
         {enterprise && showDocRelations && <DocRelationsPanel isOpen onClose={() => setShowDocRelations(false)} />}
