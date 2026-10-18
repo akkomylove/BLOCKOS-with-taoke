@@ -482,6 +482,23 @@ export default function BlockEditor({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 深度防御：若由于任何原因穿透到 BlockEditor，无条件阻止浏览器默认另存为弹窗并触发同步
+      const isSaveShortcut =
+        (e.ctrlKey || e.metaKey) &&
+        (e.code === 'KeyS' ||
+          e.key === 's' ||
+          e.key === 'S' ||
+          e.keyCode === 83 ||
+          e.which === 83);
+
+      if (isSaveShortcut) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        useBlockStore.getState().syncToServer().catch(() => {});
+        return;
+      }
+
       if (e.key === 'Escape') {
         clearSelectionRef.current();
         setCommandMenuOpen(false);

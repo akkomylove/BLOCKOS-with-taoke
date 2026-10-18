@@ -114,25 +114,57 @@ export default function DesktopWorkspace() {
     prevSavedAtRef.current = lastSavedAt;
   }, [lastSavedAt]);
 
+  const handleManualSaveRef = useRef(handleManualSave);
+  handleManualSaveRef.current = handleManualSave;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+S / Cmd+S 手动保存快捷键
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      // 判定是否为 Ctrl+S / Cmd+S：
+      // 1. 物理键码 e.code === 'KeyS'（彻底防御中文输入法处于候选/激活状态时产生的 key = 'Process'）
+      // 2. 传统键码 e.keyCode === 83 或 e.which === 83
+      // 3. 字符键值 e.key === 's' 或 'S'
+      const isSaveShortcut =
+        (e.ctrlKey || e.metaKey) &&
+        (e.code === 'KeyS' ||
+          e.key === 's' ||
+          e.key === 'S' ||
+          e.keyCode === 83 ||
+          e.which === 83);
+
+      if (isSaveShortcut) {
+        // 第一优先级无条件阻止浏览器原生另存为 (Save Page As) 弹窗
         e.preventDefault();
         e.stopPropagation();
-        handleManualSave();
+        e.stopImmediatePropagation();
+        handleManualSaveRef.current();
         return;
       }
 
       // Ctrl+K / Cmd+K AI 助手中枢快捷键
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      const isAIAssistantShortcut =
+        (e.ctrlKey || e.metaKey) &&
+        (e.code === 'KeyK' ||
+          e.key === 'k' ||
+          e.key === 'K' ||
+          e.keyCode === 75 ||
+          e.which === 75);
+
+      if (isAIAssistantShortcut) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         setShowAIAssistant((prev) => !prev);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => window.removeEventListener('keydown', handleKeyDown, true);
+    // 捕获阶段双重绑定 window 与 document，指定 passive: false 确保 preventDefault 绝对生效
+    window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+    document.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+    };
   }, []);
 
   return (
