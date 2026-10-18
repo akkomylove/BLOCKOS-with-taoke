@@ -124,6 +124,16 @@ export function isBlockOSSelfIntroQuery(cmd: string): boolean {
   return false;
 }
 
+export function deriveTopicTitle(raw: string): string {
+  if (!raw) return '主题知识卡片';
+  const clean = raw
+    .replace(/^(?:嗯|请问|请|你能|能否|可以|想知道)?\s*(?:帮我|给我|我)?\s*(?:介绍|说说|讲讲|聊聊|告诉我)?\s*(?:一下|下)?/, '')
+    .replace(/[吗呀呢吧？?！!。\s]+$/, '')
+    .trim();
+  if (!clean) return '主题知识卡片';
+  return clean.length > 25 ? clean.substring(0, 25) + '...' : clean;
+}
+
 export function getLocalBlockOSCapabilityIntro(): { message: string; actionSuggestions: ActionSuggestion[] } {
   return {
     message: `我是 BlockOS 画布协同操作智能体（Agent）。BlockOS 是一个原子级 Block 知识操作系统与无限白板协同环境（非区块链系统）。
@@ -429,8 +439,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       return { isHandled: true, ops };
     }
 
-    // 8. 批量创建普通 Block
-    const createMultiMatch = trimmed.match(/^(?:创建|添加|新建)\s*(\d+|一|两|三|四|五|六|七|八|九|十)\s*个\s*(文本|代码|表格|画板|媒体|待办)?\s*(?:Block|块|卡片)?/i);
+    // 8. 批量创建普通 Block（纯粹的空卡片创建指令，结尾必须为 Block/块/卡片）
+    const createMultiMatch = trimmed.match(/^(?:创建|添加|新建)\s*(\d+|一|两|三|四|五|六|七|八|九|十)\s*个\s*(文本|代码|表格|画板|媒体|待办)?\s*(?:Block|块|卡片)?$/i);
     if (createMultiMatch) {
       const rawCount = createMultiMatch[1];
       const count = Math.min(Math.max(parseInt(rawCount, 10) || numMap[rawCount] || 1, 1), 20);
@@ -446,13 +456,14 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       return { isHandled: true, ops: [msg] };
     }
 
-    // 9. 单个创建 Block
-    if (/^(创建|新建|添加)(一个|1个)?\s*(文本|代码|表格|画板|媒体|待办)?\s*(?:Block|块|卡片)?/i.test(trimmed)) {
-      const typeMatch = trimmed.match(/(文本|代码|表格|画板|媒体|待办)/);
+    // 9. 单个创建普通 Block（纯粹的空卡片创建指令，结尾必须为 Block/块/卡片）
+    const createSingleMatch = trimmed.match(/^(?:创建|新建|添加)\s*(?:一个|1个)?\s*(文本|代码|表格|画板|媒体|待办)?\s*(?:Block|块|卡片)?$/i);
+    if (createSingleMatch) {
+      const rawType = createSingleMatch[1];
       const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media', 待办: 'todo' };
-      const blockType = (typeMatch && typeMap[typeMatch[1]]) || 'text';
+      const blockType = (rawType && typeMap[rawType]) || 'text';
       addBlock(blockType);
-      const msg = `已创建 1 个 ${typeMatch ? typeMatch[1] : '文本'} Block`;
+      const msg = `已创建 1 个 ${rawType || '文本'} Block`;
       setExecutedOps([msg]);
       return { isHandled: true, ops: [msg] };
     }
@@ -599,32 +610,71 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   }, [input, executeCommandOrPrompt]);
 
   const handleExecuteSuggestion = useCallback((cmd: string) => {
-    setInput(cmd);
-    executeCommandOrPrompt(cmd);
-  }, [executeCommandOrPrompt]);
+    // 优先：如果操作是“在画布创建当前主题卡片”或类似创建卡片指令，且当前已有问答解答内容，直接将当前内容写入画布 Block
+    if (
+      /在画布创建|创建.*?主题卡片|创建.*?详细介绍(?:的)?(?:Block|块|卡片)|创建.*?关于.*?的?(?:Block|块|卡片)/i.test(cmd) &&
+      (streamText || result)
+    ) {
+      const content = streamText || result;
+      const title = deriveTopicTitle(input);
 
-  const handleKeep = useCallback(() => {
-    if (streamText) {
       let blockType: BlockType = 'text';
-      let cleanContent = streamText;
-
-      // 智能感知内容类型
-      if (/^graph\s+(TD|LR|TB)|sequenceDiagram|classDiagram/m.test(streamText)) {
+      if (/^graph\s+(TD|LR|TB)|sequenceDiagram|classDiagram/m.test(content)) {
         blockType = 'mermaid';
-      } else if (/^```(javascript|typescript|js|ts)?\n[\s\S]*\n```$/m.test(streamText)) {
+      } else if (/^```(javascript|typescript|js|ts)?\n[\s\S]*\n```$/m.test(content)) {
         blockType = 'code';
-        cleanContent = streamText.replace(/^```[a-z]*\n/i, '').replace(/\n```$/, '');
-      } else if (/^- \[[ x]\]/m.test(streamText)) {
+      } else if (/^- \[[ x]\]/m.test(content)) {
         blockType = 'todo';
       }
 
-      const newBlockId = addBlock(blockType);
-      setTimeout(() => {
-        updateBlock(newBlockId, { content: cleanContent });
-      }, 0);
+      const lastBlock = blocks[blocks.length - 1];
+      const newX = lastBlock ? (lastBlock.x || 40) : 40;
+      const newY = lastBlock ? (lastBlock.y || 40) + (lastBlock.height || 260) + 40 : 40;
+
+      const newBlockId = addBlock(blockType, undefined, { x: newX, y: newY });
+      updateBlock(newBlockId, {
+        title,
+        content,
+      });
+
+      const msg = `已在画布创建主题卡片「${title}」并写入知识内容`;
+      setExecutedOps([msg]);
+      setResult(msg);
+      setActionSuggestions([]);
+      return;
+    }
+
+    setInput(cmd);
+    executeCommandOrPrompt(cmd);
+  }, [executeCommandOrPrompt, streamText, result, input, blocks, addBlock, updateBlock]);
+
+  const handleKeep = useCallback(() => {
+    const content = streamText || result;
+    if (content) {
+      let blockType: BlockType = 'text';
+      let cleanContent = content;
+
+      // 智能感知内容类型
+      if (/^graph\s+(TD|LR|TB)|sequenceDiagram|classDiagram/m.test(content)) {
+        blockType = 'mermaid';
+      } else if (/^```(javascript|typescript|js|ts)?\n[\s\S]*\n```$/m.test(content)) {
+        blockType = 'code';
+        cleanContent = content.replace(/^```[a-z]*\n/i, '').replace(/\n```$/, '');
+      } else if (/^- \[[ x]\]/m.test(content)) {
+        blockType = 'todo';
+      }
+
+      const title = deriveTopicTitle(input);
+
+      const lastBlock = blocks[blocks.length - 1];
+      const newX = lastBlock ? (lastBlock.x || 40) : 40;
+      const newY = lastBlock ? (lastBlock.y || 40) + (lastBlock.height || 260) + 40 : 40;
+
+      const newBlockId = addBlock(blockType, undefined, { x: newX, y: newY });
+      updateBlock(newBlockId, { title, content: cleanContent });
     }
     onClose();
-  }, [streamText, addBlock, updateBlock, onClose]);
+  }, [streamText, result, input, blocks, addBlock, updateBlock, onClose]);
 
   if (!isOpen) return null;
 
@@ -741,7 +791,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         )}
 
         {/* 文本类回复的底部保留操作 */}
-        {!isLoading && streamText && !executedOps.length && actionSuggestions.length === 0 && (
+        {!isLoading && (streamText || result) && !executedOps.length && (
           <div className="flex gap-2 px-5 py-3 border-t border-line-subtle dark:border-zinc-800">
             <button
               onClick={handleKeep}

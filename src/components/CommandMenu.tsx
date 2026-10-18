@@ -18,7 +18,6 @@ import {
   Lightbulb,
   Clock,
   Search,
-  Sparkles,
 } from 'lucide-react';
 import type { BlockType } from '@/types/block';
 import { BLOCK_CATEGORIES, type BlockCategoryItem } from '@/lib/block-categories';
@@ -256,12 +255,9 @@ export default function CommandMenu({ isOpen, onClose, onSelect, position }: Com
       </div>
 
       {/* Footer shortcut helper */}
-      <div className="px-3 py-1.5 border-t border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/80 dark:bg-zinc-900/80 text-[10px] text-content-tertiary dark:text-zinc-500 flex items-center justify-between">
+      <div className="px-3 py-1.5 border-t border-[#eff0f2] dark:border-[#24272e] bg-[#f7f8fa] dark:bg-[#141517] text-[10px] text-[#8f959e] flex items-center justify-between">
         <span>↑↓ 切换 · Enter 确认创建</span>
-        <span className="flex items-center gap-1 text-brand">
-          <Sparkles className="w-2.5 h-2.5" />
-          <span>飞书式多维分类</span>
-        </span>
+        <span>Esc 关闭</span>
       </div>
     </div>
   );

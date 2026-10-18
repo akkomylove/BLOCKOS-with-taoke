@@ -9,6 +9,7 @@ import {
   isBlockOSSelfIntroQuery,
   extractStreamingDisplay,
   unescapeJsonString,
+  deriveTopicTitle,
 } from '@/components/CommandPalette';
 
 describe('BlockOS AI Assistant Knowledge & Canvas Operating Capabilities', () => {
@@ -243,5 +244,35 @@ describe('BlockOS AI Assistant Knowledge & Canvas Operating Capabilities', () =>
       expect(unescapeJsonString('Streaming unicode\\u4e')).toBe('Streaming unicode');
     });
   });
+
+  describe('Non-Empty Topic Card Creation & Content Persistence (Zero Blank Block)', () => {
+    it('creates topic knowledge card with title and rich content on canvas', () => {
+      const store = useBlockStore.getState();
+      const mangaContent = `- **《龙珠》**：鸟山明代表作，热血冒险史诗\n- **《海贼王》**：尾田荣一郎代表作，寻宝航海传奇\n- **《火影忍者》**：岸本齐史代表作，忍者羁绊与成长`;
+      const topicTitle = '经典漫画推荐';
+
+      const blockId = store.addBlock('text');
+      store.updateBlock(blockId, {
+        title: topicTitle,
+        content: mangaContent,
+      });
+
+      const card = useBlockStore.getState().blocks.find((b) => b.id === blockId);
+      expect(card).toBeDefined();
+      expect(card?.title).toBe('经典漫画推荐');
+      expect(card?.content).toContain('《龙珠》');
+      expect(card?.content).toContain('《海贼王》');
+      expect(card?.content.trim().length).toBeGreaterThan(0);
+    });
+
+    it('derives clean titles from conversational user questions', () => {
+      expect(deriveTopicTitle('嗯你知道有哪些经典漫画吗？')).toBe('你知道有哪些经典漫画');
+      expect(deriveTopicTitle('你能给我介绍一下莫奈吗？')).toBe('莫奈');
+      expect(deriveTopicTitle('介绍一下快速排序算法原理')).toBe('快速排序算法原理');
+      expect(deriveTopicTitle('我想了解微服务架构设计')).toBe('想了解微服务架构设计');
+      expect(deriveTopicTitle('')).toBe('主题知识卡片');
+    });
+  });
 });
+
 

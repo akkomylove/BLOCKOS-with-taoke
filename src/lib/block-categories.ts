@@ -51,7 +51,7 @@ export const BLOCK_CATEGORIES: BlockCategory[] = [
   {
     id: 'widget',
     title: '敏捷小组件',
-    description: '飞书风格警示高亮与里程碑倒计时',
+    description: '状态警示高亮与交付里程碑倒计时',
     items: [
       { type: 'callout', label: '高亮提示', description: '提示/注意/阻断/达成5种高亮警示容器', badge: 'New' },
       { type: 'countdown', label: '冲刺倒计时', description: '实时跳动翻牌器，紧盯交付里程碑', badge: 'New' },
