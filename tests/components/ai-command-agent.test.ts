@@ -5,6 +5,11 @@ import {
   BLOCKOS_BLOCK_TYPES_INFO,
   BLOCKOS_CANVAS_CAPABILITIES,
 } from '@/config/blockos-knowledge';
+import {
+  isBlockOSSelfIntroQuery,
+  extractStreamingDisplay,
+  unescapeJsonString,
+} from '@/components/CommandPalette';
 
 describe('BlockOS AI Assistant Knowledge & Canvas Operating Capabilities', () => {
   beforeEach(() => {
@@ -149,4 +154,94 @@ describe('BlockOS AI Assistant Knowledge & Canvas Operating Capabilities', () =>
       expect(state.blocks.find((b) => b.id === b3)?.meta?.highlight).toBe('red');
     });
   });
+
+  describe('Query Intent Classification & Anti-Hijacking (Zero False Intro Trigger)', () => {
+    it('correctly matches BlockOS / Assistant self-introduction queries', () => {
+      expect(isBlockOSSelfIntroQuery('你能在此blockos中完成什么工作？')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('你能在此完成什么工作？')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('你能做什么')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('有什么能力')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('具备什么能力')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('介绍一下你的能力')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('介绍一下BlockOS')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('介绍一下你自己')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('你是谁')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('自我介绍')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('功能')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('能力')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('help')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('?')).toBe(true);
+      expect(isBlockOSSelfIntroQuery('？')).toBe(true);
+    });
+
+    it('does NOT hijack general knowledge or third-party topic queries (e.g. Monet)', () => {
+      expect(isBlockOSSelfIntroQuery('你能给我介绍一下莫奈吗？')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('你能给我介绍一下莫奈吗')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('给我介绍一下莫奈')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('介绍一下量子计算')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('介绍一下React 19')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('莫奈是谁')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('快速排序的原理是什么')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('帮我写一个快速排序算法')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('创建1个核心需求Block')).toBe(false);
+      expect(isBlockOSSelfIntroQuery('清空画布')).toBe(false);
+    });
+  });
+
+  describe('Streaming Text Extraction & Zero Raw JSON Leakage', () => {
+    it('extracts partial streaming message cleanly without leaking JSON syntax', () => {
+      const partialJson = '{\n  "type": "agent_response",\n  "message": "莫奈（Claude Monet）是法国著名画家，印象派代表人物与创始人之一。';
+      const extracted = extractStreamingDisplay(partialJson);
+      expect(extracted).toBe('莫奈（Claude Monet）是法国著名画家，印象派代表人物与创始人之一。');
+      expect(extracted).not.toContain('{');
+      expect(extracted).not.toContain('"type"');
+      expect(extracted).not.toContain('"message"');
+    });
+
+    it('unescapes newlines and special characters in streaming text on-the-fly', () => {
+      const streamingWithEscapes = '{\n  "type": "agent_response",\n  "message": "莫奈代表作：\\n1. 《日出·印象》\\n2. 《睡莲》系列\\n\\n艺术特点：\\n- \\"光的诗人\\"\\n- 外光写生"';
+      const extracted = extractStreamingDisplay(streamingWithEscapes);
+      expect(extracted).toContain('莫奈代表作：\n1. 《日出·印象》\n2. 《睡莲》系列');
+      expect(extracted).toContain('"光的诗人"');
+      expect(extracted).not.toContain('\\n');
+      expect(extracted).not.toContain('\\"');
+    });
+
+    it('displays graceful status instead of raw JSON syntax for initial tokens', () => {
+      expect(extractStreamingDisplay('{')).toBe('正在思考并组织内容...');
+      expect(extractStreamingDisplay('{\n  "type": "agent_response",')).toBe('正在思考并组织内容...');
+      expect(extractStreamingDisplay('{\n  "type": "operations",')).toBe('正在分析画布并规划操作...');
+    });
+
+    it('extracts operation summary cleanly while streaming operations', () => {
+      const opStream = '{\n  "type": "operations",\n  "summary": "已在画布上为您创建微服务架构流程图",\n  "operations": [';
+      const extracted = extractStreamingDisplay(opStream);
+      expect(extracted).toBe('已在画布上为您创建微服务架构流程图');
+      expect(extracted).not.toContain('{');
+      expect(extracted).not.toContain('operations');
+    });
+
+    it('unwraps markdown-fenced JSON responses smoothly', () => {
+      const markdownJson = '```json\n{\n  "type": "agent_response",\n  "message": "莫奈生平与艺术成就介绍"\n}';
+      const extracted = extractStreamingDisplay(markdownJson);
+      expect(extracted).toBe('莫奈生平与艺术成就介绍');
+    });
+
+    it('passes through regular non-JSON text unmodified', () => {
+      const plainText = '克劳德·莫奈出生于巴黎，是法国最重要的画家之一。';
+      expect(extractStreamingDisplay(plainText)).toBe(plainText);
+    });
+  });
+
+  describe('unescapeJsonString Helper', () => {
+    it('correctly handles all standard escapes and incomplete trailing escapes', () => {
+      expect(unescapeJsonString('Line 1\\nLine 2\\tTabbed\\r\\n')).toBe('Line 1\nLine 2\tTabbed\r\n');
+      expect(unescapeJsonString('\\"Quoted\\" and \\\\Backslash\\\\')).toBe('"Quoted" and \\Backslash\\');
+      expect(unescapeJsonString('\\u4e2d\\u6587')).toBe('中文');
+      // Incomplete trailing escape should not crash or produce broken tokens
+      expect(unescapeJsonString('Streaming in progress\\')).toBe('Streaming in progress');
+      expect(unescapeJsonString('Streaming unicode\\u4e')).toBe('Streaming unicode');
+    });
+  });
 });
+

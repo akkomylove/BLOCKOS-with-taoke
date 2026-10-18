@@ -39,7 +39,92 @@ interface AgentResponsePayload {
   actionSuggestions?: ActionSuggestion[];
 }
 
-function getLocalBlockOSCapabilityIntro(): { message: string; actionSuggestions: ActionSuggestion[] } {
+export function unescapeJsonString(str: string): string {
+  // If string ends with an unfinished escape like \ or \u, trim it safely
+  const cleaned = str.replace(/\\(?:u[0-9a-fA-F]{0,3})?$/, '');
+  return cleaned
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+export function extractStreamingDisplay(raw: string): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+
+  // If wrapped in markdown code fence (```json ... or ``` ...)
+  const unwrapped = trimmed.replace(/^```(?:json)?\s*/i, '');
+
+  // If it starts with JSON structure syntax
+  if (unwrapped.startsWith('{')) {
+    // 1. Check if "message" field has started streaming
+    const messageMatch = unwrapped.match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)/);
+    if (messageMatch) {
+      return unescapeJsonString(messageMatch[1]);
+    }
+
+    // 2. Check if "summary" field has started streaming
+    const summaryMatch = unwrapped.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)/);
+    if (summaryMatch) {
+      return unescapeJsonString(summaryMatch[1]);
+    }
+
+    // 3. If it's an operations type declaration
+    if (/"type"\s*:\s*"operations"/i.test(unwrapped)) {
+      return '正在分析画布并规划操作...';
+    }
+
+    // 4. Still in initial JSON headers
+    return '正在思考并组织内容...';
+  }
+
+  // Not a JSON object: return the text directly
+  return raw;
+}
+
+export function isBlockOSSelfIntroQuery(cmd: string): boolean {
+  const trimmed = cmd.trim();
+  if (!trimmed) return false;
+
+  // 1. 极简关键词或符号精准触发
+  if (/^(?:功能|能力|帮助|help|\?|？|自我介绍)$/i.test(trimmed)) {
+    return true;
+  }
+
+  // 2. 询问身份："你是谁" / "你叫什么"
+  if (/^(?:你|助手|agent)\s*(?:是|叫)\s*(?:谁|什么)/i.test(trimmed)) {
+    return true;
+  }
+
+  // 3. 询问介绍自身体系："介绍一下你的能力" / "介绍一下BlockOS" / "介绍一下你自己"
+  if (/(?:介绍|讲讲|说说)(?:一下|下)?\s*(?:你(?:的)?(?:能力|功能|定位)?|自己|blockos|这个(?:系统|软件|画布|工具))/i.test(trimmed)) {
+    return true;
+  }
+
+  // 如果包含“介绍/讲讲/说说”，但宾语不是自身（例如“你能给我介绍一下莫奈吗”、“介绍一下量子计算”），绝对不属于自我介绍
+  if (/(?:介绍|讲讲|说说)/.test(trimmed)) {
+    return false;
+  }
+
+  const clean = trimmed.replace(/[？?！!。]+$/, '').trim();
+
+  // 4. 询问能力与工作范围："你能做什么" / "你能在此完成什么工作" / "你能在此blockos中完成什么工作"
+  if (/(?:你|助手|agent|blockos)?.*能.*(?:完成|做)(?:什么|些什么)?(?:工作|事情|操作|任务)?$/i.test(clean)) {
+    return true;
+  }
+
+  // 5. 询问具备哪些能力/功能："有什么能力" / "具备什么能力" / "你有什么能力" / "你的功能"
+  if (/^(?:你|助手|agent|blockos)?\s*(?:的)?(?:有|具备)?(?:什么|哪些)?(?:能力|功能)$/i.test(clean)) {
+    return true;
+  }
+
+  return false;
+}
+
+export function getLocalBlockOSCapabilityIntro(): { message: string; actionSuggestions: ActionSuggestion[] } {
   return {
     message: `我是 BlockOS 画布协同操作智能体（Agent）。BlockOS 是一个原子级 Block 知识操作系统与无限白板协同环境（非区块链系统）。
 
@@ -274,18 +359,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     const trimmed = cmd.trim();
     if (!trimmed) return { isHandled: false };
 
-    // 0. 询问 BlockOS 能力/功能介绍/我是谁
-    if (
-      trimmed.includes('完成什么工作') ||
-      trimmed.includes('你能做什么') ||
-      trimmed.includes('有什么能力') ||
-      trimmed.includes('具备什么能力') ||
-      trimmed.includes('你的功能') ||
-      trimmed.includes('你是谁') ||
-      trimmed.includes('介绍') ||
-      trimmed.includes('帮助') ||
-      /^(功能|能力|帮助|help|\?|？)$/i.test(trimmed)
-    ) {
+    // 0. 询问 BlockOS 自身能力/功能介绍/我是谁
+    if (isBlockOSSelfIntroQuery(trimmed)) {
       return { isHandled: true, intro: getLocalBlockOSCapabilityIntro() };
     }
 
@@ -453,7 +528,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         accumulated += chunk;
-        setStreamText(accumulated);
+        setStreamText(extractStreamingDisplay(accumulated));
       }
 
       const text = accumulated.trim();
@@ -475,7 +550,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       if (parsedJson) {
         if (!Array.isArray(parsedJson) && parsedJson.type === 'agent_response') {
           // Agent 问答与能力展示
-          const msg = parsedJson.message || text;
+          const msg = parsedJson.message || extractStreamingDisplay(text);
           setResult(msg);
           setStreamText(msg);
           if (Array.isArray(parsedJson.actionSuggestions)) {
@@ -486,27 +561,34 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
           if (Array.isArray(parsedJson.operations)) {
             const ops = executeOperations(parsedJson.operations);
             setResult(parsedJson.summary || ops.join('\n') || '操作已执行');
+            setStreamText('');
           }
         } else if (Array.isArray(parsedJson)) {
           // 纯操作数组兼容
           const ops = executeOperations(parsedJson);
           setResult(ops.join('\n') || '操作已执行');
+          setStreamText('');
         } else {
-          setResult(text);
-          setStreamText(text);
+          const cleanText = extractStreamingDisplay(text);
+          setResult(cleanText);
+          setStreamText(cleanText);
         }
       } else {
         // 未解析为 JSON 的自然语言文本回复
-        setResult(text);
-        setStreamText(text);
+        const cleanText = extractStreamingDisplay(text);
+        setResult(cleanText);
+        setStreamText(cleanText);
       }
     } catch (error) {
       console.error('AI Error:', error);
-      // 网络或异常时兜底
-      const fallback = getLocalBlockOSCapabilityIntro();
-      setResult(fallback.message);
-      setStreamText(fallback.message);
-      setActionSuggestions(fallback.actionSuggestions);
+      // 网络或异常时友好提示
+      const errorMsg = 'AI 服务响应异常或网络中断，请稍后重试。您也可以通过画布工具栏直接操作卡片。';
+      setResult(errorMsg);
+      setStreamText(errorMsg);
+      setActionSuggestions([
+        { label: '🚀 生成需求与子任务树', command: '创建1个核心功能需求Block，并创建3个开发子任务' },
+        { label: '🔀 创建系统架构流程图', command: '创建微服务系统架构 Mermaid 流程图' },
+      ]);
     } finally {
       setIsLoading(false);
     }
