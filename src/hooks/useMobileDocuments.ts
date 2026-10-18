@@ -6,6 +6,7 @@ import { useBlockStore } from '@/store/blockStore';
 import { getPresetDocumentBlocks } from '@/config/presetDocuments';
 import type { Block } from '@/types/block';
 import type { DocumentChapter, Page } from '@/types/page';
+import { useAccountStore } from '@/store/accountStore';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'pending' | 'conflict';
 interface PendingDocument { pageId: string; userId: string; blocks: Block[]; version: number; }
@@ -39,16 +40,17 @@ export function useMobileDocuments() {
     async function initialize() {
       try {
         await useBlockStore.persist.rehydrate();
-        const authResponse = await fetch('/api/auth/user', { signal: controller.signal });
-        if (authResponse.status === 401) {
+        await useAccountStore.getState().load();
+        const accountState = useAccountStore.getState();
+        if (accountState.status === 'guest') {
           const blocks = getPresetDocumentBlocks('doc-guide');
           const page: Page = { id: 'mobile-example', title: '欢迎使用 BlockOS', icon: '👋', createdAt: 0, updatedAt: 0 };
           useBlockStore.setState({ pages: [page], folders: [], currentPageId: page.id, blocks, pageBlocks: { [page.id]: blocks }, currentUserId: null });
           setSession('guest');
           return;
         }
-        if (!authResponse.ok) throw new Error('暂时无法读取登录状态，请刷新重试');
-        const user = await authResponse.json();
+        if (accountState.status !== 'ready' || !accountState.user) throw new Error(accountState.error || '暂时无法读取登录状态，请刷新重试');
+        const user = accountState.user;
         if (!user.id) throw new Error('登录已过期，请重新登录');
         userRef.current = user.id;
         useBlockStore.getState().setCurrentUserId(user.id);

@@ -1,8 +1,9 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+async function GETHandler() {
   try {
     let userId: string;
     try {
@@ -64,3 +65,4 @@ export async function GET() {
     return NextResponse.json({ error: 'Internal Server Error', summaries: [] }, { status: 500 });
   }
 }
+export const GET = withEnterprise(GETHandler);

@@ -1,10 +1,11 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId, checkProjectPermission } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { nanoid } from 'nanoid';
 import { isValidNanoid } from '@/lib/validation';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -127,3 +128,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withEnterprise(GETHandler);
+export const POST = withEnterprise(POSTHandler);

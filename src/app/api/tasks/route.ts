@@ -1,3 +1,4 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
@@ -50,7 +51,7 @@ function normalizeTask(row: Record<string, unknown>) {
  * @param includeSubtasks - 是否包含子任务 (默认 false)
  * @returns 任务列表及分页信息
  */
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -150,7 +151,7 @@ export async function GET(req: NextRequest) {
  * @param orderIndex - 排序索引 (默认 0)
  * @returns 创建的任务 ID
  */
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -203,3 +204,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withEnterprise(GETHandler);
+export const POST = withEnterprise(POSTHandler);

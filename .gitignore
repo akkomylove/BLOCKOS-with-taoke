@@ -52,5 +52,7 @@ push-to-github*
 # ===== 内部架构决策与交接日志 (本地保留，禁止推至公开仓库) =====
 DECISIONS.md
 HANDOVER.md
+docs/account-modes-plan.md
+docs/mcp-testing.md
 .trae/
 scratch/

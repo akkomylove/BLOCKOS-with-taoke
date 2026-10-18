@@ -1,57 +1,21 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { ACCOUNT_COOKIE, digest } from '@/lib/account';
+import { getDb, run, saveDb } from '@/lib/db';
 
 export async function POST() {
-  try {
-    const response = NextResponse.json({ success: true });
-    response.cookies.set({
-      name: 'demo-session',
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    response.cookies.set({
-      name: 'demo-session',
-      value: '',
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    response.cookies.set({
-      name: 'next-auth.session-token',
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    response.cookies.set({
-      name: '__Secure-authjs.session-token',
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    response.cookies.set({
-      name: 'authjs.session-token',
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 0,
-      path: '/',
-    });
-    return response;
-  } catch (err) {
-    console.error('Logout error:', err);
-    return NextResponse.json({ error: 'Failed to logout' }, { status: 500 });
+  const store = await cookies();
+  const token = store.get(ACCOUNT_COOKIE)?.value;
+  if (token) {
+    await getDb();
+    run('DELETE FROM account_sessions WHERE token_hash = ?', [digest(token)]);
+    saveDb();
   }
+  const res = NextResponse.json({ success: true });
+  const names = new Set([ACCOUNT_COOKIE, 'demo-session', 'next-auth.session-token', '__Secure-authjs.session-token', 'authjs.session-token']);
+  for (const cookie of store.getAll()) {
+    if (/^(?:__Secure-)?(?:authjs|next-auth)\.session-token(?:\.\d+)?$/.test(cookie.name)) names.add(cookie.name);
+  }
+  for (const name of names) res.cookies.set(name, '', { path: '/', maxAge: 0, httpOnly: true, sameSite: 'lax', secure: name.startsWith('__Secure-') || process.env.NODE_ENV === 'production' });
+  return res;
 }
-

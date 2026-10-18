@@ -1,3 +1,4 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
@@ -15,7 +16,7 @@ function normalizeMilestone(row: Record<string, unknown>) {
   };
 }
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -85,3 +86,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withEnterprise(GETHandler);
+export const POST = withEnterprise(POSTHandler);

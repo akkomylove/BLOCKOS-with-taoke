@@ -1,9 +1,10 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { getUserId } from '@/lib/auth-utils';
 import { nanoid } from 'nanoid';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let userId: string;
   try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -73,3 +74,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Failed to create tasks' }, { status: 500 });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);

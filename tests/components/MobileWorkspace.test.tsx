@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MobileWorkspace from '@/components/mobile/MobileWorkspace';
 import { useBlockStore } from '@/store/blockStore';
+import { useAccountStore } from '@/store/accountStore';
 import type { Page } from '@/types/page';
 import type { Block } from '@/types/block';
 
@@ -14,6 +15,7 @@ let savedRequests: Array<{ blocks: Block[]; version: number }>;
 describe('Mobile reading, light editing and quick capture', () => {
   beforeEach(() => {
     localStorage.clear();
+    useAccountStore.setState({ user: null, status: 'idle', error: '' });
     useBlockStore.setState({ pages: [], blocks: [], pageBlocks: {}, currentPageId: '', currentUserId: null, folders: [], groups: [] });
     remotePages = [{ id: 'doc-one', title: '退款文档', version: 7, createdAt: 1, updatedAt: 1, chapters: [{ id: 'refund', title: '退款规则', blockIds: ['text-one', 'todo-one'] }] }];
     remoteBlocks = { 'doc-one': [

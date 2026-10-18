@@ -1,8 +1,9 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, query } from '@/lib/db';
 import { getUserId } from '@/lib/auth-utils';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   let userId: string;
   try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -74,3 +75,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Failed to fetch workflow source' }, { status: 500 });
   }
 }
+
+export const GET = withEnterprise(GETHandler);

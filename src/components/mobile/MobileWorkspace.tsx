@@ -1,6 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { useAccountStore } from '@/store/accountStore';
+const AccountPanel = dynamic(() => import('@/components/collaboration/ProfilePanel').then(module => module.ProfilePanel), { ssr: false });
 import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Cloud, Folder, Inbox, Loader2, LogIn, Moon, Plus, Search, Sun } from 'lucide-react';
 import { ThemeProvider, useTheme } from '@/components/ThemeProvider';
 import { useBlockStore } from '@/store/blockStore';
@@ -15,6 +19,8 @@ type Screen = 'library' | 'overview' | 'reading' | 'edit' | 'capture' | 'inbox' 
 const signIn = () => { window.location.href = '/login'; };
 
 function MobileWorkspaceContent() {
+  const account = useAccountStore(state => state.user);
+  const [showAccount, setShowAccount] = useState(false);
   const documents = useMobileDocuments();
   const pages = useBlockStore((state) => state.pages);
   const folders = useBlockStore((state) => state.folders);
@@ -127,6 +133,8 @@ function MobileWorkspaceContent() {
 
     {(documents.error || documents.saveState === 'pending' || documents.saveState === 'conflict') && screen !== 'new' && <div className="mw-status-banner" role="status"><span>{documents.error || savedLabel}</span>{documents.saveState === 'pending' && <button disabled={saving} onClick={() => void documents.retrySave()}>重试保存</button>}</div>}
 
+    {editable && <div className="flex items-center justify-between px-5 py-2 text-xs"><button onClick={() => setShowAccount(true)} className="text-blue-500">{account?.mode === 'enterprise' ? '企业模式' : '个人模式'} · 账号中心</button>{account?.mode === 'enterprise' && <Link className="text-blue-500" href="/teams">企业协作</Link>}</div>}
+    {showAccount && <AccountPanel isOpen onClose={() => setShowAccount(false)} />}
     <main className="mw-main" ref={contentRef} aria-busy={documents.loading || documents.session === 'loading'}>
       {documents.session === 'loading' && !documents.error ? <div className="mw-empty"><Loader2 className="animate-spin" size={25} /><p>正在打开文档…</p></div> : documents.loading ? <div className="mw-empty"><Loader2 className="animate-spin" size={25} /><p>正在读取内容…</p></div> : <>
         {isLibrary && <>

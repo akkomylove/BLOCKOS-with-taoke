@@ -1,3 +1,4 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { nanoid } from 'nanoid';
@@ -10,7 +11,7 @@ import { getUserId } from '@/lib/auth-utils';
  * @param limit - 每页数量 (默认 20)
  * @returns 项目列表及分页信息
  */
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
  * @param color - 项目颜色 (可选)
  * @returns 创建的项目 ID
  */
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -99,3 +100,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withEnterprise(GETHandler);
+export const POST = withEnterprise(POSTHandler);

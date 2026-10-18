@@ -1,3 +1,4 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { getUserId, checkProjectPermission } from '@/lib/auth-utils';
 import { getDb, query } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
@@ -74,7 +75,7 @@ function detectDuplicates(
   return { isDuplicate: false };
 }
 
-export async function POST(
+async function POSTHandler(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -312,3 +313,5 @@ ${content.slice(0, 8000)}
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);

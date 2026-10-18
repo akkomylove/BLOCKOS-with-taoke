@@ -1,3 +1,4 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
@@ -15,7 +16,7 @@ function normalizeMilestone(row: Record<string, unknown>) {
   };
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -120,7 +121,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -160,3 +161,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withEnterprise(GETHandler);
+export const PATCH = withEnterprise(PATCHHandler);
+export const DELETE = withEnterprise(DELETEHandler);

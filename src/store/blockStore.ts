@@ -193,7 +193,7 @@ export const BLOCK_TEMPLATES: BlockTemplate[] = [
     id: 'onboarding-guide',
     name: '👋 新手快速入门指南',
     icon: '👋',
-    description: '3 分钟掌握 BlockOS：无界画布、Agent 规则自驱动、代码沙箱与单 Block 专属 AI',
+    description: '3 分钟掌握 BlockOS：二维无界画布、单 Block 专属 AI、父子嵌套结构与代码沙箱',
     blocks: PRESET_DOCUMENTS[0]?.blocks || [],
   },
   {
@@ -262,31 +262,7 @@ export const BLOCK_TEMPLATES: BlockTemplate[] = [
   },
 ];
 
-const defaultAgentRules: AgentRule[] = [
-  {
-    id: 'todo-complete',
-    name: '需求验收与交付自动化',
-    enabled: true,
-    triggerType: 'blockUpdate',
-    triggerCondition: "block.type === 'todo' && !prevBlock.meta?.checked && block.meta?.checked",
-    actions: [
-      {
-        type: 'createBlock',
-        config: {
-          type: 'text',
-          contentTemplate: '### 📋 迭代发布报告（Agent 自动化归档）\n- **验收状态**：✅ 质量检查通过 · 准予发布上线\n- **执行动作**：Agent 规则引擎自驱动触发\n- **归档时间**：{timestamp}\n- **关联需求**：[P0需求交付] 完成用户中心与鉴权架构验证\n- **协作流转**：状态机已自动流转为「已交付」，变更审计日志已同步广播至团队协同看板。',
-          position: 'after',
-        },
-      },
-      {
-        type: 'callAI',
-        config: {
-          prompt: '作为产研交付 Agent，根据已验收交付的功能"[P0需求交付] 完成用户中心与鉴权架构验证"，生成一份专业的【下一步上线保障与测试 Checklist】（包含 3 个具体可执行的待办项，涵盖灰度放量、核心指标监控与应急预案，使用 Markdown 清单格式，语言严谨专业，符合飞书/钉钉企业级协同规范）',
-        },
-      },
-    ],
-  },
-];
+const defaultAgentRules: AgentRule[] = [];
 
 const seedBlocks: Block[] = getPresetDocumentBlocks('doc-guide');
 
@@ -337,7 +313,7 @@ export const useBlockStore = create<BlockStore>()(
       selectedIds: [],
       agentRules: defaultAgentRules,
       agentLogs: [],
-      agentEnabled: true,
+      agentEnabled: false,
       _hydrated: false,
       history: [],
       historyIndex: -1,

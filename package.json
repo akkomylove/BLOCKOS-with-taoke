@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:mcp": "node tests/e2e-mcp-client.mjs",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

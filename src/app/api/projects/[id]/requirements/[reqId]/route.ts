@@ -1,9 +1,10 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId, checkProjectPermission } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 
-export async function GET(
+async function GETHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; reqId: string }> }
 ) {
@@ -84,7 +85,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
+async function PUTHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; reqId: string }> }
 ) {
@@ -152,7 +153,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function DELETEHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; reqId: string }> }
 ) {
@@ -197,3 +198,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withEnterprise(GETHandler);
+export const PUT = withEnterprise(PUTHandler);
+export const DELETE = withEnterprise(DELETEHandler);

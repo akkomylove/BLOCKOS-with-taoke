@@ -263,6 +263,7 @@ describe('AI Impact, Smart Task Import, Invites, and Comments API', () => {
     expect(getCodeData.isExpired).toBe(false);
 
     // 3. 项目外人员 outsiderId 接受邀请加入
+    run("UPDATE users SET account_mode = 'enterprise' WHERE id = ?", [outsiderId]);
     vi.spyOn(authUtils, 'getUserId').mockResolvedValue(outsiderId);
     const acceptReq = new NextRequest('http://localhost/api/invites/' + code, { method: 'POST' });
     const acceptRes = await acceptInvite(acceptReq, { params: Promise.resolve({ code }) });

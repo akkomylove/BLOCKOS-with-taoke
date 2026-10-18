@@ -2,54 +2,18 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
-  const { nextUrl } = req;
-
-  const nextAuthToken = req.cookies.get('authjs.session-token') || req.cookies.get('__Secure-authjs.session-token');
-  let demoSession = req.cookies.get('demo-session');
-  
-  const authHeader = req.headers.get('authorization');
-  const hasBearerToken = !!authHeader && authHeader.startsWith('Bearer ');
-  const isApiOpenRoute = nextUrl.pathname.startsWith('/api/open');
-  const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth') || nextUrl.pathname === '/api/db-status' || isApiOpenRoute;
-  const isPublicRoute = nextUrl.pathname === '/login' || nextUrl.pathname === '/';
-  const isApiRoute = nextUrl.pathname.startsWith('/api');
-
-  if (!demoSession && !hasBearerToken && process.env.NODE_ENV === 'development' && nextUrl.pathname !== '/login' && !isApiAuthRoute) {
-    const response = NextResponse.next();
-    response.cookies.set({
-      name: 'demo-session',
-      value: 'demo-admin-001',
-      httpOnly: false,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-      path: '/',
-    });
-    demoSession = { name: 'demo-session', value: 'demo-admin-001' };
-  }
-
-  const isLoggedIn = !!nextAuthToken || !!demoSession || hasBearerToken;
-
-  if (isApiAuthRoute) {
-    return NextResponse.next();
-  }
-
-  if (isLoggedIn && nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/', nextUrl));
-  }
-
-  if (!isLoggedIn && isApiRoute && !isApiAuthRoute) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  if (!isLoggedIn && !isPublicRoute) {
-    return NextResponse.redirect(new URL('/login', nextUrl));
-  }
-
-  return NextResponse.next();
+  const pathname = req.nextUrl.pathname;
+  const publicRoute = pathname === '/' || pathname === '/login' || pathname.startsWith('/api/auth/')
+    || pathname.startsWith('/api/open/') || pathname === '/api/db-status';
+  if (publicRoute) return NextResponse.next();
+  const hasSession = req.cookies.getAll().some(cookie => !!cookie.value && (
+    ['blockos-session', 'demo-session', 'authjs.session-token', '__Secure-authjs.session-token'].includes(cookie.name)
+    || /^(?:__Secure-)?authjs\.session-token\.\d+$/.test(cookie.name)));
+  if (hasSession || req.headers.get('authorization')?.startsWith('Bearer ')) return NextResponse.next();
+  if (pathname.startsWith('/api/')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const login = new URL('/login', req.url);
+  login.searchParams.set('next', pathname);
+  return NextResponse.redirect(login);
 }
 
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)'],
-};
-
+export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)'] };

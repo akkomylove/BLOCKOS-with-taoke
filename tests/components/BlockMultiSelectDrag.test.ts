@@ -7,7 +7,7 @@ describe('Onboarding Tour Wording and Copy Audit', () => {
     const step2 = TOUR_STEPS.find((s) => s.badge.includes('2/5'));
     expect(step2).toBeDefined();
     expect(step2?.description).not.toContain('卡片垂直智能避让排布，杜绝重叠！');
-    expect(step2?.description).toContain('实现无缝的敏捷研发流转！');
+    expect(step2?.description).toContain('让信息层级井井有条！');
   });
 
   it('should have customer-facing professional descriptions across all 5 tour steps', () => {

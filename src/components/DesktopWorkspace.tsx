@@ -13,7 +13,9 @@ import ImportPanel from '@/components/ImportPanel';
 import ExportPanel from '@/components/ExportPanel';
 import HistoryPanel from '@/components/HistoryPanel';
 import CopilotPanel from '@/components/CopilotPanel';
-import AnalyzePanel from '@/components/AnalyzePanel';
+import dynamic from 'next/dynamic';
+import { useAccountStore } from '@/store/accountStore';
+const AnalyzePanel = dynamic(() => import('@/components/AnalyzePanel'), { ssr: false });
 import ChatPanel from '@/components/ChatPanel';
 import ReviewEnrichPanel from '@/components/ReviewEnrichPanel';
 import FoldPlanPanel from '@/components/FoldPlanPanel';
@@ -22,9 +24,11 @@ import { ProfilePanel } from '@/components/collaboration/ProfilePanel';
 import { useAgent } from '@/hooks/useAgent';
 import { useBlockStore } from '@/store/blockStore';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { getPresetDocumentBlocks } from '@/config/presetDocuments';
+import { getAccountGuide } from '@/config/account-guide';
 
 export default function DesktopWorkspace() {
+  const account = useAccountStore(state => state.user);
+  const enterprise = account?.mode === 'enterprise';
   const [showLogs, setShowLogs] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [showRelationDrawer, setShowRelationDrawer] = useState(false);
@@ -53,51 +57,27 @@ export default function DesktopWorkspace() {
   useEffect(() => {
     let active = true;
     useBlockStore.persist.rehydrate();
+    if (account?.id) useBlockStore.getState().setCurrentUserId(account.id);
     hydrate();
 
     // 飞书/钉钉风格官方新手入门系统保障与激活机制
     const GUIDE_ID = 'doc-guide';
     const GUIDE_TITLE = '👋 欢迎使用 BlockOS ｜ 新手快速入门指南';
-    const GUIDE_VERSION_KEY = 'blockos-guide-v12-permanent-onboarding';
+    const GUIDE_VERSION_KEY = `blockos-guide-v14-account:${account?.id}`;
     const hasUpgraded = localStorage.getItem(GUIDE_VERSION_KEY);
 
     const state = useBlockStore.getState();
-    const freshGuideBlocks = getPresetDocumentBlocks('doc-guide');
+    const freshGuideBlocks = getAccountGuide(account?.mode || 'personal');
 
     // 检查当前指南文档卡片是否丢失或为空（如被旧版本同步冲掉）
     const curGuideBlocks = state.pageBlocks[GUIDE_ID] || (state.currentPageId === GUIDE_ID ? state.blocks : []);
     const isGuideEmpty = !curGuideBlocks || curGuideBlocks.length === 0;
 
-    // 强制同步最新的 Agent 规则，彻底清除 localStorage 中旧的祝贺语
-    const currentRules = state.agentRules || [];
-    const todoRule = currentRules.find((r) => r.id === 'todo-complete');
-    if (!todoRule || !JSON.stringify(todoRule).includes('迭代发布报告')) {
+    // 清除可能残留在 localStorage 中的旧演示规则与开关
+    if (state.agentEnabled || (state.agentRules && state.agentRules.length > 0)) {
       useBlockStore.setState({
-        agentRules: [
-          {
-            id: 'todo-complete',
-            name: '需求验收与交付自动化',
-            enabled: true,
-            triggerType: 'blockUpdate',
-            triggerCondition: "block.type === 'todo' && !prevBlock.meta?.checked && block.meta?.checked",
-            actions: [
-              {
-                type: 'createBlock',
-                config: {
-                  type: 'text',
-                  contentTemplate: '### 📋 迭代发布报告（Agent 自动化归档）\n- **验收状态**：✅ 质量检查通过 · 准予发布上线\n- **执行动作**：Agent 规则引擎自驱动触发\n- **归档时间**：{timestamp}\n- **关联需求**：[P0需求交付] 完成用户中心与鉴权架构验证\n- **协作流转**：状态机已自动流转为「已交付」，变更审计日志已同步广播至团队协同看板。',
-                  position: 'after',
-                },
-              },
-              {
-                type: 'callAI',
-                config: {
-                  prompt: '作为产研交付 Agent，根据已验收交付的功能"[P0需求交付] 完成用户中心与鉴权架构验证"，生成一份专业的【下一步上线保障与测试 Checklist】（包含 3 个具体可执行的待办项，涵盖灰度放量、核心指标监控与应急预案，使用 Markdown 清单格式，语言严谨专业，符合飞书/钉钉企业级协同规范）',
-                },
-              },
-            ],
-          },
-        ],
+        agentEnabled: false,
+        agentRules: [],
       });
     }
 
@@ -167,14 +147,7 @@ export default function DesktopWorkspace() {
     }
 
     const loadServerData = async () => {
-      try {
-        const response = await fetch('/api/auth/user');
-        if (!active) return;
-        if (response.ok) {
-          const user = await response.json();
-          if (user.id) useBlockStore.getState().setCurrentUserId(user.id);
-        }
-      } catch { /* Retain local content if the account service is unavailable. */ }
+      if (account?.id) useBlockStore.getState().setCurrentUserId(account.id);
       if (!active) return;
       await syncPages();
       if (!active) return;
@@ -198,7 +171,7 @@ export default function DesktopWorkspace() {
     };
     loadServerData();
     return () => { active = false; };
-  }, [hydrate, syncPages, loadFromServer]);
+  }, [hydrate, syncPages, loadFromServer, account?.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -263,7 +236,7 @@ export default function DesktopWorkspace() {
             if (state.currentPageId !== targetGuideId) {
               state.setCurrentPage(targetGuideId);
             }
-            const freshBlocks = getPresetDocumentBlocks('doc-guide');
+            const freshBlocks = getAccountGuide(account?.mode || 'personal');
             const currentGuideBlocks = useBlockStore.getState().blocks;
             if (!currentGuideBlocks || currentGuideBlocks.length === 0) {
               useBlockStore.setState((prev) => ({
@@ -284,7 +257,7 @@ export default function DesktopWorkspace() {
         <ExportPanel isOpen={showExport} onClose={() => setShowExport(false)} />
         <HistoryPanel isOpen={showHistory} onClose={() => setShowHistory(false)} />
         <CopilotPanel isOpen={showCopilot} onClose={() => setShowCopilot(false)} />
-        <AnalyzePanel isOpen={showAnalyze} onClose={() => setShowAnalyze(false)} />
+        {enterprise && showAnalyze && <AnalyzePanel isOpen onClose={() => setShowAnalyze(false)} />}
         <ChatPanel isOpen={showChat} onClose={() => setShowChat(false)} />
         <ReviewEnrichPanel isOpen={showReviewEnrich} onClose={() => setShowReviewEnrich(false)} />
         <FoldPlanPanel isOpen={showFoldPlan} onClose={() => setShowFoldPlan(false)} />

@@ -4,6 +4,7 @@ import { auth } from './auth';
 import { DEMO_USERS, isDemoAdmin } from './demo-users';
 import { query } from './db';
 import { verifyApiKeyToken } from './api-keys';
+import { ACCOUNT_COOKIE, verifyAccountSession } from './account';
 
 const SESSION_SECRET =
   process.env.AUTH_SECRET ||
@@ -81,6 +82,18 @@ export async function getUserId(req?: Request | { headers?: Headers | { get(name
     if (err instanceof Error && err.message.startsWith('Unauthorized')) {
       throw err;
     }
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(ACCOUNT_COOKIE)?.value;
+    if (token) {
+      const userId = await verifyAccountSession(token);
+      if (!userId) throw new Error('Unauthorized: Session expired or revoked');
+      return userId;
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith('Unauthorized')) throw err;
   }
 
   // 1. 校验 NextAuth 官方服务端 Session

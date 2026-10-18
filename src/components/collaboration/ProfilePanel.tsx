@@ -1,184 +1,63 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, User, Briefcase, Tag, Plus, Check } from 'lucide-react';
-import { useCollaborationStore } from '@/store/collaborationStore';
-import { UserTaskOverview } from './UserTaskOverview';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { X, User, Building2, Shield, LogOut } from 'lucide-react';
+import { useAccountStore } from '@/store/accountStore';
+import type { AccountMode } from '@/types/account';
 
-interface ProfilePanelProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const FUNCTION_OPTIONS = [
-  '前端开发', '后端开发', '全栈开发', 'UI/UX设计', '产品经理',
-  '项目经理', '测试工程师', 'DevOps', '数据分析', '架构师',
-];
-
-export function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
-  const profile = useCollaborationStore((state) => state.userProfile);
-  const tasks = useCollaborationStore((state) => state.userTasks);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState(profile?.title || '');
-  const [showAddFunction, setShowAddFunction] = useState(false);
-  const [userName, setUserName] = useState<string>('用户');
-  const [userEmail, setUserEmail] = useState<string>('');
-
+const EnterpriseTasks = dynamic(() => import('./EnterpriseAccountTasks'), { ssr: false });
+const empty = { displayName: '', bio: '', title: '', functions: [] as string[] };
+export function ProfilePanel({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { user, switchMode, logout, updateName } = useAccountStore();
+  const [draft, setDraft] = useState(empty);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   useEffect(() => {
     if (!isOpen) return;
-    useCollaborationStore.getState().fetchUserProfile();
-    useCollaborationStore.getState().fetchUserTasks();
-
-    fetch('/api/auth/user')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          setUserName(data.name || '用户');
-          setUserEmail(data.email || '');
-        }
-      })
-      .catch(() => {});
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!editingTitle) {
-      setTitleValue(profile?.title || '');
-    }
-  }, [profile?.title, editingTitle]);
-
-  const handleSaveTitle = async () => {
-    await useCollaborationStore.getState().updateUserProfile({ title: titleValue });
-    setEditingTitle(false);
-  };
-
-  const handleAddFunction = async (fn: string) => {
-    const current = profile?.functions || [];
-    if (current.includes(fn)) return;
-    const newFunctions = [...current, fn];
-    await useCollaborationStore.getState().updateUserProfile({ functions: newFunctions });
-    setShowAddFunction(false);
-  };
-
-  const handleRemoveFunction = async (fn: string) => {
-    const newFunctions = (profile?.functions || []).filter(f => f !== fn);
-    await useCollaborationStore.getState().updateUserProfile({ functions: newFunctions });
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg max-h-[85vh] bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-zinc-700">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-purple-500/15 border border-blue-500/20 flex items-center justify-center">
-              <User className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">个人中心</h2>
-              <p className="text-[11px] text-gray-500 dark:text-zinc-500">管理个人信息与任务</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-gray-500 dark:text-zinc-500"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-zinc-800 rounded-xl">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-lg font-semibold flex-shrink-0">
-              <User className="w-6 h-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{userName}</p>
-              <p className="text-xs text-gray-500 dark:text-zinc-400 truncate">{userEmail || 'user@blockos.dev'}</p>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-              <Briefcase className="w-3.5 h-3.5" />
-              职务
-            </h3>
-            {editingTitle ? (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={titleValue}
-                  onChange={e => setTitleValue(e.target.value)}
-                  placeholder="输入职务名称"
-                  className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                  autoFocus
-                />
-                <button onClick={handleSaveTitle} className="p-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
-                  <Check className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => { setTitleValue(profile?.title || ''); setEditingTitle(true); }}
-                className="w-full text-left px-3 py-2 bg-gray-50 dark:bg-zinc-800 rounded-lg text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
-              >
-                {profile?.title || '点击设置职务...'}
-              </button>
-            )}
-          </div>
-
-          <div>
-            <h3 className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-              <Tag className="w-3.5 h-3.5" />
-              职能标签
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {(profile?.functions || []).map(fn => (
-                <span
-                  key={fn}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg text-xs font-medium group"
-                >
-                  {fn}
-                  <button
-                    onClick={() => handleRemoveFunction(fn)}
-                    className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-all"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              <button
-                onClick={() => setShowAddFunction(!showAddFunction)}
-                className="inline-flex items-center gap-1 px-2 py-1 border border-dashed border-gray-300 dark:border-zinc-600 rounded-lg text-xs text-gray-400 hover:text-blue-500 hover:border-blue-400 transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-                添加
-              </button>
-            </div>
-            {showAddFunction && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {FUNCTION_OPTIONS.filter(f => !(profile?.functions || []).includes(f)).map(fn => (
-                  <button
-                    key={fn}
-                    onClick={() => handleAddFunction(fn)}
-                    className="px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-xs text-gray-600 dark:text-zinc-400 hover:text-purple-600 dark:hover:text-purple-400 rounded transition-colors"
-                  >
-                    {fn}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h3 className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-              我的任务
-            </h3>
-            <UserTaskOverview summaries={tasks} />
-          </div>
-        </div>
+    const controller = new AbortController();
+    setLoaded(false); setError(''); setMessage(''); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+    fetch('/api/user/profile', { signal: controller.signal }).then(async res => { if (!res.ok) throw new Error('资料加载失败，请关闭后重试'); return res.json(); }).then(data => { setDraft(data); setLoaded(true); }).catch(err => { if (!controller.signal.aborted) setError(err.message); });
+    return () => controller.abort();
+  }, [isOpen, user?.id]);
+  if (!isOpen || !user) return null;
+  const enterprise = user.mode === 'enterprise';
+  async function perform(action: () => Promise<void>, success = '') {
+    if (busy) return;
+    setBusy(true); setError(''); setMessage('');
+    try { await action(); setMessage(success); }
+    catch (err) { setError(err instanceof Error ? err.message : '操作失败，请重试'); }
+    finally { setBusy(false); }
+  }
+  async function changeMode(mode: AccountMode) { await switchMode(mode); }
+  const input = 'mt-1 block w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800';
+  return <div className="fixed inset-0 z-[250] flex items-center justify-center p-3" role="dialog" aria-modal="true" aria-labelledby="account-title" onKeyDown={e => { if (e.key === 'Escape' && !busy) onClose(); }}>
+    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { if (!busy) onClose(); }} />
+    <div className="relative flex max-h-[90dvh] w-full max-w-xl flex-col rounded-2xl border border-gray-200 bg-white text-left text-gray-900 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+      <header className="flex items-center justify-between border-b border-gray-200 p-5 dark:border-zinc-700"><div><h2 id="account-title" className="text-lg font-semibold">账号中心</h2><p className="text-xs text-gray-500">{user.email} · {user.provider === 'demo' ? '演示账号' : user.hasPassword ? '邮箱账号' : '第三方账号'}</p></div><button autoFocus aria-label="关闭账号中心" disabled={busy} onClick={onClose}><X size={20} /></button></header>
+      <div className="space-y-6 overflow-y-auto p-5">
+        <section><h3 className="mb-3 font-medium">使用模式</h3><div className="grid grid-cols-2 gap-3">{(['personal', 'enterprise'] as const).map(mode => <button key={mode} aria-pressed={user.mode === mode} disabled={busy} onClick={() => void perform(() => changeMode(mode), `已切换至${mode === 'personal' ? '个人' : '企业'}模式`)} className={`rounded-xl border p-4 text-left disabled:opacity-60 ${user.mode === mode ? 'border-blue-500 bg-blue-500/5' : 'border-gray-200 dark:border-zinc-700'}`}>{mode === 'personal' ? <User size={20} /> : <Building2 size={20} />}<strong className="mt-2 block text-sm">{mode === 'personal' ? '个人模式' : '企业模式'}</strong><span className="mt-1 block text-xs text-gray-500">{mode === 'personal' ? '专注知识、文档与 AI' : '团队、项目与成员协作'}</span></button>)}</div><p className="mt-2 text-xs text-gray-500">切换会保留文档、团队和项目。企业模式内的操作权限由成员角色决定。</p>{enterprise && <Link href="/teams" className="mt-3 inline-block text-sm text-blue-500">进入企业协作 →</Link>}</section>
+        <form className="space-y-3" onSubmit={e => { e.preventDefault(); void perform(async () => {
+          const res = await fetch('/api/user/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(draft) });
+          const data = await res.json(); if (!res.ok) throw new Error(data.error || '保存失败');
+          updateName(draft.displayName.trim());
+        }, '个人资料已保存'); }}><h3 className="font-medium">个人资料</h3><label className="block text-sm">昵称<input required maxLength={60} className={input} value={draft.displayName} onChange={e => setDraft({ ...draft, displayName: e.target.value })} /></label><label className="block text-sm">个人简介<textarea maxLength={1000} className={input} value={draft.bio} onChange={e => setDraft({ ...draft, bio: e.target.value })} /></label>{enterprise && <><label className="block text-sm">职务<input maxLength={80} className={input} value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} /></label><label className="block text-sm">职能（逗号分隔）<input className={input} value={draft.functions.join(', ')} onChange={e => setDraft({ ...draft, functions: e.target.value.split(/[,，]/).map(value => value.trim()).filter(Boolean) })} /></label><p className="text-xs text-gray-500">成员权限以具体团队和项目中的角色为准。</p></>}<button disabled={busy || !loaded} className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50">保存资料</button></form>
+        <section className="space-y-3"><h3 className="flex items-center gap-2 font-medium"><Shield size={16} />账号安全</h3>{user.hasPassword ? <form className="space-y-3" onSubmit={e => { e.preventDefault(); void perform(async () => {
+          if (newPassword !== confirmPassword) throw new Error('两次输入的新密码不一致');
+          const res = await fetch('/api/account/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) });
+          const data = await res.json(); if (!res.ok) throw new Error(data.error || '修改失败');
+          setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+        }, '密码已修改，其他设备的密码登录会话已失效'); }}><label className="block text-sm">当前密码<input required className={input} type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></label><label className="block text-sm">新密码<input required minLength={10} className={input} type="password" autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)} /></label><label className="block text-sm">确认新密码<input required minLength={10} className={input} type="password" autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label><p className="text-xs text-gray-500">至少 10 个字符，不超过 72 字节。修改后其他设备需要重新登录。</p><button disabled={busy} className="rounded-lg border border-gray-200 px-4 py-2 text-sm dark:border-zinc-700">修改密码</button></form> : <p className="text-sm text-gray-500">{user.provider === 'demo' ? '公共演示账号不提供密码设置，请注册正式账号保存私人内容。' : '密码由原登录平台管理。'}</p>}</section>
+        {enterprise && <EnterpriseTasks />}
+        <button disabled={busy} onClick={() => void perform(logout)} className="flex items-center gap-2 text-sm text-red-500"><LogOut size={16} />退出登录</button>
+        {error && <p role="alert" className="text-sm text-red-500">{error}</p>}{message && <p role="status" className="text-sm text-green-600">{message}</p>}
       </div>
     </div>
-  );
+  </div>;
 }

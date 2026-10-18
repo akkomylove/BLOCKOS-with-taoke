@@ -1,10 +1,11 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { nanoid } from 'nanoid';
 import { isValidNanoid } from '@/lib/validation';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let currentUserId: string;
     try {
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let currentUserId: string;
     try {
@@ -92,7 +93,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let currentUserId: string;
     try {
@@ -133,3 +134,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);
+export const PATCH = withEnterprise(PATCHHandler);
+export const DELETE = withEnterprise(DELETEHandler);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAccountStore } from '@/store/accountStore';
 import {
   X, BookOpen, Zap, HelpCircle, Settings, Key, Globe, Cpu,
   Sparkles, ArrowRight, CheckCircle2, ChevronDown, ChevronUp,
@@ -73,6 +74,7 @@ interface ApiKeyItem {
 }
 
 export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelProps) {
+  const enterprise = useAccountStore(state => state.user?.mode === 'enterprise');
   const [activeTab, setActiveTab] = useState('guide');
   const [apiKey, setApiKey] = useState('');
   const [baseURL, setBaseURL] = useState('');
@@ -266,7 +268,9 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
 
               <AccordionItem icon={Sparkles} title="核心功能">
                 <div className="space-y-3">
-                  {FEATURES.map((f) => (
+                  {FEATURES.filter(f => enterprise || !['团队管理', '项目协作'].includes(f.title)).map((feature) => {
+                    const f = feature.title === '个人中心' ? { ...feature, title: '账号中心', desc: '管理昵称、简介、密码与使用模式，切换模式时保留已有内容。' } : feature;
+                    return (
                     <div key={f.title} className="flex items-start gap-3">
                       <div className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <f.icon className="w-3.5 h-3.5 text-gray-600 dark:text-zinc-400" />
@@ -276,7 +280,7 @@ export default function HelpPanel({ isOpen, onClose, onRestartTour }: HelpPanelP
                         <p className="text-[11px] text-gray-600 dark:text-zinc-400 leading-relaxed">{f.desc}</p>
                       </div>
                     </div>
-                  ))}
+                  ); })}
                 </div>
               </AccordionItem>
 

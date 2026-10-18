@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { analyzeDocument } from '@/lib/ai';
 import type { AnalyzeRequest } from '@/lib/ai';
 import { getUserId } from '@/lib/auth-utils';
+import { withEnterprise } from '@/lib/enterprise-access';
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   let userId: string;
   try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -22,3 +23,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message, code }, { status: statusCode });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);

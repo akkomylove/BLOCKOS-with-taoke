@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
-  Bot, Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
+  Activity, Trash2, Sparkles, GitBranch, Undo2, Redo2, HelpCircle,
   Search, Download, Upload, CopyPlus, Wand2, Layers, Sun, Moon, History, Users,
   LogOut, UserCircle, LayoutGrid, BarChart3, BrainCircuit,
   ClipboardCheck, Link2, MoreHorizontal, Loader2, Check, AlertCircle, MessageSquare, WifiOff
 } from 'lucide-react';
 import Logo from '@/components/Logo';
+import { useAccountStore } from '@/store/accountStore';
 import { useBlockStore } from '@/store/blockStore';
 import { useTheme } from '@/components/ThemeProvider';
 
@@ -43,8 +44,6 @@ export default function Toolbar({
   onToggleFoldPlan, onToggleDocRelations,
 }: ToolbarProps) {
   const router = useRouter();
-  const agentEnabled = useBlockStore((state) => state.agentEnabled);
-  const toggleAgent = useBlockStore((state) => state.toggleAgent);
   const selectedIds = useBlockStore((state) => state.selectedIds);
   const deleteBlock = useBlockStore((state) => state.deleteBlock);
   const clearSelection = useBlockStore((state) => state.clearSelection);
@@ -61,12 +60,15 @@ export default function Toolbar({
   const saveStatus = useBlockStore((state) => state.saveStatus);
   const saveError = useBlockStore((state) => state.saveError);
   const retrySave = useBlockStore((state) => state.retrySave);
-  const setCurrentUserId = useBlockStore((state) => state.setCurrentUserId);
+  const user = useAccountStore(state => state.user);
+  const logout = useAccountStore(state => state.logout);
+  const enterprise = user?.mode === 'enterprise';
+  const [logoutError, setLogoutError] = useState('');
   const { theme, toggleTheme } = useTheme();
 
   const currentPage = pages.find((p) => p.id === currentPageId);
   const [formatting, setFormatting] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
+  const userName = user?.name;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userBtnRef = useRef<HTMLButtonElement>(null);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -96,45 +98,9 @@ export default function Toolbar({
     };
   }, [retrySave]);
 
-  useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        const res = await fetch('/api/auth/user');
-        if (res.ok) {
-          const data = await res.json();
-          setUserName(data.name || '用户');
-          if (data.id) {
-            setCurrentUserId(data.id);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load user info:', err);
-      }
-    };
-    loadUserInfo();
-  }, [setCurrentUserId]);
-
   const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (err) {
-      console.error('Logout failed:', err);
-    } finally {
-      if (typeof window !== 'undefined') {
-        try {
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && !key.startsWith('blockos-guide-') && (key.startsWith('block-os') || key.startsWith('doc-') || key.includes('guide'))) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach((k) => localStorage.removeItem(k));
-        } catch {}
-      }
-      useBlockStore.getState().reset();
-      router.push('/login');
-    }
+    try { await logout(); }
+    catch (err) { setLogoutError(err instanceof Error ? err.message : '退出失败，请重试'); }
   };
 
   const handleDeleteSelected = () => {
@@ -235,15 +201,12 @@ export default function Toolbar({
         <button onClick={onToggleChat} className={iconBtnBlue} title="AI 对话">
           <MessageSquare className="w-4 h-4" />
         </button>
-        <button onClick={toggleAgent} className={agentEnabled ? iconBtnActive : iconBtn} title="Agent 规则引擎">
-          <Bot className="w-4 h-4" />
-        </button>
         <button onClick={onToggleCopilot} className={`${iconBtnBlue} hidden xl:flex`} title="AI Copilot">
           <BrainCircuit className="w-4 h-4" />
         </button>
-        <button onClick={onToggleAnalyze} className={`${iconBtnBlue} hidden xl:flex`} title="工作流分析">
+        {enterprise && (<button onClick={onToggleAnalyze} className={`${iconBtnBlue} hidden xl:flex`} title="工作流分析">
           <BarChart3 className="w-4 h-4" />
-        </button>
+        </button>)}
         <button onClick={onToggleReviewEnrich} className={`${iconBtnBlue} hidden 2xl:flex`} title="角色审阅">
           <ClipboardCheck className="w-4 h-4" />
         </button>
@@ -280,9 +243,9 @@ export default function Toolbar({
         <div className="w-px h-5 bg-gray-300 dark:bg-zinc-700 mx-0.5 sm:mx-1 shrink-0 hidden md:block" />
 
         {/* Tools Group (协作与日志中屏展开，导入/导出宽屏展开) */}
-        <button onClick={() => router.push('/teams')} className={`${iconBtn} hidden md:flex`} title="协作看板">
+        {enterprise && (<button onClick={() => router.push('/teams')} className={`${iconBtn} hidden md:flex`} title="协作看板">
           <Users className="w-4 h-4" />
-        </button>
+        </button>)}
         <button onClick={onToggleLogs} className={`${showLogs ? iconBtnActive : iconBtn} hidden md:flex`} title="执行日志">
           <Activity className="w-4 h-4" />
         </button>
@@ -332,7 +295,7 @@ export default function Toolbar({
       </div>
 
       {/* Right: Theme + User (右侧常驻，永不被挤压溢出) */}
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-1 shrink-0"><button onClick={onOpenProfile} className="rounded-lg bg-blue-500/10 px-2 py-1.5 text-xs text-blue-600 dark:text-blue-300" title="切换使用模式">{enterprise ? '企业模式' : '个人模式'}</button>
         <button onClick={toggleTheme} className={iconBtn} title="切换主题">
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
@@ -363,7 +326,7 @@ export default function Toolbar({
                   right: Math.max(8, window.innerWidth - (userBtnRef.current?.getBoundingClientRect().right ?? 0)),
                 }}
               >
-                <div className="p-1.5">
+                <div className="p-1.5">{logoutError && <p role="alert" className="p-2 text-xs text-red-500">{logoutError}</p>}
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-md transition-colors"
@@ -416,13 +379,13 @@ export default function Toolbar({
                   <BrainCircuit className="w-4 h-4 text-blue-500 shrink-0" />
                   <span>Copilot 规划</span>
                 </button>
-                <button
+                {enterprise && (<button
                   onClick={() => { setMoreMenuOpen(false); onToggleAnalyze(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <BarChart3 className="w-4 h-4 text-indigo-500 shrink-0" />
                   <span>工作流分析</span>
-                </button>
+                </button>)}
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleReviewEnrich(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
@@ -481,7 +444,7 @@ export default function Toolbar({
 
             {/* 工具与协作 */}
             <div>
-              <div className="px-2 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">工具与协作</div>
+              <div className="px-2 py-1 text-[10px] font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">{enterprise ? '工具与协作' : '个人工具'}</div>
               <div className="space-y-0.5">
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleExport(); }}
@@ -497,13 +460,13 @@ export default function Toolbar({
                   <Upload className="w-4 h-4 text-gray-600 dark:text-zinc-400 shrink-0" />
                   <span>导入文档</span>
                 </button>
-                <button
+                {enterprise && (<button
                   onClick={() => { setMoreMenuOpen(false); router.push('/teams'); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"
                 >
                   <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span>敏捷看板</span>
-                </button>
+                </button>)}
                 <button
                   onClick={() => { setMoreMenuOpen(false); onToggleLogs(); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-left"

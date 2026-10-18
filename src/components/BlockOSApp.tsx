@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useSyncExternalStore } from 'react';
+import AccountGate from './AccountGate';
 
 const loading = () => <div className="grid h-[100dvh] place-items-center text-sm text-zinc-500">正在打开 BlockOS…</div>;
 const DesktopWorkspace = dynamic(() => import('./DesktopWorkspace'), { ssr: false, loading });
@@ -18,5 +19,5 @@ const getServerSnapshot = () => null;
 export default function BlockOSApp() {
   const mobile = useSyncExternalStore<boolean | null>(subscribe, getSnapshot, getServerSnapshot);
   if (mobile === null) return loading();
-  return mobile ? <MobileWorkspace /> : <DesktopWorkspace />;
+  return mobile ? <MobileWorkspace /> : <AccountGate><DesktopWorkspace /></AccountGate>;
 }

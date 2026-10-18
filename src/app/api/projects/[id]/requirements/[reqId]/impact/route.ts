@@ -1,7 +1,8 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest } from 'next/server';
 import { POST as runImpact } from '../../../ai-impact/route';
 
-export async function GET(
+async function GETHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; reqId: string }> }
 ) {
@@ -14,7 +15,7 @@ export async function GET(
   return runImpact(dummyReq, { params: Promise.resolve({ id }) });
 }
 
-export async function POST(
+async function POSTHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; reqId: string }> }
 ) {
@@ -27,3 +28,6 @@ export async function POST(
   });
   return runImpact(dummyReq, { params: Promise.resolve({ id }) });
 }
+
+export const GET = withEnterprise(GETHandler);
+export const POST = withEnterprise(POSTHandler);

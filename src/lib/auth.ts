@@ -4,40 +4,21 @@ import Google from 'next-auth/providers/google';
 import { getDb, query, run, saveDb } from './db';
 import { nanoid } from 'nanoid';
 
-function validateEnvVars() {
-  const missing: string[] = [];
-  
-  if (!process.env.GITHUB_CLIENT_ID) missing.push('GITHUB_CLIENT_ID');
-  if (!process.env.GITHUB_CLIENT_SECRET) missing.push('GITHUB_CLIENT_SECRET');
-  if (!process.env.GOOGLE_CLIENT_ID) missing.push('GOOGLE_CLIENT_ID');
-  if (!process.env.GOOGLE_CLIENT_SECRET) missing.push('GOOGLE_CLIENT_SECRET');
-  
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}. ` +
-      'Please set these variables in your .env.local file or environment configuration.'
-    );
-  }
-}
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'blockos-fallback-session-secret-key-32chars',
   providers: [
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID || 'placeholder-github-id',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || 'placeholder-github-secret',
-    }),
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID || 'placeholder-google-id',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'placeholder-google-secret',
-    }),
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET ? [GitHub({
+      clientId: process.env.GITHUB_CLIENT_ID, clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    })] : []),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [Google({
+      clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })] : []),
   ],
   session: {
     strategy: 'jwt',
   },
   callbacks: {
     async signIn({ user, account }) {
-      validateEnvVars();
       if (!account || !user.email) return false;
 
       await getDb();
@@ -50,7 +31,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (existing.length === 0) {
         const id = nanoid();
         run(
-          'INSERT INTO users (id, email, name, avatar, provider, provider_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          "INSERT INTO users (id, email, name, avatar, provider, provider_id, created_at, account_mode) VALUES (?, ?, ?, ?, ?, ?, ?, 'personal')",
           [
             id,
             user.email,

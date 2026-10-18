@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
-import { getDb, query, run, saveDb } from '@/lib/db';
+import { getDb, query, run, saveDb, transaction } from '@/lib/db';
+import { verifyApiKeyToken } from '@/lib/api-keys';
 import { nanoid } from 'nanoid';
 
+const BLOCK_TYPES = ['text', 'code', 'table', 'todo', 'whiteboard', 'mindmap'];
+type InputSchema = {
+  type: string | string[];
+  properties?: Record<string, InputSchema>;
+  required?: string[];
+  items?: InputSchema;
+  enum?: string[];
+  description?: string;
+  default?: string;
+};
+
 // MCP 标准工具清单 (Model Context Protocol Tool Definitions)
-const MCP_TOOLS = [
+const MCP_TOOLS: { name: string; description: string; inputSchema: InputSchema }[] = [
   {
     name: 'read_canvas',
     description: '读取 BlockOS 画布上的所有原子 Block，包括父子嵌套层级树（blockTree）、标题、内容与元数据。',
@@ -22,7 +34,7 @@ const MCP_TOOLS = [
       type: 'object',
       properties: {
         pageId: { type: 'string', description: '文档页面 ID' },
-        type: { type: 'string', enum: ['text', 'code', 'table', 'todo', 'whiteboard', 'mindmap'], description: 'Block 类型' },
+        type: { type: 'string', enum: BLOCK_TYPES, description: 'Block 类型' },
         title: { type: 'string', description: 'Block 标题' },
         content: { type: 'string', description: 'Block 详细内容' },
         parentId: { type: 'string', description: '父 Block ID，若提供则自动作为子 Block 挂载在父节点下' },
@@ -37,7 +49,7 @@ const MCP_TOOLS = [
       type: 'object',
       properties: {
         blockId: { type: 'string', description: '待设置的 Block ID' },
-        parentId: { type: 'string', description: '目标父 Block ID。传入 null 或留空表示移出子 Block（提升为画布独立 Block）' },
+        parentId: { type: ['string', 'null'], description: '目标父 Block ID。传入 null 或留空表示移出子 Block（提升为画布独立 Block）' },
       },
       required: ['blockId'],
     },
@@ -54,7 +66,7 @@ const MCP_TOOLS = [
           properties: {
             title: { type: 'string' },
             content: { type: 'string' },
-            type: { type: 'string', default: 'text' },
+            type: { type: 'string', enum: BLOCK_TYPES, default: 'text' },
           },
           required: ['content'],
         },
@@ -65,7 +77,7 @@ const MCP_TOOLS = [
             properties: {
               title: { type: 'string' },
               content: { type: 'string' },
-              type: { type: 'string', default: 'text' },
+              type: { type: 'string', enum: BLOCK_TYPES, default: 'text' },
             },
             required: ['content'],
           },
@@ -101,8 +113,17 @@ const MCP_TOOLS = [
 
 export async function POST(req: NextRequest) {
   let userId: string;
+  let permissions: string[] = ['read', 'write'];
   try {
-    userId = await getUserId(req);
+    const authorization = req.headers.get('authorization');
+    if (authorization?.startsWith('Bearer ')) {
+      const verified = await verifyApiKeyToken(authorization.slice(7).trim());
+      if (!verified) throw new Error('Unauthorized');
+      userId = verified.userId;
+      permissions = verified.permissions;
+    } else {
+      userId = await getUserId(req);
+    }
   } catch {
     return NextResponse.json(
       {
@@ -114,21 +135,40 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let rpc: unknown;
+  try {
+    rpc = await req.json();
+  } catch {
+    return rpcError(null, -32700, 'Parse error', 400);
+  }
+  if (!isObject(rpc) || rpc.jsonrpc !== '2.0' || typeof rpc.method !== 'string'
+    || ('id' in rpc && typeof rpc.id !== 'string' && (typeof rpc.id !== 'number' || !Number.isFinite(rpc.id)))) {
+    return rpcError(null, -32600, 'Invalid Request', 400);
+  }
+  // Notifications never produce responses or execute request-only tool calls.
+  if (!('id' in rpc)) return new NextResponse(null, { status: 202 });
+  const id = rpc.id as string | number;
+  const { method, params = {} } = rpc;
+  if (!isObject(params)) return rpcError(id, -32602, 'params must be an object');
+
   try {
     await getDb();
-    const rpc = await req.json();
-    const { jsonrpc = '2.0', id = 1, method, params = {} } = rpc;
 
     if (method === 'initialize') {
       return NextResponse.json({
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: '2024-11-05',
+          protocolVersion: ['2024-11-05', '2025-03-26', '2025-06-18', '2025-11-25'].includes(String(params.protocolVersion))
+            ? params.protocolVersion : '2025-03-26',
           capabilities: { tools: { listChanged: false } },
           serverInfo: { name: 'blockos-mcp-server', version: '1.0.0' },
         },
       });
+    }
+
+    if (method === 'ping') {
+      return NextResponse.json({ jsonrpc: '2.0', id, result: {} });
     }
 
     if (method === 'tools/list') {
@@ -141,7 +181,23 @@ export async function POST(req: NextRequest) {
 
     if (method === 'tools/call') {
       const { name, arguments: args = {} } = params;
-      const toolResult = await handleMcpToolCall(name, args, userId);
+      const tool = MCP_TOOLS.find((item) => item.name === name);
+      if (!tool) return rpcError(id, -32602, `Unknown tool: ${String(name)}`);
+      const validationError = validateInput(args, tool.inputSchema, 'arguments');
+      if (validationError) return rpcError(id, -32602, validationError);
+      let toolResult: Record<string, unknown> = {};
+      try {
+        const permission = name === 'read_canvas' ? 'read' : 'write';
+        if (!permissions.includes(permission)) throw new Error(`API Key 缺少 ${permission} 权限`);
+        if (permission === 'read') {
+          toolResult = handleMcpToolCall(tool.name, args as Record<string, unknown>, userId);
+        } else {
+          transaction(() => { toolResult = handleMcpToolCall(tool.name, args as Record<string, unknown>, userId); });
+          saveDb();
+        }
+      } catch (err) {
+        toolResult = { isError: true, error: err instanceof Error ? err.message : '工具执行失败' };
+      }
       return NextResponse.json({
         jsonrpc: '2.0',
         id,
@@ -159,25 +215,72 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('MCP Server error:', err);
-    return NextResponse.json({
-      jsonrpc: '2.0',
-      error: { code: -32603, message: 'Internal JSON-RPC error', data: String(err) },
-      id: null,
-    }, { status: 500 });
+    return rpcError(id, -32603, 'Internal JSON-RPC error', 500);
   }
 }
 
-async function handleMcpToolCall(name: string, args: Record<string, unknown>, userId: string): Promise<Record<string, unknown>> {
+function rpcError(id: string | number | null, code: number, message: string, status = 200) {
+  return NextResponse.json({ jsonrpc: '2.0', id, error: { code, message } }, { status });
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+// Validate the same schemas advertised by tools/list, including nested batch entries.
+function validateInput(value: unknown, schema: InputSchema, path: string): string | null {
+  const actualType = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+  const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+  if (!types.includes(actualType)) return `${path} must be ${types.join(' or ')}`;
+  if (schema.enum && !schema.enum.includes(value as string)) return `${path} has an unsupported value`;
+  if (isObject(value)) {
+    for (const field of schema.required || []) {
+      if (!(field in value)) return `${path}.${field} is required`;
+    }
+    for (const [field, child] of Object.entries(schema.properties || {})) {
+      if (field in value) {
+        const error = validateInput(value[field], child, `${path}.${field}`);
+        if (error) return error;
+      }
+    }
+  }
+  if (Array.isArray(value) && schema.items) {
+    for (let i = 0; i < value.length; i++) {
+      const error = validateInput(value[i], schema.items, `${path}[${i}]`);
+      if (error) return error;
+    }
+  }
+  return null;
+}
+
+function handleMcpToolCall(name: string, args: Record<string, unknown>, userId: string): Record<string, unknown> {
   const now = Date.now();
 
   const resolvePageId = (providedPageId?: unknown): string => {
-    if (typeof providedPageId === 'string' && providedPageId.trim()) return providedPageId;
+    if (typeof providedPageId === 'string' && providedPageId.trim()) {
+      const page = query(`SELECT id FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)`, [providedPageId, userId]);
+      if (!page.length) throw new Error('画布不存在或无权访问');
+      return providedPageId;
+    }
     const userPages = query(
-      `SELECT id FROM pages WHERE user_id = ? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 1`,
+      `SELECT id FROM pages WHERE user_id = ? AND (deleted_at IS NULL OR deleted_at = 0) ORDER BY updated_at DESC LIMIT 1`,
       [userId]
     );
     if (userPages.length > 0) return userPages[0].id as string;
     throw new Error('未找到当前用户的活跃画布，请先创建页面');
+  };
+
+  const ownedBlock = (blockId: string) => {
+    const rows = query(`SELECT b.* FROM blocks b JOIN pages p ON p.id = b.page_id
+      WHERE b.id = ? AND p.user_id = ? AND (p.deleted_at IS NULL OR p.deleted_at = 0)`, [blockId, userId]);
+    if (!rows.length) throw new Error('Block 不存在或无权访问');
+    return rows[0];
+  };
+
+  const samePageBlock = (blockId: string, pageId: string) => {
+    const block = ownedBlock(blockId);
+    if (block.page_id !== pageId) throw new Error('关联的 Block 必须位于同一画布');
+    return block;
   };
 
   switch (name) {
@@ -228,11 +331,9 @@ async function handleMcpToolCall(name: string, args: Record<string, unknown>, us
       let x = 40;
       let y = 40 + nextOrder * 120;
       if (parentId) {
-        const p = query(`SELECT x, y, width FROM blocks WHERE id = ?`, [parentId]);
-        if (p.length > 0) {
-          x = Number(p[0].x || 40) + Number(p[0].width || 420) + 40;
-          y = Number(p[0].y || 40);
-        }
+        const p = samePageBlock(parentId, pageId);
+        x = Number(p.x ?? 40) + Number(p.width ?? 420) + 40;
+        y = Number(p.y ?? 40);
       }
 
       run(
@@ -242,7 +343,6 @@ async function handleMcpToolCall(name: string, args: Record<string, unknown>, us
         [id, pageId, type, title, content, parentId, nextOrder, x, y, now, now]
       );
       run(`UPDATE pages SET updated_at = ? WHERE id = ?`, [now, pageId]);
-      saveDb();
 
       return { success: true, message: 'Block 创建成功', block: { id, pageId, type, title, content, parentId } };
     }
@@ -254,22 +354,26 @@ async function handleMcpToolCall(name: string, args: Record<string, unknown>, us
       if (!blockId) throw new Error('缺少 blockId 参数');
       if (blockId === parentId) throw new Error('不能将 Block 设置为自身的子 Block');
 
-      const existing = query(`SELECT id, page_id FROM blocks WHERE id = ?`, [blockId]);
-      if (existing.length === 0) throw new Error(`未找到目标 Block: ${blockId}`);
+      const existing = ownedBlock(blockId);
 
       if (parentId) {
-        const parent = query(`SELECT id, x, y, width FROM blocks WHERE id = ?`, [parentId]);
-        if (parent.length === 0) throw new Error(`未找到父 Block: ${parentId}`);
+        const parent = samePageBlock(parentId, existing.page_id as string);
+        const visited = new Set([blockId]);
+        let ancestor: typeof parent | null = parent;
+        while (ancestor) {
+          if (visited.has(ancestor.id as string)) throw new Error('不能创建循环父子关系');
+          visited.add(ancestor.id as string);
+          ancestor = ancestor.parent_id ? samePageBlock(ancestor.parent_id as string, existing.page_id as string) : null;
+        }
         // 自动贴合在父 Block 侧翼
-        const newX = Number(parent[0].x || 40) + Number(parent[0].width || 420) + 40;
-        const newY = Number(parent[0].y || 40);
+        const newX = Number(parent.x ?? 40) + Number(parent.width ?? 420) + 40;
+        const newY = Number(parent.y ?? 40);
         run(`UPDATE blocks SET parent_id = ?, x = ?, y = ?, updated_at = ? WHERE id = ?`, [parentId, newX, newY, now, blockId]);
       } else {
         run(`UPDATE blocks SET parent_id = NULL, updated_at = ? WHERE id = ?`, [now, blockId]);
       }
 
-      run(`UPDATE pages SET updated_at = ? WHERE id = ?`, [now, existing[0].page_id as string]);
-      saveDb();
+      run(`UPDATE pages SET updated_at = ? WHERE id = ?`, [now, existing.page_id as string]);
 
       return {
         success: true,
@@ -317,7 +421,6 @@ async function handleMcpToolCall(name: string, args: Record<string, unknown>, us
       }
 
       run(`UPDATE pages SET updated_at = ? WHERE id = ?`, [now, pageId]);
-      saveDb();
 
       return {
         success: true,
@@ -330,16 +433,16 @@ async function handleMcpToolCall(name: string, args: Record<string, unknown>, us
     case 'create_link': {
       const fromId = String(args.fromBlockId);
       const toId = String(args.toBlockId);
-      const source = query(`SELECT id, meta FROM blocks WHERE id = ?`, [fromId]);
-      if (source.length === 0) throw new Error(`源 Block ${fromId} 不存在`);
+      const source = ownedBlock(fromId);
+      samePageBlock(toId, source.page_id as string);
 
-      const meta = JSON.parse((source[0].meta as string) || '{}');
+      const meta = JSON.parse((source.meta as string) || '{}');
       const links = Array.isArray(meta.links) ? meta.links : [];
       if (!links.includes(toId)) {
         links.push(toId);
         meta.links = links;
         run(`UPDATE blocks SET meta = ?, updated_at = ? WHERE id = ?`, [JSON.stringify(meta), now, fromId]);
-        saveDb();
+        run(`UPDATE pages SET updated_at = ? WHERE id = ?`, [now, source.page_id as string]);
       }
 
       return { success: true, message: `已在 ${fromId} 与 ${toId} 之间建立拓扑链接`, fromId, toId };
@@ -347,9 +450,18 @@ async function handleMcpToolCall(name: string, args: Record<string, unknown>, us
 
     case 'delete_block': {
       const blockId = String(args.blockId);
-      run(`UPDATE blocks SET parent_id = NULL WHERE parent_id = ?`, [blockId]);
+      const block = ownedBlock(blockId);
+      const pageId = block.page_id as string;
+      run(`UPDATE blocks SET parent_id = NULL, updated_at = ? WHERE parent_id = ? AND page_id = ?`, [now, blockId, pageId]);
+      for (const linked of query('SELECT id, meta FROM blocks WHERE page_id = ?', [pageId])) {
+        const meta = JSON.parse((linked.meta as string) || '{}');
+        if (Array.isArray(meta.links) && meta.links.includes(blockId)) {
+          meta.links = meta.links.filter((link: unknown) => link !== blockId);
+          run('UPDATE blocks SET meta = ?, updated_at = ? WHERE id = ?', [JSON.stringify(meta), now, linked.id as string]);
+        }
+      }
       run(`DELETE FROM blocks WHERE id = ?`, [blockId]);
-      saveDb();
+      run(`UPDATE pages SET updated_at = ? WHERE id = ?`, [now, pageId]);
       return { success: true, message: `已删除 Block ${blockId}`, deletedId: blockId };
     }
 

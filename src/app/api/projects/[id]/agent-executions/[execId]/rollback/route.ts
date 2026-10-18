@@ -1,9 +1,10 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId, checkProjectPermission } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 
-export async function POST(
+async function POSTHandler(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; execId: string }> }
 ) {
@@ -88,3 +89,5 @@ export async function POST(
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);

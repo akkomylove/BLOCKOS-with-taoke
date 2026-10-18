@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow isolated builds/tests without disturbing another running workspace server.
+  distDir: process.env.BLOCKOS_BUILD_DIR || '.next',
+  typescript: { tsconfigPath: process.env.BLOCKOS_TSCONFIG_PATH || 'tsconfig.json' },
   serverExternalPackages: ['sql.js'],
   images: {
     unoptimized: true,

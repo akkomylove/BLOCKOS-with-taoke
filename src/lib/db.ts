@@ -403,6 +403,7 @@ function initSchema(database: Database) {
   `);
 
   const safeAddColumns = [
+    'ALTER TABLE users ADD COLUMN account_mode TEXT',
     'ALTER TABLE pages ADD COLUMN folder_id TEXT',
     'ALTER TABLE pages ADD COLUMN chapters TEXT',
     'ALTER TABLE pages ADD COLUMN kind TEXT NOT NULL DEFAULT "document"',
@@ -435,6 +436,31 @@ function initSchema(database: Database) {
       // Column may already exist, ignore error safely
     }
   }
+
+  database.run(`
+    CREATE TABLE IF NOT EXISTS account_credentials (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      password_hash TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS account_sessions (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_account_sessions_user ON account_sessions(user_id);
+    CREATE TABLE IF NOT EXISTS account_login_attempts (
+      email_hash TEXT PRIMARY KEY, attempts INTEGER NOT NULL, started_at INTEGER NOT NULL
+    );
+    UPDATE users SET account_mode = CASE WHEN provider = 'demo'
+      OR EXISTS (SELECT 1 FROM team_members WHERE user_id = users.id)
+      OR EXISTS (SELECT 1 FROM project_members WHERE user_id = users.id)
+      OR EXISTS (SELECT 1 FROM teams WHERE owner_id = users.id)
+      OR EXISTS (SELECT 1 FROM projects WHERE owner_id = users.id)
+      THEN 'enterprise' ELSE 'personal' END
+    WHERE account_mode IS NULL;
+  `);
 
   try {
     const res = database.exec('SELECT COUNT(*) as cnt FROM agent_rule_templates');
@@ -585,7 +611,7 @@ function seedDemoUsers(database: Database) {
 
     const now = Date.now();
     database.run(
-      `INSERT INTO users (id, email, name, avatar, provider, provider_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, email, name, avatar, provider, provider_id, created_at, account_mode) VALUES (?, ?, ?, ?, ?, ?, ?, 'enterprise')`,
       [user.id, user.email, user.name, user.avatar || '', 'demo', user.id, now]
     );
 

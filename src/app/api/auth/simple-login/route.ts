@@ -6,6 +6,9 @@ import { getDb, query, run, saveDb } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_LOGIN !== 'true') {
+      return NextResponse.json({ error: '演示登录未开放，请注册或登录正式账号' }, { status: 403 });
+    }
     const body = await request.json();
     const { userId, name, email } = body;
 
@@ -13,7 +16,7 @@ export async function POST(request: Request) {
     const isProduction = process.env.NODE_ENV === 'production';
     const demoUser = DEMO_USERS.find((u) => u.id === userId);
 
-    if (isProduction && !demoUser && !process.env.ALLOW_INSECURE_DEMO_LOGIN) {
+    if (!demoUser) {
       return NextResponse.json(
         { error: '生产环境已禁用未授权用户快捷登录，请使用 OAuth 正式登录' },
         { status: 403 }
@@ -57,6 +60,10 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7, // 7 天有效期
       path: '/',
     });
+
+    response.cookies.set('blockos-session', '', { path: '/', maxAge: 0, httpOnly: true });
+    response.cookies.set('authjs.session-token', '', { path: '/', maxAge: 0, httpOnly: true });
+    response.cookies.set('__Secure-authjs.session-token', '', { path: '/', maxAge: 0, httpOnly: true, secure: true });
 
     return response;
   } catch (error) {

@@ -1,10 +1,11 @@
+import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { getUserId } from '@/lib/auth-utils';
 import { nanoid } from 'nanoid';
 import type { AnalyzeResponse } from '@/lib/ai';
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   let userId: string;
   try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+async function GETHandler(req: NextRequest) {
   let userId: string;
   try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -66,3 +67,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch analyses' }, { status: 500 });
   }
 }
+
+export const POST = withEnterprise(POSTHandler);
+export const GET = withEnterprise(GETHandler);

@@ -1,3 +1,8 @@
+// These endpoint unit tests run as enterprise accounts; mode guards have separate integration coverage.
+vi.mock('@/lib/account', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/account')>(),
+  getAccountMode: vi.fn().mockResolvedValue('enterprise'),
+}));
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET, POST } from '@/app/api/projects/route';
 

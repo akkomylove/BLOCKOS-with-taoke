@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAccountStore } from '@/store/accountStore';
 import {
-  X, Sparkles, Move, Bot, Code, Compass,
+  X, Sparkles, Move, Layers, Code, Compass,
   ChevronRight, ChevronLeft, Lightbulb, Minus, Maximize2, GripHorizontal
 } from 'lucide-react';
 
@@ -37,12 +38,12 @@ export const TOUR_STEPS: TourStep[] = [
   {
     targetSelector: '[data-tour="guide-block-todo"]',
     badge: '步骤 2/5',
-    category: '核心哲学 · 行动自由',
-    title: '文档化身活体：Agent 自主监听与发布自动化',
+    category: '核心哲学 · 结构自由',
+    title: '结构化组织：父子嵌套与敏捷任务追踪',
     description:
-      '文档不再是被动记录的静态纸面！BlockOS 内置 Agent 规则引擎，时刻感知任务状态。勾选任务瞬间，Agent 自动归档生成【迭代发布报告】，并联动智谱 GLM 4.7 Flash 大模型自主规划【下一步上线保障 Checklist】，实现无缝的敏捷研发流转！',
-    actionHint: '⚡ 试一试：勾选待办任务，见证产研交付自动化流转与 AI 智能规划！',
-    icon: Bot,
+      '无界白板不等于杂乱平铺！BlockOS 支持严谨的父子嵌套结构（Sub-Block）。你可以将复杂的待办清单、技术方案与设计图自由归属到主卡片下，支持多级缩进、一键折叠与级联拖拽，让信息层级井井有条！',
+    actionHint: '🌳 试一试：点击待办复选框标记完成，或体验卡片父子组织与对齐！',
+    icon: Layers,
     color: 'from-emerald-500 to-teal-500',
   },
   {
@@ -71,9 +72,9 @@ export const TOUR_STEPS: TourStep[] = [
     targetSelector: '[data-tour="toolbar-actions"]',
     badge: '步骤 5/5',
     category: '全局中枢 · 协同与看板',
-    title: '全局工作台：Agent 日志、角色透视与看板',
+    title: '全局工作台：AI 规划、角色透视与看板',
     description:
-      '顶部工具栏是你的指挥中枢：点击 Activity 图标实时审计 Agent 自动化操作日志；按 Ctrl+K 唤起自然语言命令；按角色折叠过滤视图；点击团队图标切换至协同看板。',
+      '顶部工具栏是你的指挥中枢：快速唤起自然语言 AI 助手；查看执行历史与版本记录；按角色折叠过滤视图；点击团队图标切换至协同看板。',
     actionHint: '🎉 祝贺完成新手导览！你可以随时在右上角「帮助」中重新唤起本教程。',
     icon: Compass,
     color: 'from-cyan-500 to-blue-500',
@@ -103,7 +104,10 @@ export default function OnboardingTour({ onComplete, onSkip }: OnboardingTourPro
   const cardStartPos = useRef({ top: 0, left: 0 });
   const hasUserDraggedRef = useRef(false);
 
-  const step = TOUR_STEPS[currentStep];
+  const enterprise = useAccountStore(state => state.user?.mode === 'enterprise');
+  const base = TOUR_STEPS[currentStep];
+  const step = !enterprise && currentStep === 1 ? { ...base, title: '用待办记录下一步', description: '把一个目标写成待办，完成后勾选。也可以将相关卡片设为子 Block，整理出清晰的知识层级。', actionHint: '试一试：勾选一项待办，或整理卡片的父子关系。' }
+    : !enterprise && currentStep === 4 ? { ...base, category: '个人工作台', title: '文档、AI 与个人账号', description: '使用顶部 AI 助手、搜索、导入导出与历史版本。点击「个人模式」打开账号中心，管理资料和密码；需要协作时再开启企业模式。' } : base;
   const StepIcon = step.icon;
 
   const updateTargetAndCardPos = useCallback(() => {
