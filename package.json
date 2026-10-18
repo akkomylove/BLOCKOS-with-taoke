@@ -11,7 +11,9 @@
     "test:run": "vitest run",
     "test:mcp": "node tests/e2e-mcp-client.mjs",
     "test:integration": "node tests/e2e-mcp-client.mjs",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:regression": "node tests/e2e-regression.mjs",
+    "test:sandbox": "node tests/e2e-browser-sandbox.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.47",

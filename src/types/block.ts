@@ -50,6 +50,8 @@ export interface BlockMeta {
   fontColor?: string;
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
+  richTextHtml?: string;
+  richTextContent?: string;
   textDecoration?: 'none' | 'underline' | 'line-through';
 
   agentGenerated?: boolean;

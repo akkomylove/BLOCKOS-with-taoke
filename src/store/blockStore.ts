@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import type { Block, BlockType, BlockMeta, AgentRule, AgentLog, BlockTemplate } from '@/types/block';
 import type { Page, Folder } from '@/types/page';
 import { PRESET_DOCUMENTS, getPresetDocumentBlocks } from '@/config/presetDocuments';
+import { escapeHtml, sanitizeHtml } from '@/lib/sanitize';
 
 interface HistoryEntry {
   pageId: string;
@@ -924,7 +925,7 @@ export const useBlockStore = create<BlockStore>()(
           .map((block) => {
             switch (block.type) {
               case 'text':
-                return `<div class="prose">${block.content}</div>`;
+                return `<div class="prose">${block.meta.richTextContent === block.content && block.meta.richTextHtml ? sanitizeHtml(block.meta.richTextHtml) : escapeHtml(block.content).replace(/\n/g, '<br>')}</div>`;
               case 'todo':
                 return `<div class="todo"><input type="checkbox" ${block.meta?.checked ? 'checked' : ''} /> ${block.content}</div>`;
               case 'code':

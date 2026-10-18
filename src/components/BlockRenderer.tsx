@@ -33,7 +33,9 @@ export default function BlockRenderer({ block, isSelected, childrenSlot, childCo
       return (
         <TextBlock
           content={block.content}
-          onChange={(content) => updateBlock(block.id, { content })}
+          richTextHtml={block.meta.richTextContent === block.content ? block.meta.richTextHtml : undefined}
+          onChange={(content, html) => updateBlock(block.id, { content, meta: { ...block.meta, richTextHtml: html, richTextContent: content } })}
+          onStyleChange={style => updateBlock(block.id, { meta: { ...block.meta, ...style } })}
           fontSize={block.meta.fontSize}
           fontFamily={block.meta.fontFamily}
           fontColor={block.meta.fontColor}

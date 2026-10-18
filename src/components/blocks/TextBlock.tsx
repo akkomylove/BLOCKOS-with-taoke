@@ -5,10 +5,13 @@ import {
   Bold, Italic, Underline, Strikethrough, List, ListOrdered,
   Type, AlignLeft, Wand2, Minus
 } from 'lucide-react';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface TextBlockProps {
   content: string;
-  onChange: (content: string) => void;
+  onChange: (content: string, richTextHtml?: string) => void;
+  richTextHtml?: string;
+  onStyleChange?: (style: { fontSize?: number; fontFamily?: string; fontColor?: string }) => void;
   readOnly?: boolean;
   fontSize?: number;
   fontFamily?: string;
@@ -47,6 +50,8 @@ const COLORS = [
 export default function TextBlock({
   content,
   onChange,
+  richTextHtml,
+  onStyleChange,
   readOnly,
   fontSize: initialFontSize,
   fontFamily: initialFontFamily,
@@ -78,12 +83,20 @@ export default function TextBlock({
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRequestTime = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    setFontSize(initialFontSize || 14);
+    setFontFamily(initialFontFamily || '');
+    setFontColor(initialFontColor || '');
+  }, [initialFontSize, initialFontFamily, initialFontColor]);
 
   useEffect(() => {
-    if (ref.current && ref.current.innerText !== content) {
+    if (ref.current && richTextHtml) {
+      const html = sanitizeHtml(richTextHtml);
+      if (ref.current.innerHTML !== html) ref.current.innerHTML = html;
+    } else if (ref.current && ref.current.innerText !== content) {
       ref.current.innerText = content;
     }
-  }, [content]);
+  }, [content, richTextHtml]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -152,7 +165,7 @@ export default function TextBlock({
   const handleInput = useCallback(() => {
     if (ref.current) {
       const text = ref.current.innerText;
-      onChange(text);
+      onChange(text, sanitizeHtml(ref.current.innerHTML));
       setShowGhost(false);
       setGhostText('');
       if (abortControllerRef.current) {
@@ -168,8 +181,8 @@ export default function TextBlock({
 
   const acceptGhost = useCallback(() => {
     if (ref.current && ghostText) {
-      ref.current.innerText += ghostText;
-      onChange(ref.current.innerText);
+      ref.current.appendChild(document.createTextNode(ghostText));
+      onChange(ref.current.innerText, sanitizeHtml(ref.current.innerHTML));
       setShowGhost(false);
       setGhostText('');
     }
@@ -185,7 +198,7 @@ export default function TextBlock({
   const exec = (command: string, value: string = '') => {
     document.execCommand(command, false, value);
     if (ref.current) {
-      onChange(ref.current.innerText);
+      onChange(ref.current.innerText, sanitizeHtml(ref.current.innerHTML));
     }
   };
 
@@ -197,23 +210,26 @@ export default function TextBlock({
     if (ref.current) {
       const current = ref.current.innerText || '';
       const dividerText = current.length > 0 && !current.endsWith('\n') ? '\n---\n' : '---\n';
-      ref.current.innerText = current + dividerText;
-      onChange(ref.current.innerText);
+      ref.current.appendChild(document.createTextNode(dividerText));
+      onChange(ref.current.innerText, sanitizeHtml(ref.current.innerHTML));
     }
   };
 
   const handleFontSizeChange = (size: number) => {
     setFontSize(size);
+    onStyleChange?.({ fontSize: size });
     setShowSizePicker(false);
   };
 
   const handleFontFamilyChange = (family: string) => {
     setFontFamily(family);
+    onStyleChange?.({ fontFamily: family });
     setShowFontPicker(false);
   };
 
   const handleColorChange = (color: string) => {
     setFontColor(color);
+    onStyleChange?.({ fontColor: color });
     setShowColorPicker(false);
     setCustomColor('');
   };
@@ -223,12 +239,14 @@ export default function TextBlock({
     setCustomColor(value);
     if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
       setFontColor(value);
+      onStyleChange?.({ fontColor: value });
     }
   };
 
   const applyCustomColor = () => {
     if (/^#[0-9A-Fa-f]{6}$/.test(customColor)) {
       setFontColor(customColor);
+      onStyleChange?.({ fontColor: customColor });
       setShowColorPicker(false);
       setCustomColor('');
     }
@@ -256,6 +274,7 @@ export default function TextBlock({
     >
       {!readOnly && (
         <div
+          onMouseDown={event => { if ((event.target as Element).closest('button')) event.preventDefault(); }}
           className={`flex items-center gap-0.5 mb-1 transition-all duration-150 ${
             showToolbar ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'
           }`}

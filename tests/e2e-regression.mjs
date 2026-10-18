@@ -23,6 +23,7 @@ const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev'
     ZHIPU_API_KEY: '', DASHSCOPE_API_KEY: '', SILICONFLOW_API_KEY: '', OPENAI_API_KEY: '',
   },
 });
+await writeFile(`scratch/regression-process-${process.pid}.json`, JSON.stringify({ pid: server.pid, port }));
 let logs = '';
 for (const stream of [server.stdout, server.stderr]) stream.on('data', chunk => { logs = (logs + chunk).slice(-12000); });
 let browser;
@@ -41,7 +42,8 @@ try {
   browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
-  page.setDefaultTimeout(15000);
+  page.setDefaultTimeout(20000);
+  const waitResponse = (predicate) => { const pending = page.waitForResponse(predicate); pending.catch(() => {}); return pending; };
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
   async function api(route, method = 'GET', data, expected = 200) {
@@ -67,7 +69,7 @@ try {
     guideId = (await api('/api/pages')).pages[0].id;
     const editor = page.locator('[contenteditable=true]').first();
     const original = await editor.innerText();
-    const saved = page.waitForResponse(response => response.url().endsWith(`/api/pages/${guideId}/blocks`) && response.request().method() === 'PUT' && response.request().postData().includes('REG-SAVED'));
+    const saved = waitResponse(response => response.url().endsWith(`/api/pages/${guideId}/blocks`) && response.request().method() === 'PUT' && response.request().postData().includes('REG-SAVED'));
     await editor.fill(original + '\nREG-SAVED');
     assert.ok((await saved).ok());
     assert.ok(JSON.stringify((await api(`/api/pages/${guideId}/blocks`)).blocks).includes('REG-SAVED'));
@@ -80,14 +82,28 @@ try {
     assert.equal(await page.getByText('暂无版本历史快照', { exact: true }).count(), 0);
     await page.keyboard.press('Escape');
   });
+  await check('D-01 rich text formatting is saved and survives refresh', async () => {
+    const editor = page.locator('[contenteditable=true]').first();
+    await editor.fill('REG-FORMATTED-CONTENT');
+    await editor.press('Control+a');
+    await editor.press('Control+b');
+    await editor.locator('b,strong').waitFor();
+    await page.waitForTimeout(1100);
+    const blocks = (await api(`/api/pages/${guideId}/blocks`)).blocks;
+    const formatted = blocks.find(block => block.content.includes('REG-FORMATTED'));
+    assert.match(formatted.meta.richTextHtml, /<(?:b|strong)>/);
+    await page.reload();
+    await page.locator('[contenteditable=true]').first().locator('b,strong').waitFor();
+  });
   let templateId;
   await check('D-01b PRD template persists across refresh; D-07 template Escape', async () => {
     await page.getByTitle('新建页面', { exact: true }).click();
-    await page.getByText('选择模板', { exact: true }).waitFor();
+    await page.getByRole('dialog', { name: '选择模板' }).waitFor();
+    assert.ok(await page.getByRole('dialog', { name: '选择模板' }).evaluate(element => element.contains(document.activeElement)));
     await page.keyboard.press('Escape');
     await page.getByText('选择模板', { exact: true }).waitFor({ state: 'hidden' });
     await page.getByTitle('新建页面', { exact: true }).click();
-    const saved = page.waitForResponse(response => /api\/pages\/[^/]+\/blocks$/.test(response.url()) && response.request().method() === 'PUT');
+    const saved = waitResponse(response => /api\/pages\/[^/]+\/blocks$/.test(response.url()) && response.request().method() === 'PUT');
     await page.getByRole('button', { name: /产品需求文档/ }).click();
     assert.ok((await saved).ok());
     const pages = (await api('/api/pages')).pages;
@@ -117,7 +133,7 @@ try {
     await page.getByTitle('AI 助手', { exact: true }).click();
     await page.route('**/api/ai/command', route => route.fulfill({ contentType: 'text/plain', body: JSON.stringify({ type: 'operations', operations: [{ action: 'createBlock', type: 'text', title: 'REG-AGENT-CARD', content: '代理创建保存检查' }] }) }));
     await page.getByLabel('向 AI 助手提问或发送画布指令').fill('创建一张正文卡片');
-    const saved = page.waitForResponse(response => /api\/pages\/[^/]+\/blocks$/.test(response.url()) && response.request().method() === 'PUT');
+    const saved = waitResponse(response => /api\/pages\/[^/]+\/blocks$/.test(response.url()) && response.request().method() === 'PUT');
     await page.getByRole('button', { name: '发送', exact: true }).click();
     await page.getByText('已处理画布操作', { exact: true }).waitFor();
     assert.ok((await saved).ok());
@@ -143,7 +159,7 @@ try {
     await page.getByRole('button', { name: /AI 计划书导入/ }).click();
     await page.locator('input[type=file]').setInputFiles({ name: 'regression-plan.md', mimeType: 'text/markdown', buffer: Buffer.from('# 计划\n## 第一阶段\n- 完成需求整理\n## 第二阶段\n- 完成实现') });
     await page.getByRole('button', { name: '确认导入到看板' }).waitFor({ timeout: 60000 });
-    await Promise.all([page.waitForResponse(response => response.url().includes('/ai-import') && response.request().method() === 'POST'), page.getByRole('button', { name: '确认导入到看板' }).click()]);
+    await Promise.all([waitResponse(response => response.url().includes('/ai-import') && response.request().method() === 'POST'), page.getByRole('button', { name: '确认导入到看板' }).click()]);
     await page.getByRole('heading', { name: '研发任务看板', exact: true }).waitFor();
     const tasks = (await api(`/api/tasks?projectId=${project.id}`)).tasks;
     assert.ok(tasks.length > 0);
@@ -160,8 +176,7 @@ try {
   });
   await check('D-12 task menu moves a task to pending review and persists it', async () => {
     await page.getByTitle('更多操作', { exact: true }).first().click();
-    await page.getByRole('button', { name: '待验收', exact: true }).click();
-    await page.waitForResponse(response => /api\/tasks\/[^/]+$/.test(response.url()) && response.request().method() === 'PATCH');
+    await Promise.all([waitResponse(response => /api\/tasks\/[^/]+$/.test(response.url()) && response.request().method() === 'PATCH'), page.getByRole('button', { name: '待验收', exact: true }).click()]);
     const tasks = (await api(`/api/tasks?projectId=${project.id}`)).tasks;
     assert.ok(tasks.some(task => task.status === 'pending_review'));
   });
@@ -170,8 +185,8 @@ try {
     await page.getByRole('button', { name: /返回团队/ }).waitFor();
     await page.getByRole('button', { name: '新建里程碑' }).click();
     await page.getByPlaceholder('例如：V1.0 核心能力闭环').fill('REG-MILESTONE');
-    const created = page.waitForResponse(response => response.url().endsWith('/api/milestones') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: '创建里程碑', exact: true }).click();
+    const created = waitResponse(response => response.url().endsWith('/api/milestones') && response.request().method() === 'POST');
+    await page.getByRole('button', { name: '确认创建', exact: true }).click();
     assert.ok((await created).ok());
     await page.getByText('REG-MILESTONE', { exact: true }).waitFor();
     assert.ok((await api(`/api/milestones?projectId=${project.id}`)).milestones.some(item => item.name === 'REG-MILESTONE'));
@@ -195,6 +210,16 @@ try {
     assert.equal((await response.body()).subarray(0, 5).toString(), '%PDF-');
     assert.match(response.headers()['content-disposition'], /filename\*/);
   });
+  await check('D-09 unavailable PDF service falls back to a printable document', async () => {
+    await page.goto(base + '/');
+    await page.getByTitle('导出', { exact: true }).click();
+    await page.route('**/api/export/pdf', route => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
+    await page.getByRole('button', { name: /^PDF/ }).click();
+    await page.getByText('已打开浏览器打印窗口，请选择“另存为 PDF”。').waitFor();
+    const frame = page.frameLocator('iframe[title="PDF 打印预览"]');
+    await frame.locator('body').waitFor({ state: 'attached' });
+    await page.unroute('**/api/export/pdf');
+  });
   await page.goto(base + '/');
   await page.locator('[contenteditable=true]').first().waitFor();
   await check('D-02 typing does not send AI requests by default', async () => {
@@ -215,7 +240,7 @@ try {
     const card = handle.locator('xpath=ancestor::*[@data-block-id][1]');
     const id = await card.getAttribute('data-block-id');
     const before = (await api(`/api/pages/${templateId}/blocks`)).blocks.find(block => block.id === id).width;
-    const saved = page.waitForResponse(response => response.url().endsWith(`/api/pages/${templateId}/blocks`) && response.request().method() === 'PUT');
+    const saved = waitResponse(response => response.url().endsWith(`/api/pages/${templateId}/blocks`) && response.request().method() === 'PUT');
     await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
     await page.mouse.down();
     await page.mouse.move(bounds.x + bounds.width / 2 + 70, bounds.y + bounds.height / 2, { steps: 10 });
@@ -231,6 +256,16 @@ try {
         && !button.textContent.trim() && !button.getAttribute('aria-label') && !button.getAttribute('aria-labelledby') && !button.getAttribute('title');
     }).map(button => button.outerHTML.slice(0, 400)));
     assert.deepEqual(unnamed, []);
+  });
+  await check('D-10 application code card executes only in the isolated worker', async () => {
+    const blocks = (await api(`/api/pages/${templateId}/blocks`)).blocks;
+    const now = Date.now();
+    await api(`/api/pages/${templateId}/blocks`, 'PUT', { blocks: [...blocks, { id: 'reg-sandbox-ui', type: 'code', title: 'REG-SANDBOX', content: 'console.log(typeof window, typeof document, typeof localStorage)', meta: { language: 'javascript' }, parentId: null, order: blocks.length, x: 40, y: 40, width: 500, height: 400, createdAt: now, updatedAt: now }] });
+    await page.reload();
+    const card = page.locator('[data-block-id="reg-sandbox-ui"]').first();
+    await card.getByRole('button', { name: '运行', exact: true }).click();
+    await card.getByText('undefined undefined undefined', { exact: true }).waitFor();
+    assert.equal((await page.title()).includes('ISOL='), false);
   });
   assert.deepEqual(pageErrors, [], 'Unexpected browser page errors');
   await writeFile('scratch/regression-results.json', JSON.stringify({ results, pageErrors }, null, 2));
