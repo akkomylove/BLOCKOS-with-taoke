@@ -30,12 +30,15 @@ export default function CreateProjectModal({ isOpen, onClose, teamId }: CreatePr
   const [selectedColor, setSelectedColor] = useState('blue');
   const [selectedIcon, setSelectedIcon] = useState('📁');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !teamId) return;
+    if (!name.trim()) { setError('请填写项目名称'); return; }
+    if (!teamId) { setError('请先选择团队'); return; }
+    setError('');
 
     setLoading(true);
     try {
@@ -47,6 +50,7 @@ export default function CreateProjectModal({ isOpen, onClose, teamId }: CreatePr
       setSelectedIcon('📁');
     } catch (error) {
       console.error('Failed to create project:', error);
+      setError(error instanceof Error ? error.message : '创建失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -66,6 +70,7 @@ export default function CreateProjectModal({ isOpen, onClose, teamId }: CreatePr
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className={`w-16 h-16 rounded-xl ${colors.find(c => c.name === selectedColor)?.value} flex items-center justify-center text-3xl`}>
@@ -151,7 +156,7 @@ export default function CreateProjectModal({ isOpen, onClose, teamId }: CreatePr
             </button>
             <button
               type="submit"
-              disabled={loading || !name.trim()}
+              disabled={loading}
               className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (

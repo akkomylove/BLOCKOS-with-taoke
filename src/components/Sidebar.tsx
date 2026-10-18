@@ -307,6 +307,7 @@ function PageItem({
   onMenuToggle, onDelete, onMoveToFolder, folders, hasMultiplePages,
 }: PageItemProps) {
   const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   return (
     <div
@@ -338,8 +339,17 @@ function PageItem({
           className="p-1 rounded hover:bg-[#eff0f2] dark:hover:bg-[#282a30] text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5]"
           onClick={(e) => {
             e.stopPropagation();
+            if (typeof window !== 'undefined') {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMenuPos({
+                top: Math.min(rect.bottom + 4, window.innerHeight - 180),
+                left: Math.max(12, rect.right - 144),
+              });
+            }
+            setShowFolderPicker(false);
             onMenuToggle();
           }}
+          aria-label={`页面「${page.title}」的更多操作`}
         >
           <MoreHorizontal className="w-3.5 h-3.5" />
         </button>
@@ -348,8 +358,12 @@ function PageItem({
       {menuOpenId === page.id && typeof document !== 'undefined' && createPortal(
         <>
           <div className="fixed inset-0 z-[180]" onClick={() => { setShowFolderPicker(false); onMenuToggle(); }} />
-          <div className="fixed z-[190] bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-card-hover py-1 w-36 animate-in fade-in zoom-in-95 duration-100"
-            style={{ top: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().bottom ?? 0) + 4 : 0), left: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().right ?? 0) - 144 : 0) }}
+          <div
+            className="fixed z-[190] bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-card-hover py-1 w-36 animate-in fade-in zoom-in-95 duration-100"
+            style={{
+              top: menuPos?.top ?? 100,
+              left: menuPos?.left ?? 20,
+            }}
           >
             <button
               className="w-full px-3 py-1.5 text-left text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 hover:text-[#3370ff] dark:hover:text-[#4b85ff] flex items-center gap-2 transition-colors"
@@ -372,8 +386,12 @@ function PageItem({
               {showFolderPicker && typeof document !== 'undefined' && createPortal(
                 <>
                   <div className="fixed inset-0 z-[200]" onClick={() => setShowFolderPicker(false)} />
-                  <div className="fixed z-[210] bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-card-hover py-1 w-32 animate-in fade-in zoom-in-95 duration-100"
-                    style={{ top: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().bottom ?? 0) + 4 : 0), left: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().right ?? 0) - 144 + 144 + 4 : 0) }}
+                  <div
+                    className="fixed z-[210] bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-card-hover py-1 w-36 animate-in fade-in zoom-in-95 duration-100"
+                    style={{
+                      top: menuPos?.top ?? 100,
+                      left: Math.min((menuPos?.left ?? 20) + 148, (typeof window !== 'undefined' ? window.innerWidth : 800) - 160),
+                    }}
                   >
                     <button
                       className="w-full px-3 py-1.5 text-left text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors"

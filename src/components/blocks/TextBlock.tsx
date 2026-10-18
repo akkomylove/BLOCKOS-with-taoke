@@ -77,6 +77,7 @@ export default function TextBlock({
   });
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRequestTime = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (ref.current && ref.current.innerText !== content) {
@@ -98,20 +99,31 @@ export default function TextBlock({
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    };
   }, []);
 
   const fetchCompletion = useCallback(async (text: string) => {
     const now = Date.now();
-    if (now - lastRequestTime.current < 3000) return;
+    if (now - lastRequestTime.current < 2500) return;
     if (!aiEnabled) return;
-    if (!text.trim() || text.trim().length < 5) return;
+    if (!text.trim() || text.trim().length < 8) return;
     lastRequestTime.current = now;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           prompt: `基于以下内容续写一句话（只返回续写的内容，不要重复原文，不要任何解释）：\n\n${text.slice(-200)}`,
           context: '',
@@ -143,10 +155,14 @@ export default function TextBlock({
       onChange(text);
       setShowGhost(false);
       setGhostText('');
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
       if (typingTimer.current) clearTimeout(typingTimer.current);
       typingTimer.current = setTimeout(() => {
         fetchCompletion(text);
-      }, 1500);
+      }, 2000);
     }
   }, [onChange, fetchCompletion]);
 

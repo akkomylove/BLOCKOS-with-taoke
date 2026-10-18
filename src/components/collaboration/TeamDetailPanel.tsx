@@ -114,7 +114,7 @@ export function TeamDetailPanel({ teamId, teamName, onClose }: TeamDetailPanelPr
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-zinc-800">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">{teamName}</h2>
-          <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">团队详情</p>
+          <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">成员列表与组织权限</p>
         </div>
         <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-400 hover:text-gray-600">
           <X className="w-5 h-5" />
@@ -140,7 +140,13 @@ export function TeamDetailPanel({ teamId, teamName, onClose }: TeamDetailPanelPr
               type="text"
               value={newMemberId}
               onChange={e => setNewMemberId(e.target.value)}
-              placeholder="输入用户的 User ID"
+              placeholder="输入成员 User ID 或注册邮箱（如 colleague@example.com）"
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing && newMemberId.trim() && !addingMember) {
+                  e.preventDefault();
+                  handleAddMember();
+                }
+              }}
               className="w-full px-3 py-1.5 bg-white dark:bg-zinc-700 border border-gray-200 dark:border-zinc-600 rounded text-sm text-gray-900 dark:text-zinc-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               autoFocus
             />

@@ -22,8 +22,48 @@ export default function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
   const [activeTypeFilter, setActiveTypeFilter] = useState<BlockType | null>(null);
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const blocks = useBlockStore((state) => state.blocks);
+  const [loadError, setLoadError] = useState('');
+
+  const pages = useBlockStore((state) => state.pages);
+  const pageBlocks = useBlockStore((state) => state.pageBlocks);
+  const currentBlocks = useBlockStore((state) => state.blocks);
+  const currentPageId = useBlockStore((state) => state.currentPageId);
+  const setCurrentPage = useBlockStore((state) => state.setCurrentPage);
   const setSelection = useBlockStore((state) => state.setSelection);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setLoadError('');
+    const missing = pages.filter(page => page.id !== currentPageId && !useBlockStore.getState().pageBlocks[page.id]);
+    let next = 0;
+    async function load() {
+      while (next < missing.length && !controller.signal.aborted) {
+        const page = missing[next++];
+        try {
+          const response = await fetch(`/api/pages/${encodeURIComponent(page.id)}/blocks`, { signal: controller.signal });
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          if (!controller.signal.aborted && Array.isArray(data.blocks)) useBlockStore.setState(state => ({ pageBlocks: { ...state.pageBlocks, [page.id]: state.pageBlocks[page.id] || data.blocks } }));
+        } catch { if (!controller.signal.aborted) setLoadError('部分文档未能加载，搜索结果可能不完整，请关闭后重试'); }
+      }
+    }
+    void Promise.all(Array.from({ length: Math.min(missing.length, 3) }, load));
+    return () => controller.abort();
+  }, [isOpen, pages, currentPageId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,55 +75,79 @@ export default function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
     }
   }, [isOpen]);
 
+  const allSearchableItems = useMemo(() => {
+    const items: Array<{
+      block: typeof currentBlocks[0];
+      pageId: string;
+      pageTitle: string;
+      isCurrentPage: boolean;
+    }> = [];
+
+    pages.forEach((p) => {
+      const bList = p.id === currentPageId ? currentBlocks : (pageBlocks[p.id] || []);
+      bList.forEach((b) => {
+        items.push({
+          block: b,
+          pageId: p.id,
+          pageTitle: p.title || '未命名文档',
+          isCurrentPage: p.id === currentPageId,
+        });
+      });
+    });
+
+    return items;
+  }, [pages, pageBlocks, currentBlocks, currentPageId]);
+
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
-    blocks.forEach((b) => b.meta.tags?.forEach((t) => tagSet.add(t)));
+    allSearchableItems.forEach(({ block: b }) => b.meta?.tags?.forEach((t) => tagSet.add(t)));
     return Array.from(tagSet);
-  }, [blocks]);
+  }, [allSearchableItems]);
 
   const allTypes = useMemo(() => {
     const typeSet = new Set<BlockType>();
-    blocks.forEach((b) => typeSet.add(b.type));
+    allSearchableItems.forEach(({ block: b }) => typeSet.add(b.type));
     return Array.from(typeSet);
-  }, [blocks]);
+  }, [allSearchableItems]);
 
   const results = useMemo(() => {
-    let filtered = blocks;
+    let filtered = allSearchableItems;
 
     if (activeTypeFilter) {
-      filtered = filtered.filter((b) => b.type === activeTypeFilter);
+      filtered = filtered.filter((item) => item.block.type === activeTypeFilter);
     }
 
     if (activeTagFilter) {
-      filtered = filtered.filter((b) => b.meta.tags?.includes(activeTagFilter));
+      filtered = filtered.filter((item) => item.block.meta?.tags?.includes(activeTagFilter));
     }
 
     if (!query.trim()) {
-      return filtered.map((b) => ({
-        block: b,
-        preview: b.content.replace(/\n/g, ' ').slice(0, 120),
+      return filtered.map((item) => ({
+        ...item,
+        preview: (item.block.content || '').replace(/\n/g, ' ').slice(0, 120),
         matchedTitle: false,
         matchedContent: false,
         matchedTag: false,
-      })).slice(0, 20);
+      })).slice(0, 30);
     }
 
     const q = query.toLowerCase();
     return filtered
-      .filter((b) =>
-        b.content.toLowerCase().includes(q) ||
-        b.title.toLowerCase().includes(q) ||
-        b.meta.tags?.some((t) => t.toLowerCase().includes(q))
+      .filter((item) =>
+        (item.block.content || '').toLowerCase().includes(q) ||
+        (item.block.title || '').toLowerCase().includes(q) ||
+        (item.pageTitle || '').toLowerCase().includes(q) ||
+        item.block.meta?.tags?.some((t) => t.toLowerCase().includes(q))
       )
-      .map((b) => ({
-        block: b,
-        preview: b.content.replace(/\n/g, ' ').slice(0, 120),
-        matchedTitle: b.title.toLowerCase().includes(q),
-        matchedContent: b.content.toLowerCase().includes(q),
-        matchedTag: b.meta.tags?.some((t) => t.toLowerCase().includes(q)) || false,
+      .map((item) => ({
+        ...item,
+        preview: (item.block.content || '').replace(/\n/g, ' ').slice(0, 120),
+        matchedTitle: (item.block.title || '').toLowerCase().includes(q),
+        matchedContent: (item.block.content || '').toLowerCase().includes(q),
+        matchedTag: item.block.meta?.tags?.some((t) => t.toLowerCase().includes(q)) || false,
       }))
-      .slice(0, 20);
-  }, [query, blocks, activeTypeFilter, activeTagFilter]);
+      .slice(0, 30);
+  }, [query, allSearchableItems, activeTypeFilter, activeTagFilter]);
 
   const highlightText = (text: string, q: string) => {
     if (!q.trim()) return text;
@@ -102,13 +166,16 @@ export default function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
     return parts.length > 0 ? parts : text;
   };
 
-  const handleSelect = (blockId: string) => {
+  const handleSelect = (pageId: string, blockId: string) => {
+    if (pageId !== currentPageId) {
+      setCurrentPage(pageId);
+    }
     setSelection([blockId]);
     onClose();
     setTimeout(() => {
       const el = document.querySelector(`[data-block-id="${blockId}"]`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
+    }, 150);
   };
 
   if (!isOpen) return null;
@@ -128,12 +195,14 @@ export default function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
           />
           <button
             onClick={onClose}
+            aria-label="关闭搜索"
             className="p-1 hover:bg-surface-hover dark:hover:bg-zinc-800 rounded-lg text-content-tertiary hover:text-content-secondary dark:hover:text-zinc-300 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
+        {loadError && <p role="status" className="px-5 py-2 text-xs text-amber-700">{loadError}</p>}
         {(allTypes.length > 0 || allTags.length > 0) && (
           <div className="px-5 py-2.5 border-b border-line-subtle dark:border-zinc-800 bg-[#f7f8fa]/60 dark:bg-zinc-900/40 space-y-2">
             {allTypes.length > 0 && (
@@ -200,14 +269,17 @@ export default function SearchPanel({ isOpen, onClose }: SearchPanelProps) {
           {results.length === 0 && (query.trim() || activeTypeFilter || activeTagFilter) && (
             <div className="px-4 py-10 text-center text-xs text-content-tertiary dark:text-zinc-500">未找到匹配内容</div>
           )}
-          {results.map(({ block, preview, matchedTitle, matchedTag }) => (
+          {results.map(({ block, preview, pageId, pageTitle, matchedTitle, matchedTag }) => (
             <button
-              key={block.id}
-              onClick={() => handleSelect(block.id)}
+              key={`${pageId}-${block.id}`}
+              onClick={() => handleSelect(pageId, block.id)}
               className="w-full text-left px-5 py-3 hover:bg-surface-hover dark:hover:bg-zinc-800/60 border-b border-line-subtle dark:border-zinc-800/50 last:border-0 transition-colors"
             >
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <FileText className="w-3.5 h-3.5 text-content-tertiary" />
+                <span className="text-[10px] px-1.5 py-0.5 bg-[#eff0f2] dark:bg-zinc-800 text-content-secondary dark:text-zinc-300 rounded font-medium flex items-center gap-0.5">
+                  <FileText className="w-2.5 h-2.5 text-content-tertiary" />
+                  {pageTitle}
+                </span>
                 <span className="text-xs text-content-tertiary capitalize">{BLOCK_TYPE_LABELS[block.type] || block.type}</span>
                 {matchedTitle && (
                   <span className="text-[10px] px-1.5 py-0.5 bg-brand-light text-brand rounded font-medium">标题匹配</span>

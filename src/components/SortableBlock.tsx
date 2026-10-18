@@ -14,6 +14,8 @@ interface SortableBlockProps {
   onOpenAIMenu?: (blockId: string, blockType: BlockType, position: { top: number; left: number }) => void;
   isLinkTarget?: boolean;
   isLinkSource?: boolean;
+  childrenSlot?: React.ReactNode;
+  childCount?: number;
 }
 
 export default function SortableBlock({
@@ -23,6 +25,8 @@ export default function SortableBlock({
   onOpenAIMenu,
   isLinkTarget,
   isLinkSource,
+  childrenSlot,
+  childCount,
 }: SortableBlockProps) {
   const removeLink = useBlockStore((state) => state.removeLink);
   const allBlocks = useBlockStore((state) => state.blocks);
@@ -71,13 +75,19 @@ export default function SortableBlock({
       <div
         {...attributes}
         {...listeners}
+        aria-label={`拖动卡片「${block.title || "未命名"}」`}
         className="mt-1.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-grab active:cursor-grabbing text-zinc-500 hover:text-zinc-300 transition-all duration-150"
       >
         <GripVertical className="w-3.5 h-3.5" />
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col h-full">
-        <BlockRenderer block={block} isSelected={isSelected} />
+        <BlockRenderer
+          block={block}
+          isSelected={isSelected}
+          childrenSlot={childrenSlot}
+          childCount={childCount}
+        />
         {block.meta.links && block.meta.links.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-1.5 border-t border-gray-100 dark:border-zinc-800/60">
             <div className="flex items-center gap-1 text-[11px] text-blue-500 dark:text-blue-400 font-medium mr-0.5">

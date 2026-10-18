@@ -86,6 +86,52 @@ li { margin: 0.25em 0; }
     }, 300);
   };
 
+  const fallbackPrintPdf = (htmlContent: string, docTitle: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('浏览器阻止了弹出窗口，请允许弹出窗口以使用原生打印另存为 PDF');
+      return;
+    }
+    const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${docTitle}</title>
+<style>
+@media print {
+  @page { margin: 15mm; size: A4; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; padding: 24px; color: #1f2329; line-height: 1.6; font-size: 14px; max-width: 800px; margin: 0 auto; }
+h1, h2, h3 { color: #1f2329; margin-top: 1.2em; margin-bottom: 0.4em; }
+h1 { font-size: 22px; border-bottom: 1.5px solid #dee0e3; padding-bottom: 8px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+p { margin: 0.5em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #dee0e3; padding: 8px 12px; text-align: left; }
+th { background: #f7f8fa; font-weight: 600; }
+code { background: #f2f3f5; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+pre { background: #f7f8fa; padding: 12px; border-radius: 6px; border: 1px solid #dee0e3; overflow-x: auto; font-family: monospace; font-size: 12px; }
+blockquote { border-left: 3px solid #3370ff; padding-left: 12px; margin: 1em 0; color: #646a73; }
+img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+  ${htmlContent}
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 300);
+    };
+  </script>
+</body>
+</html>`;
+    printWindow.document.write(fullHtml);
+    printWindow.document.close();
+  };
+
   const handleExportPdf = async () => {
     setExporting('pdf');
     const html = exportToHtml();
@@ -95,14 +141,17 @@ li { margin: 0.25em 0; }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ html, title }),
       });
-      if (!res.ok) throw new Error('PDF export failed');
+      if (!res.ok) throw new Error('PDF 服务暂未就绪');
       const blob = await res.blob();
       triggerDownload(blob, `${title}.pdf`);
       markDone('pdf');
     } catch {
-      alert('PDF 导出失败，请确保 Playwright 已正确安装');
+      // 客户端平滑降级为原生打印另存为 PDF
+      fallbackPrintPdf(html, title);
+      markDone('pdf');
+    } finally {
+      setExporting(null);
     }
-    setExporting(null);
   };
 
   const handleExportWord = () => {

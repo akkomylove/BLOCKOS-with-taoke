@@ -3,6 +3,7 @@ import { getUserId, checkProjectPermission } from '@/lib/auth-utils';
 import { getDb, query } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 import { NextResponse } from 'next/server';
+import { normalizeProjectAnalysis } from '@/lib/project-analysis';
 
 interface ProjectMemberInfo {
   user_id: string;
@@ -44,7 +45,8 @@ function matchMemberForFunction(
     } catch {
       /* ignore */
     }
-    for (const fn of fns) {
+    for (const fn of (Array.isArray(fns) ? fns : [])) {
+      if (typeof fn !== 'string') continue;
       const fnNorm = fn.toLowerCase().replace(/[\s\/]/g, '');
       if (fnNorm && (normalized.includes(fnNorm) || fnNorm.includes(normalized))) {
         return { id: m.user_id, name: m.name, reason: `匹配项目成员技能职能: ${fn}` };
@@ -161,6 +163,8 @@ interface RawWorkflowStage {
   description?: string;
   order?: number;
   estimatedDays?: number;
+  assigneeFunction?: string;
+  tasks?: string[];
 }
 
     let rawTasks: RawAnalyzedTask[] = [];
@@ -202,7 +206,9 @@ ${content.slice(0, 8000)}
       "phase": "阶段名称（需求梳理/原型设计/技术开发/集成验收）",
       "description": "阶段目标",
       "order": 1,
-      "estimatedDays": 3
+      "estimatedDays": 3,
+      "assigneeFunction": "负责人岗位或成员姓名",
+      "tasks": ["核心事项1", "核心事项2"]
     }
   ]
 }`;
@@ -230,9 +236,10 @@ ${content.slice(0, 8000)}
           const aiContent = data.choices?.[0]?.message?.content || '';
           const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
           const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(aiContent);
-          rawTasks = parsed.tasks || [];
-          review = parsed.review || null;
-          workflow = parsed.workflow || [];
+          const normalized = normalizeProjectAnalysis(parsed);
+          rawTasks = normalized.tasks;
+          review = normalized.review;
+          workflow = normalized.workflow;
         }
       } catch (e) {
         console.warn('AI API call failed, falling back to heuristic task parser:', e);
@@ -268,9 +275,9 @@ ${content.slice(0, 8000)}
       };
 
       workflow = [
-        { phase: '需求确认与对齐', description: '核验业务范围与DoD', order: 1, estimatedDays: 2 },
-        { phase: '核心功能研发', description: '代码实现与单元测试', order: 2, estimatedDays: 5 },
-        { phase: '测试验收与交付', description: '集成测试与上线部署', order: 3, estimatedDays: 2 },
+        { phase: '需求确认与对齐', description: '核验业务范围与DoD', order: 1, estimatedDays: 2, assigneeFunction: '产品经理', tasks: ['对齐业务范围', '确认验收准则'] },
+        { phase: '核心功能研发', description: '代码实现与单元测试', order: 2, estimatedDays: 5, assigneeFunction: '研发团队', tasks: ['核心接口联调', '前端功能实现'] },
+        { phase: '测试验收与交付', description: '集成测试与上线部署', order: 3, estimatedDays: 2, assigneeFunction: '测试工程师', tasks: ['功能验收测试', '生产发布部署'] },
       ];
     }
 
@@ -298,12 +305,28 @@ ${content.slice(0, 8000)}
       };
     });
 
+    const processedWorkflow = (workflow || []).map((w, idx) => ({
+      phase: w.phase || `阶段 ${idx + 1}`,
+      description: w.description || '',
+      order: typeof w.order === 'number' ? w.order : idx + 1,
+      estimatedDays: typeof w.estimatedDays === 'number' ? w.estimatedDays : 2,
+      assigneeFunction: (w as any).assigneeFunction || (w as any).assignee || '通用岗位',
+      tasks: Array.isArray((w as any).tasks) ? (w as any).tasks : [],
+    }));
+
+    const processedReview = {
+      strengths: Array.isArray(review?.strengths) ? review.strengths : ['文档结构完整', '目标清晰'],
+      weaknesses: Array.isArray(review?.weaknesses) ? review.weaknesses : [],
+      suggestions: Array.isArray(review?.suggestions) ? review.suggestions : [],
+      riskPoints: Array.isArray(review?.riskPoints) ? review.riskPoints : [],
+    };
+
     return NextResponse.json({
       success: true,
       analysis: {
         tasks: processedTasks,
-        review,
-        workflow,
+        review: processedReview,
+        workflow: processedWorkflow,
         projectMemberCount: memberRows.length,
         existingTaskCount: existingTasks.length,
       },

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { X, Clock, RotateCcw, ChevronLeft, ChevronRight, FileText, Plus, Trash2, Edit3, History } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
 
@@ -30,6 +31,13 @@ const ACTION_META: Record<string, { icon: React.ReactNode; color: string; bg: st
     border: 'border-blue-200 dark:border-blue-500/20',
     label: '编辑了内容',
   },
+  manual: {
+    icon: <Clock className="w-4 h-4" />,
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-500/10',
+    border: 'border-blue-200 dark:border-blue-500/20',
+    label: '保存快照',
+  },
 };
 
 export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
@@ -43,19 +51,34 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
   const currentPageId = useBlockStore((state) => state.currentPageId);
   const pages = useBlockStore((state) => state.pages);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const state = useBlockStore.getState();
+      const existing = state.history.filter((h) => h.pageId === state.currentPageId);
+      if (existing.length === 0 && state.blocks.length > 0) {
+        state.saveHistory('编辑');
+      }
+    }
+  }, [isOpen]);
+
   const pageHistory = history
     .map((entry, index) => ({ ...entry, index }))
     .filter((entry) => entry.pageId === currentPageId);
 
   const handleRestore = (index: number) => {
-    const targetIndex = history.findIndex((h) => h.timestamp === history[index]?.timestamp);
-    if (targetIndex === -1) return;
-    const diff = targetIndex - historyIndex;
-    if (diff < 0) {
-      for (let i = 0; i < Math.abs(diff); i++) undo();
-    } else if (diff > 0) {
-      for (let i = 0; i < diff; i++) redo();
-    }
+    useBlockStore.getState().restoreHistory(index);
     onClose();
   };
 

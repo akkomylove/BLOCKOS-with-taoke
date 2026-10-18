@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Team, Project, Milestone, Task, UserProfile, UserTaskSummary } from '@/types/collaboration';
+import type { Team, Project, Milestone, Task, TaskStatus, TaskPriority, UserProfile, UserTaskSummary } from '@/types/collaboration';
 
 interface CollaborationState {
   teams: Team[];
@@ -38,7 +38,7 @@ interface CollaborationState {
   deleteMilestone: (id: string) => Promise<void>;
 
   fetchTasks: (projectId: string, parentId?: string) => Promise<void>;
-  createTask: (projectId: string, title: string, parentId?: string, description?: string, status?: 'todo' | 'in_progress' | 'done', priority?: 'low' | 'medium' | 'high' | 'urgent', assigneeId?: string, dueDate?: number, dod?: string, orderIndex?: number) => Promise<string>;
+  createTask: (projectId: string, title: string, parentId?: string, description?: string, status?: TaskStatus, priority?: TaskPriority, assigneeId?: string, dueDate?: number, dod?: string, orderIndex?: number) => Promise<string>;
   updateTask: (id: string, updates: Partial<Omit<Task, 'id' | 'projectId' | 'createdAt'>>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
@@ -436,7 +436,7 @@ export const useCollaborationStore = create<CollaborationState>()(
         }
       },
 
-      createTask: async (projectId: string, title: string, parentId?: string, description?: string, status?: 'todo' | 'in_progress' | 'done', priority?: 'low' | 'medium' | 'high' | 'urgent', assigneeId?: string, dueDate?: number, dod?: string, orderIndex?: number) => {
+      createTask: async (projectId: string, title: string, parentId?: string, description?: string, status?: TaskStatus, priority?: TaskPriority, assigneeId?: string, dueDate?: number, dod?: string, orderIndex?: number) => {
         set((state) => {
           state._mutations.tasks.loading = true;
           state._mutations.tasks.error = null;

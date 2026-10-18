@@ -94,7 +94,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
     }));
   };
 
-  const handleAddTask = async (status: 'todo' | 'in_progress' | 'done') => {
+  const handleAddTask = async (status: TaskStatus) => {
     if (!newTaskTitle.trim()) return;
     try {
       await createTask(projectId, newTaskTitle.trim(), undefined, '', status, 'medium');
@@ -185,7 +185,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
                     />
                     <div className="flex gap-2 mt-2 pt-2 border-t border-line-subtle dark:border-zinc-800">
                       <button
-                        onClick={() => handleAddTask(column.id as 'todo' | 'in_progress' | 'done')}
+                        onClick={() => handleAddTask(column.id as TaskStatus)}
                         className="px-3 py-1 text-xs font-medium text-white bg-brand hover:bg-brand-hover rounded-md shadow-xs transition-colors"
                       >
                         添加
@@ -246,7 +246,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
 
 interface TaskCardProps {
   task: Task;
-  onUpdateStatus: (taskId: string, status: 'todo' | 'in_progress' | 'done') => void;
+  onUpdateStatus: (taskId: string, status: TaskStatus) => void;
   onUpdatePriority: (taskId: string, priority: 'low' | 'medium' | 'high' | 'urgent') => void;
   onDelete: () => void;
 }
@@ -301,6 +301,16 @@ function TaskCard({ task, onUpdateStatus, onUpdatePriority, onDelete }: TaskCard
                 className="w-full px-3 py-1.5 text-left text-xs text-content-secondary dark:text-zinc-200 hover:bg-surface-hover dark:hover:bg-zinc-700 transition-colors"
               >
                 进行中
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUpdateStatus(task.id, 'pending_review');
+                  setShowMenu(false);
+                }}
+                className="w-full px-3 py-1.5 text-left text-xs text-content-secondary dark:text-zinc-200 hover:bg-surface-hover dark:hover:bg-zinc-700 transition-colors"
+              >
+                待验收
               </button>
               <button
                 onClick={(e) => {

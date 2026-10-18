@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { X, Upload, FileText, Loader2 } from 'lucide-react';
 import { AIAnalysisPreview } from './AIAnalysisPreview';
 import type { AIAnalysisResult } from '@/types/collaboration';
+import { normalizeProjectAnalysis } from '@/lib/project-analysis';
 
 interface ProjectImportModalProps {
   isOpen: boolean;
@@ -47,7 +48,13 @@ export function ProjectImportModal({ isOpen, onClose, projectId }: ProjectImport
           return;
         }
 
-        setAnalysis(data.analysis);
+        const normalized = normalizeProjectAnalysis(data.analysis);
+        if (!normalized.tasks.length) {
+          setError('没有识别到有效任务，请补充计划书中的任务标题和内容后重试');
+          setStep('upload');
+          return;
+        }
+        setAnalysis(normalized);
         setStep('preview');
       } catch {
         setError('请求失败，请检查网络和API配置');

@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Play, Trash2, Loader2, Database, X, Eye, EyeOff } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
 import type { Block } from '@/types/block';
+import { runJavaScriptSandbox } from '@/lib/browser-code-sandbox';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
@@ -164,14 +165,6 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
 
     if (language === 'javascript') {
       try {
-        const output: string[] = [];
-        const fakeConsole = {
-          log: (...args: unknown[]) => output.push(args.map((a) => String(a)).join(' ')),
-          warn: (...args: unknown[]) => output.push(`[warn] ${args.map((a) => String(a)).join(' ')}`),
-          error: (...args: unknown[]) => output.push(`[error] ${args.map((a) => String(a)).join(' ')}`),
-          info: (...args: unknown[]) => output.push(`[info] ${args.map((a) => String(a)).join(' ')}`),
-        };
-
         const refs = parseRefs(content);
         const refData: Record<string, unknown> = {};
         refs.forEach((ref) => {
@@ -186,14 +179,7 @@ export default function CodeBlock({ content, language = 'javascript', onChange, 
           ${content.replace(/\/\/\s*@ref\s+\w+/g, '')}
         `;
 
-        const fn = new Function('console', 'refData', wrappedCode);
-        fn(fakeConsole, refData);
-
-        setRunResult({
-          output,
-          error: null,
-          duration: Math.round(performance.now() - startTime),
-        });
+        setRunResult(await runJavaScriptSandbox(wrappedCode, refData));
       } catch (error) {
         setRunResult({
           output: [],

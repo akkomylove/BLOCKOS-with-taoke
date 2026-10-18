@@ -210,6 +210,7 @@ export default function BlockEditor({
 
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const dropTargetIdRef = useRef<string | null>(null);
+  const [hoveredLinkId, setHoveredLinkId] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const clearSelectionRef = useRef(clearSelection);
@@ -704,7 +705,12 @@ export default function BlockEditor({
         });
 
         if (targetBlock) {
-          updateBlock(targetId, { collapsed: false });
+          updateBlock(targetId, {
+            collapsed: false,
+            ...(targetBlock.type === 'toggle'
+              ? { meta: { ...targetBlock.meta, expanded: true } }
+              : {}),
+          });
           const maxChildW = Math.max(
             targetBlock.width || 760,
             ...movingBlockIds.map((id) => blocks.find((b) => b.id === id)?.width || 760)
@@ -866,6 +872,12 @@ export default function BlockEditor({
         }
       });
       if (parent) {
+        if (parent.type === 'toggle') {
+          updateBlock(parentId, {
+            collapsed: false,
+            meta: { ...parent.meta, expanded: true },
+          });
+        }
         const childWidths = selectedIds
           .filter((id) => id !== parentId)
           .map((id) => blocks.find((b) => b.id === id)?.width || 480);
@@ -904,6 +916,10 @@ export default function BlockEditor({
   const renderBlockTree = useCallback((block: (typeof sortedBlocks)[0], depth: number = 0): React.ReactNode => {
     const isChild = !!block.parentId;
     const children = sortedBlocks.filter((b) => b.parentId === block.id);
+    const isToggle = block.type === 'toggle';
+    const childrenList = children.length > 0
+      ? children.map((child) => renderBlockTree(child, depth + 1))
+      : undefined;
 
     return (
       <div
@@ -985,6 +1001,7 @@ export default function BlockEditor({
               )}
               {(childCountMap[block.id] || 0) > 0 && (
                 <button
+                  aria-label={block.collapsed ? "展开子卡片" : "折叠子卡片"}
                   onClick={() => updateBlock(block.id, { collapsed: !block.collapsed })}
                   className="p-0.5 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded text-gray-500 dark:text-zinc-400"
                   onMouseDown={(e) => e.stopPropagation()}
@@ -1000,6 +1017,7 @@ export default function BlockEditor({
                   >
                     {tag}
                     <button
+                      aria-label={`移除标签「${tag}」`}
                       onClick={(e) => { e.stopPropagation(); handleRemoveTag(block.id, tag); }}
                       className="hover:opacity-70"
                     >
@@ -1046,11 +1064,13 @@ export default function BlockEditor({
                   onOpenAIMenu={handleOpenAIMenu}
                   isLinkTarget={linkMode && linkSource !== block.id}
                   isLinkSource={linkMode && linkSource === block.id}
+                  childrenSlot={isToggle ? childrenList : undefined}
+                  childCount={children.length}
                 />
               </div>
             )}
 
-            {!block.collapsed && children.length > 0 && (
+            {!block.collapsed && children.length > 0 && !isToggle && (
               <div className="shrink-0 px-3 pb-3 pt-2 border-t border-[#eff0f2] dark:border-[#2e3037] bg-[#f7f8fa]/80 dark:bg-[#141517]/80 rounded-b-xl">
                 <div className="flex items-center justify-between py-1 mb-1.5 text-[11px] font-medium text-[#3370ff] dark:text-[#4b85ff]">
                   <div className="flex items-center gap-1.5">
@@ -1062,7 +1082,7 @@ export default function BlockEditor({
                   </span>
                 </div>
                 <div className="space-y-2 border-l-2 border-[#3370ff]/40 dark:border-[#4b85ff]/40 pl-2.5 my-1">
-                  {children.map((child) => renderBlockTree(child, depth + 1))}
+                  {childrenList}
                 </div>
               </div>
             )}
@@ -1158,10 +1178,11 @@ export default function BlockEditor({
               key={`line-${link.id}`}
               d={link.path}
               fill="none"
-              stroke="rgba(96,165,250,0.6)"
-              strokeWidth="2"
-              strokeDasharray="6 3"
+              stroke={hoveredLinkId === link.id ? '#3370ff' : 'rgba(96,165,250,0.6)'}
+              strokeWidth={hoveredLinkId === link.id ? 2.5 : 2}
+              strokeDasharray={hoveredLinkId === link.id ? 'none' : '6 3'}
               markerEnd="url(#linkArrow)"
+              className="transition-colors duration-150"
             />
           ))}
           {groupBounds.map((g) => (
@@ -1185,7 +1206,7 @@ export default function BlockEditor({
           {visibleBlocks.filter((b) => !b.parentId).map((b) => renderBlockTree(b))}
         </div>
 
-        {/* 顶层高优先级 SVG 覆盖层：渲染断开连接交互药丸 (z-30) - 彻底避免被任何 Block 卡片实体背景遮挡 */}
+        {/* 顶层高优先级 SVG 覆盖层：仅当鼠标悬停在线条或药丸上时展示断开交互药丸 (z-30) - 彻底避免被任何 Block 卡片实体背景遮挡 */}
         <svg
           className="absolute origin-top-left pointer-events-none"
           style={{
@@ -1196,34 +1217,54 @@ export default function BlockEditor({
         >
           {connectionLinks.map((link) => (
             <g
-              key={`pill-${link.id}`}
-              className="pointer-events-auto cursor-pointer group/linkpill"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeLink(link.fromId, link.toId);
-              }}
+              key={`interactive-link-${link.id}`}
+              className="pointer-events-auto"
+              onMouseEnter={() => setHoveredLinkId(link.id)}
+              onMouseLeave={() => setHoveredLinkId(null)}
             >
-              <title>{`断开与「${link.targetTitle}」的关联`}</title>
-              <rect
-                x={link.midX - 32}
-                y={link.midY - 12}
-                width={64}
-                height={24}
-                rx={12}
-                className="fill-white dark:fill-zinc-900 stroke-blue-500/80 group-hover/linkpill:stroke-red-500 group-hover/linkpill:fill-red-50 dark:group-hover/linkpill:fill-red-950/80 transition-all"
-                strokeWidth={1.5}
-                style={{
-                  filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))',
-                }}
+              {/* 宽容度高（28px）的透明点击与悬停探测路径 */}
+              <path
+                d={link.path}
+                fill="none"
+                stroke="transparent"
+                strokeWidth="28"
+                className="cursor-pointer"
+                style={{ pointerEvents: 'stroke' }}
               />
-              <text
-                x={link.midX}
-                y={link.midY + 4}
-                textAnchor="middle"
-                className="text-[11px] font-medium fill-blue-600 dark:fill-blue-400 group-hover/linkpill:fill-red-600 dark:group-hover/linkpill:fill-red-400 font-sans select-none pointer-events-none transition-colors"
-              >
-                ✕ 断开
-              </text>
+
+              {/* 当且仅当鼠标悬停在线条或药丸上时展示断开按钮 */}
+              {hoveredLinkId === link.id && (
+                <g
+                  className="cursor-pointer group/linkpill animate-in fade-in zoom-in-95 duration-150"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeLink(link.fromId, link.toId);
+                    setHoveredLinkId(null);
+                  }}
+                >
+                  <title>{`断开与「${link.targetTitle}」的关联`}</title>
+                  <rect
+                    x={link.midX - 32}
+                    y={link.midY - 12}
+                    width={64}
+                    height={24}
+                    rx={12}
+                    className="fill-white dark:fill-zinc-900 stroke-blue-500/80 group-hover/linkpill:stroke-red-500 group-hover/linkpill:fill-red-50 dark:group-hover/linkpill:fill-red-950/80 transition-all"
+                    strokeWidth={1.5}
+                    style={{
+                      filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))',
+                    }}
+                  />
+                  <text
+                    x={link.midX}
+                    y={link.midY + 4}
+                    textAnchor="middle"
+                    className="text-[11px] font-medium fill-blue-600 dark:fill-blue-400 group-hover/linkpill:fill-red-600 dark:group-hover/linkpill:fill-red-400 font-sans select-none pointer-events-none transition-colors"
+                  >
+                    ✕ 断开
+                  </text>
+                </g>
+              )}
             </g>
           ))}
         </svg>

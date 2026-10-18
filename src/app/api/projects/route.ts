@@ -40,7 +40,10 @@ async function GETHandler(req: NextRequest) {
       ORDER BY p.created_at DESC
       LIMIT ? OFFSET ?
     `, [userId, limit, offset]);
-    return NextResponse.json({ projects, total, page, limit });
+    return NextResponse.json({ projects: projects.map(project => ({ ...project,
+      teamId: project.team_id, ownerId: project.owner_id,
+      createdAt: project.created_at, updatedAt: project.updated_at,
+    })), total, page, limit });
   } catch (err) {
     console.error('GET /api/projects error:', err);
     return NextResponse.json({ error: 'Internal Server Error', projects: [] }, { status: 500 });

@@ -21,9 +21,11 @@ import type { Block } from '@/types/block';
 interface BlockRendererProps {
   block: Block;
   isSelected: boolean;
+  childrenSlot?: React.ReactNode;
+  childCount?: number;
 }
 
-export default function BlockRenderer({ block, isSelected }: BlockRendererProps) {
+export default function BlockRenderer({ block, isSelected, childrenSlot, childCount }: BlockRendererProps) {
   const updateBlock = useBlockStore((state) => state.updateBlock);
 
   switch (block.type) {
@@ -68,7 +70,7 @@ export default function BlockRenderer({ block, isSelected }: BlockRendererProps)
     case 'quote':
       return <QuoteBlock block={block} />;
     case 'toggle':
-      return <ToggleBlock block={block} />;
+      return <ToggleBlock block={block} childrenSlot={childrenSlot} childCount={childCount} />;
     case 'divider':
       return <DividerBlock block={block} updateBlock={updateBlock} />;
     case 'whiteboard':

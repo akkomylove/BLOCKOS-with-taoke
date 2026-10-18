@@ -57,6 +57,9 @@ export default function TodoBlock({ block, isSelected }: TodoBlockProps) {
       <button
         onClick={handleCheck}
         data-tour="todo-checkbox"
+        role="checkbox"
+        aria-checked={isChecked}
+        aria-label={isChecked ? "标记为未完成" : "标记为已完成"}
         className={`mt-0.5 flex-shrink-0 w-[18px] h-[18px] rounded border-2 flex items-center justify-center transition-all duration-200 ${
           isChecked
             ? 'bg-blue-500 border-blue-500 animate-check-pop'

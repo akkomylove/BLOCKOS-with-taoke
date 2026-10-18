@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, FileText } from 'lucide-react';
 import { BLOCK_TEMPLATES } from '@/store/blockStore';
 
@@ -12,6 +12,12 @@ interface TemplatePickerProps {
 
 export default function TemplatePicker({ isOpen, onClose, onSelect }: TemplatePickerProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } };
+    window.addEventListener('keydown', close, true);
+    return () => window.removeEventListener('keydown', close, true);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -24,7 +30,7 @@ export default function TemplatePicker({ isOpen, onClose, onSelect }: TemplatePi
             <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">选择模板</h2>
             <p className="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">选择一个预设模板快速创建页面</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-400 dark:text-zinc-500 transition-colors">
+          <button onClick={onClose} aria-label="关闭模板选择" className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-400 dark:text-zinc-500 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>

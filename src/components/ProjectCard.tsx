@@ -90,7 +90,7 @@ export default function ProjectCard({ project, onEdit, onDelete }: ProjectCardPr
         <div className="mt-4 flex items-center gap-4 text-xs text-content-tertiary dark:text-zinc-400">
           <div className="flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-content-tertiary" />
-            <span>{new Date(project.createdAt).toLocaleDateString()}</span>
+            <span>{Number.isFinite(Number(project.createdAt)) ? new Date(Number(project.createdAt)).toLocaleDateString('zh-CN') : '创建日期待同步'}</span>
           </div>
         </div>
       </div>

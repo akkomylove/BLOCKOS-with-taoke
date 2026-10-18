@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { X, User, Building2, Shield, LogOut } from 'lucide-react';
+import { X, User, Building2, Shield, LogOut, Copy, Check } from 'lucide-react';
 import { useAccountStore } from '@/store/accountStore';
 import type { AccountMode } from '@/types/account';
 
@@ -20,6 +20,7 @@ export function ProfilePanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [copiedId, setCopiedId] = useState(false);
   useEffect(() => {
     if (!isOpen) return;
     const controller = new AbortController();
@@ -46,6 +47,25 @@ export function ProfilePanel({ isOpen, onClose }: { isOpen: boolean; onClose: ()
           <div>
             <h2 id="account-title" className="text-base font-semibold text-content dark:text-zinc-100">账号与偏好中心</h2>
             <p className="text-xs text-content-tertiary dark:text-zinc-400 mt-0.5">{user.email} · {user.provider === 'demo' ? '公共演示账号' : user.hasPassword ? '邮箱密码登录' : '第三方授权登录'}</p>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className="text-xs text-content-tertiary dark:text-zinc-400">User ID:</span>
+              <code className="text-[11px] font-mono px-1.5 py-0.5 bg-gray-100 dark:bg-zinc-800 text-content-secondary dark:text-zinc-300 rounded border border-line-subtle dark:border-zinc-700 select-all">
+                {user.id}
+              </code>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(user.id);
+                  setCopiedId(true);
+                  setTimeout(() => setCopiedId(false), 2000);
+                }}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-brand hover:bg-brand-light dark:hover:bg-blue-950/40 transition-colors"
+                title="一键复制 User ID"
+              >
+                {copiedId ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                <span>{copiedId ? '已复制' : '复制'}</span>
+              </button>
+            </div>
           </div>
           <button
             autoFocus

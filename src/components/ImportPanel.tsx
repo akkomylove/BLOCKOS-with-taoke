@@ -38,6 +38,7 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Escape key to close
   if (!isOpen) return null;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +58,17 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
     if (activeTab === 'image') {
       reader.onload = (ev) => {
         const result = ev.target?.result as string;
-        if (result) importImage(result, file.name);
+        if (result) {
+          importImage(result, file.name);
+          setSuccess(true);
+          setImportMessage('图片已成功插入画布并同步云端');
+          setTimeout(() => {
+            setSuccess(false);
+            setImportMessage(null);
+            setFileName('');
+            onClose();
+          }, 800);
+        }
       };
       reader.readAsDataURL(file);
     } else {
@@ -94,7 +105,7 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
               setJsonContent('');
               setFileName('');
               onClose();
-            }, 1200);
+            }, 800);
           } else {
             setErrorMessage(result.error || 'JSON 解析或校验失败');
           }
@@ -108,7 +119,7 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
             setTextContent('');
             setFileName('');
             onClose();
-          }, 1200);
+          }, 800);
         } else if (activeTab === 'csv' && csvContent.trim()) {
           importFromCsv(csvContent);
           setSuccess(true);
@@ -119,7 +130,7 @@ export default function ImportPanel({ isOpen, onClose }: ImportPanelProps) {
             setCsvContent('');
             setFileName('');
             onClose();
-          }, 1200);
+          }, 800);
         }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '导入过程出现异常';

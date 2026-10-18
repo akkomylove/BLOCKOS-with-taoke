@@ -43,6 +43,7 @@ export interface BlockMeta {
   bookmarkFavicon?: string;
 
   expanded?: boolean;
+  details?: string;
   caption?: string;
   fontSize?: number;
   fontFamily?: string;

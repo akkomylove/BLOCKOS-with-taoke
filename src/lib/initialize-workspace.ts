@@ -24,7 +24,14 @@ export async function initializeWorkspace(userId: string, mode: AccountMode, sig
     if (!content.ok) throw new Error('文档内容加载失败，请刷新重试');
     const data = await content.json();
     if (signal.aborted) return false;
-    useBlockStore.setState(state => ({ pages, folders, currentPageId: id, blocks: data.blocks || [], pageBlocks: { ...state.pageBlocks, [id]: data.blocks || [] } }));
+    const finalBlocks = data.blocks || [];
+    useBlockStore.setState(state => ({
+      pages,
+      folders,
+      currentPageId: id,
+      blocks: finalBlocks,
+      pageBlocks: { ...state.pageBlocks, [id]: finalBlocks },
+    }));
     return false;
   }
   const blocks = getAccountGuide(mode).map(block => ({ ...block, id: `${block.id}-${userId}`,

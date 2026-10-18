@@ -31,19 +31,32 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const existing = query('SELECT * FROM team_members WHERE team_id = ? AND user_id = ?', [id, userId]);
+    const targetInput = userId.trim();
+    const targetUsers = query(
+      'SELECT id, name, email FROM users WHERE id = ? OR lower(email) = lower(?)',
+      [targetInput, targetInput]
+    );
+
+    if (targetUsers.length === 0) {
+      return NextResponse.json({ error: '未找到该用户，请核对用户 ID 或注册邮箱' }, { status: 404 });
+    }
+
+    const targetUser = targetUsers[0] as { id: string; name?: string; email: string };
+    const actualTargetUserId = targetUser.id;
+
+    const existing = query('SELECT * FROM team_members WHERE team_id = ? AND user_id = ?', [id, actualTargetUserId]);
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'Member already exists' }, { status: 400 });
+      return NextResponse.json({ error: '该成员已在团队中' }, { status: 409 });
     }
 
     const memberId = nanoid();
     run(
       'INSERT INTO team_members (id, team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?, ?)',
-      [memberId, id, userId, role, Date.now()]
+      [memberId, id, actualTargetUserId, role, Date.now()]
     );
     saveDb();
 
-    return NextResponse.json({ id: memberId });
+    return NextResponse.json({ id: memberId, userId: actualTargetUserId, user: targetUser });
   } catch (err) {
     console.error('POST /api/teams/[id]/members error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

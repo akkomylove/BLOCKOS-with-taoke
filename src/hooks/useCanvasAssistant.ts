@@ -100,6 +100,15 @@ export function useCanvasAssistant() {
           throw new Error('AI 操作格式异常，本次未执行画布操作');
         }
         const results = executeCanvasOperations(operations);
+        if (results.length > 0) {
+          results.forEach((res) => {
+            useBlockStore.getState().addAgentLog({
+              ruleId: 'CanvasAgent',
+              blockId: pageId,
+              result: res,
+            });
+          });
+        }
         update({ content: results.length ? '已处理画布操作' : '没有找到可执行的画布操作，请补充目标卡片或具体要求', operations: results });
       } else {
         const suggestions = Array.isArray(payload.actionSuggestions)

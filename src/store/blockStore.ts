@@ -63,13 +63,15 @@ interface BlockStore {
   removeLink: (fromId: string, toId: string) => void;
   toggleAgent: () => void;
   addAgentLog: (log: Omit<AgentLog, 'id' | 'timestamp'>) => void;
+  clearAgentLogs: () => void;
   hydrate: () => void;
 
   undo: () => void;
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
-  saveHistory: () => void;
+  saveHistory: (action?: string, pageId?: string) => void;
+  restoreHistory: (index: number) => void;
 
   indentBlock: (id: string) => void;
   outdentBlock: (id: string) => void;
@@ -91,7 +93,7 @@ interface BlockStore {
   currentUserId: string | null;
   setCurrentUserId: (userId: string | null) => void;
   retrySave: () => Promise<void>;
-  syncToServer: () => Promise<void>;
+  syncToServer: (pageId?: string) => Promise<void>;
   loadFromServer: (pageId: string) => Promise<void>;
   syncPages: () => Promise<void>;
   reset: () => void;
@@ -140,6 +142,11 @@ export function createEmptyBlock(type: BlockType): Block {
     defaultContent = `graph TD\n  Client["客户端 (Web / 移动端)"] --> Gateway["API 网关 / 鉴权"]\n  Gateway --> Engine["BlockOS 规则引擎"]\n  Engine --> AI["智谱 GLM 4.7 Flash 大模型"]\n  Engine --> DB[("PostgreSQL / SQLite 混合持久化")]`;
     defaultWidth = 560;
     defaultHeight = 320;
+  } else if (type === 'toggle') {
+    defaultTitle = '折叠列表';
+    defaultContent = '';
+    meta.expanded = true;
+    defaultWidth = 480;
   }
 
   return {
@@ -300,6 +307,41 @@ function createPresetPages(): { pages: Page[]; pageBlocks: Record<string, Block[
 
 const presetData = createPresetPages();
 
+const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pageCreates = new Map<string, Promise<boolean>>();
+const pageWrites = new Map<string, Promise<void>>();
+let pagesSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function triggerDebouncedSave() {
+  const { currentPageId: pageId, currentUserId: userId } = useBlockStore.getState();
+  if (!pageId) return;
+  const key = `${userId}:${pageId}`;
+  clearTimeout(saveTimers.get(key));
+  saveTimers.set(key, setTimeout(() => {
+    saveTimers.delete(key);
+    const state = useBlockStore.getState();
+    if (state.currentUserId !== userId || !state.pages.some(page => page.id === pageId)) return;
+    state.saveHistory('编辑', pageId);
+    void state.syncToServer(pageId);
+  }, 800));
+}
+
+function createServerPage(page: Page) {
+  const pending = fetch('/api/pages', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: page.id, title: page.title, icon: page.icon, folderId: page.folderId }),
+  }).then(response => response.ok).catch(() => false);
+  pageCreates.set(page.id, pending);
+  triggerDebouncedSave();
+}
+
+export function triggerDebouncedPagesSync() {
+  if (pagesSyncTimer) clearTimeout(pagesSyncTimer);
+  pagesSyncTimer = setTimeout(() => {
+    useBlockStore.getState().syncPages().catch(() => {});
+  }, 800);
+}
+
 export const useBlockStore = create<BlockStore>()(
   persist(
     immer((set, get) => ({
@@ -347,11 +389,7 @@ export const useBlockStore = create<BlockStore>()(
           state.selectedIds = [];
         });
         get().saveHistory();
-        fetch('/api/pages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: newPage.id, title: newPage.title, icon: newPage.icon, folderId: newPage.folderId }),
-        }).catch(() => {});
+        createServerPage(newPage);
         return newPage.id;
       },
 
@@ -361,6 +399,7 @@ export const useBlockStore = create<BlockStore>()(
         newPage.title = template ? template.name : '新页面';
         newPage.icon = template ? template.icon : '📄';
         if (folderId) newPage.folderId = folderId;
+        let createdBlocks: Block[] = [];
         set((state) => {
           state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
           state.pages.push(newPage);
@@ -377,17 +416,14 @@ export const useBlockStore = create<BlockStore>()(
             }));
             state.pageBlocks[newPage.id] = newBlocks;
             state.blocks = newBlocks;
+            createdBlocks = newBlocks;
           } else {
             state.pageBlocks[newPage.id] = [];
             state.blocks = [];
           }
         });
-        get().saveHistory();
-        fetch('/api/pages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: newPage.id, title: newPage.title, icon: newPage.icon, folderId: newPage.folderId }),
-        }).catch(() => {});
+        get().saveHistory('创建');
+        createServerPage(newPage);
         return newPage.id;
       },
 
@@ -433,22 +469,23 @@ export const useBlockStore = create<BlockStore>()(
       updatePageTitle: (id, title) => {
         set((state) => {
           const page = state.pages.find((p) => p.id === id);
-          if (page) page.title = title;
+          if (page) {
+            page.title = title;
+            page.updatedAt = Date.now();
+          }
         });
+        triggerDebouncedPagesSync();
       },
 
       setCurrentPage: (id) => {
         set((state) => {
           state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
           state.currentPageId = id;
-          let targetBlocks = state.pageBlocks[id] ? JSON.parse(JSON.stringify(state.pageBlocks[id])) : [];
-          if ((id === 'doc-guide' || id.includes('guide')) && targetBlocks.length === 0) {
-            targetBlocks = getPresetDocumentBlocks('doc-guide');
-            state.pageBlocks[id] = targetBlocks;
-          }
-          state.blocks = targetBlocks;
+          state.blocks = state.pageBlocks[id] ? JSON.parse(JSON.stringify(state.pageBlocks[id])) : [];
+          state.historyIndex = state.history.map(entry => entry.pageId).lastIndexOf(id);
           state.selectedIds = [];
         });
+        if (!get().pageBlocks[id]) void get().loadFromServer(id);
       },
 
       addFolder: (name) => {
@@ -566,8 +603,10 @@ export const useBlockStore = create<BlockStore>()(
             }
           }
           state.blocks.push(newBlock);
+          state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
         });
-        get().saveHistory();
+        get().saveHistory('创建');
+        triggerDebouncedSave();
         return newBlock.id;
       },
 
@@ -585,19 +624,24 @@ export const useBlockStore = create<BlockStore>()(
         };
         set((state) => {
           state.blocks.push(newBlock);
+          state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
         });
-        get().saveHistory();
+        get().saveHistory('创建');
+        triggerDebouncedSave();
         return newBlock.id;
       },
 
       updateBlock: (id, updates) => {
+        if (!get().history.some(entry => entry.pageId === get().currentPageId)) get().saveHistory('编辑');
         set((state) => {
           const block = state.blocks.find((b) => b.id === id);
           if (block) {
             Object.assign(block, updates);
             block.updatedAt = Date.now();
+            state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
           }
         });
+        triggerDebouncedSave();
       },
 
       deleteBlock: (id) => {
@@ -621,8 +665,10 @@ export const useBlockStore = create<BlockStore>()(
               b.meta.links = b.meta.links.filter((linkId) => !idsToDelete.has(linkId));
             }
           });
+          state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
         });
-        get().saveHistory();
+        get().saveHistory('删除');
+        triggerDebouncedSave();
       },
 
       moveBlock: (activeId, overId) => {
@@ -635,8 +681,10 @@ export const useBlockStore = create<BlockStore>()(
           state.blocks.forEach((b, i) => {
             b.order = i;
           });
+          state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
         });
-        get().saveHistory();
+        get().saveHistory('编辑');
+        triggerDebouncedSave();
       },
 
       moveBlockTo: (id, x, y) => {
@@ -646,8 +694,10 @@ export const useBlockStore = create<BlockStore>()(
             block.x = x;
             block.y = y;
             block.updatedAt = Date.now();
+            state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
           }
         });
+        triggerDebouncedSave();
       },
 
       resizeBlock: (id, width, height) => {
@@ -673,8 +723,10 @@ export const useBlockStore = create<BlockStore>()(
               }
             }
             block.updatedAt = Date.now();
+            state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
           }
         });
+        triggerDebouncedSave();
       },
 
       setSelection: (ids) => {
@@ -750,53 +802,54 @@ export const useBlockStore = create<BlockStore>()(
         });
       },
 
+      clearAgentLogs: () => {
+        set((state) => {
+          state.agentLogs = [];
+        });
+      },
+
       hydrate: () => {
         set((state) => {
           state._hydrated = true;
         });
       },
 
+      restoreHistory: (index) => {
+        const entry = get().history[index];
+        if (!entry || entry.pageId !== get().currentPageId) return;
+        set(state => {
+          state.blocks = JSON.parse(JSON.stringify(entry.blocks));
+          state.pageBlocks[state.currentPageId] = state.blocks;
+          state.historyIndex = index;
+        });
+        triggerDebouncedSave();
+      },
+
       undo: () => {
-        const { history, historyIndex } = get();
-        if (historyIndex > 0) {
-          const entry = history[historyIndex - 1];
-          set((state) => {
-            state.blocks = JSON.parse(JSON.stringify(entry.blocks));
-            state.historyIndex = historyIndex - 1;
-          });
-        }
+        const state = get();
+        const index = state.history.map((entry, index) => entry.pageId === state.currentPageId && index < state.historyIndex ? index : -1).filter(index => index >= 0).at(-1);
+        if (index !== undefined) get().restoreHistory(index);
       },
 
       redo: () => {
-        const { history, historyIndex } = get();
-        if (historyIndex < history.length - 1) {
-          const entry = history[historyIndex + 1];
-          set((state) => {
-            state.blocks = JSON.parse(JSON.stringify(entry.blocks));
-            state.historyIndex = historyIndex + 1;
-          });
-        }
+        const state = get();
+        const index = state.history.findIndex((entry, index) => entry.pageId === state.currentPageId && index > state.historyIndex);
+        if (index >= 0) get().restoreHistory(index);
       },
 
-      canUndo: () => get().historyIndex > 0,
-      canRedo: () => get().historyIndex < get().history.length - 1,
+      canUndo: () => get().history.some((entry, index) => entry.pageId === get().currentPageId && index < get().historyIndex),
+      canRedo: () => get().history.some((entry, index) => entry.pageId === get().currentPageId && index > get().historyIndex),
 
-      saveHistory: () => {
-        set((state) => {
-          const entry: HistoryEntry = {
-            pageId: state.currentPageId,
-            blocks: JSON.parse(JSON.stringify(state.blocks)),
-            timestamp: Date.now(),
-            action: 'manual',
-            blockCount: state.blocks.length,
-          };
-          state.history = state.history.slice(0, state.historyIndex + 1);
-          state.history.push(entry);
-          state.historyIndex++;
-          if (state.history.length > 50) {
-            state.history = state.history.slice(-50);
-            state.historyIndex = state.history.length - 1;
-          }
+      saveHistory: (action = '编辑', pageId = get().currentPageId) => {
+        const blocks = pageId === get().currentPageId ? get().blocks : get().pageBlocks[pageId];
+        if (!blocks) return;
+        set(state => {
+          const current = state.history[pageId === state.currentPageId ? state.historyIndex : state.history.map(entry => entry.pageId).lastIndexOf(pageId)];
+          if (current?.pageId === pageId && JSON.stringify(current.blocks) === JSON.stringify(blocks)) return;
+          if (pageId === state.currentPageId) state.history = state.history.filter((entry, index) => entry.pageId !== pageId || index <= state.historyIndex);
+          state.history.push({ pageId, blocks: JSON.parse(JSON.stringify(blocks)), timestamp: Date.now(), action, blockCount: blocks.length });
+          if (state.history.length > 50) state.history = state.history.slice(-50);
+          state.historyIndex = state.history.map(entry => entry.pageId).lastIndexOf(state.currentPageId);
         });
       },
 
@@ -809,8 +862,10 @@ export const useBlockStore = create<BlockStore>()(
           if (block.parentId === prevBlock.id) return;
           block.parentId = prevBlock.id;
           block.updatedAt = Date.now();
+          state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
         });
-        get().saveHistory();
+        get().saveHistory('编辑');
+        triggerDebouncedSave();
       },
 
       outdentBlock: (id) => {
@@ -824,8 +879,10 @@ export const useBlockStore = create<BlockStore>()(
             block.y = parent.y || 40;
           }
           block.updatedAt = Date.now();
+          state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
         });
-        get().saveHistory();
+        get().saveHistory('编辑');
+        triggerDebouncedSave();
       },
 
       getBlockDepth: (id) => getBlockDepthInBlocks(get().blocks, id),
@@ -1012,9 +1069,11 @@ export const useBlockStore = create<BlockStore>()(
 
         set((state) => {
           state.blocks = newBlocks;
+          state.pageBlocks[state.currentPageId] = newBlocks;
           state.selectedIds = [];
         });
         get().saveHistory();
+        triggerDebouncedSave();
       },
 
       importFromCsv: (csv) => {
@@ -1049,8 +1108,10 @@ export const useBlockStore = create<BlockStore>()(
         block.content = JSON.stringify({ headers, rows });
         set((state) => {
           state.blocks.push(block);
+          state.pageBlocks[state.currentPageId] = state.blocks;
         });
         get().saveHistory();
+        triggerDebouncedSave();
       },
 
       importImage: (base64, caption) => {
@@ -1064,8 +1125,10 @@ export const useBlockStore = create<BlockStore>()(
         block.meta.caption = caption;
         set((state) => {
           state.blocks.push(block);
+          state.pageBlocks[state.currentPageId] = state.blocks;
         });
         get().saveHistory();
+        triggerDebouncedSave();
       },
 
       importFromJson: (jsonStr, mode = 'replace') => {
@@ -1107,9 +1170,11 @@ export const useBlockStore = create<BlockStore>()(
               state.blocks = normalizedBlocks;
               state.selectedIds = [];
             }
+            state.pageBlocks[state.currentPageId] = state.blocks;
           });
 
           get().saveHistory();
+          triggerDebouncedSave();
           return { success: true, count: normalizedBlocks.length };
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : 'JSON 解析失败';
@@ -1161,8 +1226,10 @@ export const useBlockStore = create<BlockStore>()(
         }
       },
 
-      syncToServer: async () => {
-        const { currentPageId, blocks, currentUserId } = get();
+      syncToServer: async (pageId) => {
+        const { currentUserId } = get();
+        const currentPageId = pageId || get().currentPageId;
+        const blocks = JSON.parse(JSON.stringify(currentPageId === get().currentPageId ? get().blocks : get().pageBlocks[currentPageId] || []));
         if (!currentPageId) return;
 
         set((state) => {
@@ -1170,8 +1237,17 @@ export const useBlockStore = create<BlockStore>()(
           state.saveError = null;
         });
 
+        const key = `${currentUserId}:${currentPageId}`;
+        const previous = pageWrites.get(key);
+        let release!: () => void;
+        const completed = new Promise<void>(resolve => { release = resolve; });
+        pageWrites.set(key, completed);
         try {
-          const res = await fetch(`/api/pages/${currentPageId}/blocks`, {
+          await previous;
+          const created = pageCreates.get(currentPageId);
+          if (created && !await created) throw new Error('文档创建失败，请重试保存');
+          if (get().currentUserId !== currentUserId) return;
+          const res = await fetch(`/api/pages/${encodeURIComponent(currentPageId)}/blocks`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ blocks }),
@@ -1182,6 +1258,7 @@ export const useBlockStore = create<BlockStore>()(
             throw new Error(errData.error || `保存失败 HTTP ${res.status}`);
           }
 
+          if (get().currentUserId !== currentUserId) return;
           set((state) => {
             state.saveStatus = 'saved';
             state.lastSavedAt = Date.now();
@@ -1215,6 +1292,7 @@ export const useBlockStore = create<BlockStore>()(
             }
           }
         } catch (err) {
+          if (get().currentUserId !== currentUserId) return;
           const msg = err instanceof Error ? err.message : String(err);
           console.error('Sync failed:', msg);
           set((state) => {
@@ -1229,12 +1307,16 @@ export const useBlockStore = create<BlockStore>()(
                 'block-os-offline-pending',
                 JSON.stringify({
                   pageId: currentPageId,
-                  blocks: get().blocks,
+                  blocks,
+                  userId: currentUserId,
                   savedAt: Date.now(),
                 })
               );
             } catch {}
           }
+        } finally {
+          release();
+          if (pageWrites.get(key) === completed) pageWrites.delete(key);
         }
       },
 
@@ -1243,38 +1325,17 @@ export const useBlockStore = create<BlockStore>()(
       },
 
       loadFromServer: async (pageId) => {
+        const userId = get().currentUserId;
         try {
-          const res = await fetch(`/api/pages/${pageId}/blocks`);
-          if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data.blocks) && data.blocks.length > 0) {
-              set((state) => {
-                state.pageBlocks[pageId] = data.blocks;
-                if (state.currentPageId === pageId) {
-                  state.blocks = data.blocks;
-                }
-              });
-            } else if (Array.isArray(data.blocks) && data.blocks.length === 0) {
-              // 关键防御：如果服务端返回 0 个 block，但本地当前页面已有 block（或官方指南），
-              // 绝不可用空数组抹去本地数据！
-              const currentLocal = get().pageBlocks[pageId] || (get().currentPageId === pageId ? get().blocks : []);
-              if (currentLocal && currentLocal.length > 0) {
-                await get().syncToServer();
-              } else if (pageId === 'doc-guide' || pageId.includes('guide')) {
-                const guideBlocks = getPresetDocumentBlocks('doc-guide');
-                set((state) => {
-                  state.pageBlocks[pageId] = guideBlocks;
-                  if (state.currentPageId === pageId) {
-                    state.blocks = guideBlocks;
-                  }
-                });
-                await get().syncToServer();
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Load failed:', err);
-        }
+          const response = await fetch(`/api/pages/${encodeURIComponent(pageId)}/blocks`);
+          if (!response.ok) throw new Error('文档加载失败');
+          const data = await response.json();
+          if (get().currentUserId !== userId || !Array.isArray(data.blocks)) return;
+          set(state => {
+            state.pageBlocks[pageId] = data.blocks;
+            if (state.currentPageId === pageId) state.blocks = data.blocks;
+          });
+        } catch (error) { console.error('Load failed:', error); }
       },
 
       syncPages: async () => {
@@ -1352,14 +1413,37 @@ export const useBlockStore = create<BlockStore>()(
         pageBlocks: state.pageBlocks,
         currentUserId: state.currentUserId,
         agentRules: state.agentRules,
+        agentLogs: state.agentLogs.slice(0, 50),
         agentEnabled: state.agentEnabled,
+        history: state.history.slice(-30),
+        historyIndex: state.historyIndex,
         blockDependencies: state.blockDependencies,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state._hydrated = true;
+          if (state.currentPageId && state.pageBlocks?.[state.currentPageId]) {
+            state.blocks = JSON.parse(JSON.stringify(state.pageBlocks[state.currentPageId]));
+          }
         }
       },
     }
   )
 );
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    const state = useBlockStore.getState();
+    for (const [key, timer] of saveTimers) {
+      clearTimeout(timer);
+      const prefix = `${state.currentUserId}:`;
+      if (!key.startsWith(prefix)) continue;
+      const pageId = key.slice(prefix.length);
+      const blocks = pageId === state.currentPageId ? state.blocks : state.pageBlocks[pageId];
+      if (!blocks) continue;
+      const body = JSON.stringify({ blocks });
+      if (new Blob([body]).size <= 60000) void fetch(`/api/pages/${encodeURIComponent(pageId)}/blocks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+    }
+    saveTimers.clear();
+  });
+}
