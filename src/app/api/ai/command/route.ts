@@ -1,17 +1,22 @@
 import { streamText } from 'ai';
 import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
+import {
+  BLOCKOS_CORE_IDENTITY,
+  BLOCKOS_BLOCK_TYPES_INFO,
+  BLOCKOS_CANVAS_CAPABILITIES,
+} from '@/config/blockos-knowledge';
 
 export async function POST(req: Request) {
   try {
     const { command, blocks } = await req.json();
 
-    const prompt = buildCommandPrompt(command, blocks);
+    const prompt = buildCommandPrompt(command || '', blocks || []);
 
     const result = streamText({
       model: siliconflow(AI_MODEL),
       prompt,
       temperature: 0.2,
-      maxOutputTokens: 1500,
+      maxOutputTokens: 2048,
     });
 
     return result.toTextStreamResponse();
@@ -21,68 +26,87 @@ export async function POST(req: Request) {
   }
 }
 
-function buildCommandPrompt(command: string, blocks: Array<{ id: string; type: string; content: string; title?: string }>): string {
+function buildCommandPrompt(
+  command: string,
+  blocks: Array<{ id: string; type: string; content: string; title?: string; parentId?: string | null }>
+): string {
   const blocksInfo = blocks
-    .map((b) => `  { "id": "${b.id}", "type": "${b.type}", "title": "${b.title || ''}", "content": "${b.content.substring(0, 80).replace(/"/g, '\\"')}" }`)
+    .map(
+      (b) =>
+        `  { "id": "${b.id}", "type": "${b.type}", "title": "${b.title || ''}", "parentId": ${
+          b.parentId ? `"${b.parentId}"` : 'null'
+        }, "content": "${b.content.substring(0, 100).replace(/"/g, '\\"')}" }`
+    )
     .join(',\n');
 
   const blockCount = blocks.length;
 
-  return `你是一个 BlockOS 画布协同操作系统的核心智能调度 Agent。你需要将用户的自然语言意图精准解析为一系列可直接执行的操作指令 JSON 数组。
+  return `你是一个运行在 BlockOS 知识操作系统画布中的核心智能调度 Agent（AI 助手）。
+你的职责是作为用户的画布协同副驾，深度感知当前画布状态，并具备直接操控、编排、修改和查询 BlockOS 画布的真实能力。
+
+${BLOCKOS_CORE_IDENTITY}
+
+${BLOCKOS_BLOCK_TYPES_INFO}
+
+${BLOCKOS_CANVAS_CAPABILITIES}
 
 当前画布状态：
 - 共有 ${blockCount} 个 Block 卡片
 - Block 列表：[
-${blocksInfo}
+${blocksInfo || '  (当前画布为空)'}
 ]
 
-用户指令："${command}"
+用户输入："${command}"
 
-支持的操作类型：
-1. createBlock: 创建新的 Block
-   - content: 详细内容（必须）
-   - type: "text" | "todo" | "code" | "table" | "whiteboard"（可选，默认 "text"）
-   - title: 卡片标题（可选）
-   - parentTarget: 若指定，可自动作为该父 Block 的子 Block（提供父 Block 的 id 或匹配标题/内容关键词）
-2. setParent: 将已有 Block 设为指定父 Block 的子 Block
-   - childTarget: 待设置 Block 的 id 或匹配关键词（必须）
-   - parentTarget: 目标父 Block 的 id 或匹配关键词（必须）
-3. outdentBlock: 将指定 Block 移出子 Block 结构，提升为画布独立卡片
-   - target: 目标 Block 的 id 或匹配关键词（必须）
-4. createSubBlock: 直接在指定父 Block 下创建子 Block
-   - parentTarget: 目标父 Block 的 id 或匹配关键词（必须）
-   - content: 子 Block 内容（必须）
-   - title: 标题（可选）
-   - type: 类型（可选）
-5. batchCreateHierarchy: 批量创建一套完整的父子层级卡片树（如创建1个需求父卡片，并自动挂载多个子任务/子卡片）
-   - parent: { title: "父卡片标题", content: "父卡片内容", type?: "text" | "todo" }
-   - children: [
-       { title: "子项1标题", content: "子项1内容", type?: "todo" | "text" },
-       { title: "子项2标题", content: "子项2内容", type?: "todo" | "text" }
-     ]
-6. createLink: 在两个 Block 之间建立拓扑链接关系
-   - sourceTarget: 源 Block 的 id 或关键词
-   - targetTarget: 目标 Block 的 id 或关键词
-7. updateBlock: 更新 Block 的内容或属性
-   - target: block 的 id 或关键词
-   - update: { content?: "新内容", title?: "新标题" }
-8. highlightBlocks: 高亮包含关键词的 Block
-   - target: 匹配关键词
-9. deleteBlock: 删除指定 Block
-   - target: block 的 id 或关键词
-10. deleteAllBlocks: 清空所有 Block
-11. clearAllContent: 清空所有 Block 的内容
+【解析与输出协议】
+请根据用户输入的意图，严格输出单一的合法 JSON 对象（不要包裹在任何未闭合的代码块或多余字符中）：
 
-解析规则：
-- 当用户要求创建多个 Block 且要求“设为子 Block”或具备层级结构时，优先使用 batchCreateHierarchy 或带有 parentTarget 的 createBlock。
-- 当用户要求将某个已有 Block 挂载到另一个 Block 下时，使用 setParent。
-- 仔细分析用户指令中的数字（如“创建1个父Block和2个子Block”），严格输出对应数量的子项。
-- 必须只返回合法的 JSON 数组，严禁附带任何 Markdown 解释、反问或多余字符。
+模式 1：用户提出关于 BlockOS 的询问、能力介绍、使用帮助、概念咨询或画布现状提问（例如：“你能在此blockos中完成什么工作？”、“介绍一下你的能力”、“你能做什么？”、“当前画布有哪些内容？”）：
+输出 JSON 格式：
+{
+  "type": "agent_response",
+  "message": "清晰、专业且详实的回答。必须紧扣 BlockOS 原子级知识卡片与无限画布的真实能力（绝对严禁提及区块链、智能合约或 DApp）。详细阐述自己在 BlockOS 中能操控画布的四大核心维度：\n1. 全模态卡片生成（富文本、任务待办、交互式代码沙箱、多维数据表格、Mermaid 架构流程图、高亮警示等 11 种 Block）\n2. 父子层级树状结构化拆解（PRD 父卡片 + 多任务子卡片）\n3. 拓扑连线与依赖图谱治理（建立双向或单向箭头连线）\n4. 全画布检索与质量审计（高亮关键项、代码一键运行调试、批量清理重排）",
+  "actionSuggestions": [
+    { "label": "🚀 生成需求与子任务树", "command": "创建1个核心功能需求Block，并创建3个开发子任务" },
+    { "label": "💻 创建快速排序代码沙箱", "command": "创建一个包含快速排序算法的代码沙箱Block" },
+    { "label": "🔀 创建系统架构流程图", "command": "创建微服务系统架构 Mermaid 流程图" },
+    { "label": "📊 创建团队版本规划表格", "command": "创建团队版本迭代数据表格" },
+    { "label": "💡 创建高亮风险警示卡", "command": "创建一个高亮警示Block，注明交付前核心性能指标要求" }
+  ]
+}
 
-返回示例：
-[{"action":"batchCreateHierarchy","parent":{"title":"用户中心重构","content":"核心目标：完成鉴权升级与多租户权限隔离","type":"text"},"children":[{"title":"子任务1","content":"完成 JWT 与 API Key 双模鉴权中间件改造","type":"todo"},{"title":"子任务2","content":"编写 RBAC 角色权限多维矩阵用例","type":"todo"}]}]
-[{"action":"setParent","childTarget":"性能压测","parentTarget":"技术方案文档"}]
-[{"action":"createBlock","type":"text","title":"架构设计","content":"核心无界画布与原子Block体系"}]
+模式 2：用户给出明确的画布操作指令（创建、删除、修改、层级嵌套、拓扑连线、高亮、清空等）：
+支持的 actions：
+- batchCreateHierarchy: 批量创建一套完整的父子层级卡片树（如创建 1 个需求父卡片，并自动挂载多个子任务/子卡片）
+  - parent: { title: "父卡片标题", content: "父卡片内容", type?: "text" | "todo" }
+  - children: [ { title: "子项标题", content: "子项内容", type?: "todo" | "text" | "code" } ]
+- createBlock: 创建单个指定类型的 Block
+  - type: "text" | "todo" | "code" | "table" | "whiteboard" | "mindmap" | "mermaid" | "callout" | "countdown" | "bookmark"
+  - title: 卡片标题
+  - content: 卡片内容（若为 mermaid 请提供标准的 graph TD 流程图代码；若为 code 请提供标准的 JS/TS 示例代码；若为 callout 请写清警示内容）
+  - parentTarget: 若指定，可自动作为该父 Block 的子 Block
+- setParent: 将已有 Block 设为指定父 Block 的子 Block (childTarget, parentTarget)
+- outdentBlock: 将指定 Block 移出子 Block 结构 (target)
+- createSubBlock: 在指定父 Block 下创建子 Block (parentTarget, content, title, type)
+- createLink: 在两个 Block 之间建立拓扑连线 (sourceTarget, targetTarget)
+- updateBlock: 更新 Block 的内容或属性 (target, update: { content, title })
+- highlightBlocks: 高亮包含关键词的 Block (target)
+- deleteBlock: 删除指定 Block (target)
+- deleteAllBlocks: 清空所有 Block
+- clearAllContent: 清空所有 Block 的内容
 
-请输出 JSON 数组：`;
+输出 JSON 格式：
+{
+  "type": "operations",
+  "summary": "针对用户指令执行的简短客观说明（例如：已在画布上为您创建微服务架构流程图）",
+  "operations": [
+    { "action": "...", ... }
+  ]
+}
+
+【铁律】：
+1. 绝对严禁输出任何区块链相关内容！
+2. 必须且只能输出标准的 JSON 格式，不要在 JSON 前后输出任何 markdown 解释。
+
+请输出 JSON：`;
 }

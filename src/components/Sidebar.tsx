@@ -88,20 +88,20 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
 
   if (collapsed) {
     return (
-      <div className="w-12 h-full bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-700 flex flex-col items-center py-3 gap-3">
+      <div className="w-12 h-full bg-[#f7f8fa] dark:bg-[#1a1c20] border-r border-[#dee0e3] dark:border-[#33363e] flex flex-col items-center py-3 gap-3 select-none">
         <button
           onClick={onToggleCollapse}
-          className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+          className="p-1.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded-lg text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] transition-colors"
           title="展开侧边栏"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
-        <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center text-[10px] text-white font-bold">
+        <div className="w-6 h-6 bg-[#3370ff] rounded-md flex items-center justify-center text-[11px] text-white font-bold shadow-xs">
           B
         </div>
         <button
           onClick={() => handleAddPage()}
-          className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+          className="p-1.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded-lg text-[#8f959e] dark:text-[#6b7280] hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors"
           title="新建页面"
         >
           <Plus className="w-4 h-4" />
@@ -111,15 +111,15 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
   }
 
   return (
-    <div className="w-64 h-full bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-700 flex flex-col">
-      <div className="p-3 border-b border-gray-200 dark:border-zinc-700 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-gray-900 dark:text-zinc-100 font-semibold">
-          <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center text-xs text-white">B</div>
-          <span>BlockOS</span>
+    <div className="w-64 h-full bg-[#f7f8fa] dark:bg-[#1a1c20] border-r border-[#dee0e3] dark:border-[#33363e] flex flex-col select-none">
+      <div className="h-11 px-3.5 border-b border-[#dee0e3] dark:border-[#33363e] flex items-center justify-between">
+        <div className="flex items-center gap-2 text-[#1f2329] dark:text-[#f2f3f5] font-semibold text-sm">
+          <div className="w-6 h-6 bg-[#3370ff] rounded-md flex items-center justify-center text-xs text-white shadow-xs font-bold">B</div>
+          <span className="tracking-tight">BlockOS</span>
         </div>
         <button
           onClick={onToggleCollapse}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+          className="p-1 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded-md text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] transition-colors"
           title="折叠侧边栏"
         >
           <ChevronRight className="w-4 h-4" />
@@ -127,19 +127,19 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto py-2">
-        <div className="px-3 py-2 text-xs font-medium text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+        <div className="px-3.5 py-1.5 text-[11px] font-medium text-[#8f959e] dark:text-[#6b7280] tracking-wider flex items-center justify-between">
           <span>页面</span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setShowAddFolder(!showAddFolder)}
-              className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+              className="p-1 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] transition-colors"
               title="新建文件夹"
             >
               <FolderPlus className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => handleAddPage()}
-              className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
+              className="p-1 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors"
               title="新建页面"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -148,10 +148,10 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         </div>
 
         {showAddFolder && (
-          <div className="mx-3 mb-2 flex items-center gap-1">
+          <div className="mx-3 mb-2 flex items-center gap-1.5">
             <input
               autoFocus
-              className="flex-1 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded px-2 py-1 text-xs text-gray-800 dark:text-zinc-200 outline-none focus:border-blue-500/40"
+              className="flex-1 bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-md px-2 py-1 text-xs text-[#1f2329] dark:text-[#f2f3f5] outline-none focus:border-[#3370ff] transition-colors"
               placeholder="文件夹名称"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
@@ -160,7 +160,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                 if (e.key === 'Escape') { setShowAddFolder(false); setNewFolderName(''); }
               }}
             />
-            <button onClick={handleAddFolder} className="p-1 text-blue-400 hover:text-blue-300">
+            <button onClick={handleAddFolder} className="p-1 text-[#3370ff] hover:text-[#215fe9]">
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -170,26 +170,26 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           const folderPages = pages.filter((p) => p.folderId === folder.id);
           return (
             <div key={folder.id} className="mb-1">
-              <div className="group mx-2 rounded-md flex items-center gap-1.5 px-2 py-1 text-sm text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200 transition-colors">
+              <div className="group mx-2 rounded-md flex items-center gap-1.5 px-2 py-1.5 text-xs text-[#646a73] dark:text-[#9ca3af] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] hover:bg-[#eff0f2]/70 dark:hover:bg-[#282a30]/70 transition-colors">
                 <button
                   onClick={() => toggleFolderCollapse(folder.id)}
-                  className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded"
+                  className="p-0.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded"
                 >
                   {folder.collapsed ? (
-                    <ChevronRight className="w-3 h-3" />
+                    <ChevronRight className="w-3 h-3 text-[#8f959e]" />
                   ) : (
-                    <ChevronDown className="w-3 h-3" />
+                    <ChevronDown className="w-3 h-3 text-[#8f959e]" />
                   )}
                 </button>
                 {folder.collapsed ? (
-                  <Folder className="w-3.5 h-3.5" />
+                  <Folder className="w-3.5 h-3.5 text-[#8f959e]" />
                 ) : (
-                  <FolderOpen className="w-3.5 h-3.5" />
+                  <FolderOpen className="w-3.5 h-3.5 text-[#3370ff]" />
                 )}
                 {editingFolderId === folder.id ? (
                   <input
                     autoFocus
-                    className="flex-1 bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded px-1 py-0.5 text-xs text-gray-800 dark:text-zinc-200 outline-none"
+                    className="flex-1 bg-white dark:bg-[#1f2125] border border-[#3370ff] rounded px-1.5 py-0.5 text-xs text-[#1f2329] dark:text-[#f2f3f5] outline-none"
                     value={editFolderName}
                     onChange={(e) => setEditFolderName(e.target.value)}
                     onBlur={handleSaveFolderEdit}
@@ -206,18 +206,18 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                     {folder.name}
                   </span>
                 )}
-                <span className="text-[10px] text-gray-400 dark:text-zinc-600">{folderPages.length}</span>
+                <span className="text-[10px] text-[#8f959e] dark:text-[#6b7280]">{folderPages.length}</span>
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleAddPage(folder.id)}
-                    className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300"
+                    className="p-0.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#3370ff] dark:hover:text-[#4b85ff]"
                     title="在此文件夹新建页面"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
                   <button
                     onClick={() => deleteFolder(folder.id)}
-                    className="p-0.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded text-gray-400 dark:text-zinc-500 hover:text-red-400"
+                    className="p-0.5 hover:bg-[#eff0f2] dark:hover:bg-[#282a30] rounded text-[#8f959e] dark:text-[#6b7280] hover:text-[#d64b42]"
                     title="删除文件夹"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -246,7 +246,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
                 />
               ))}
               {folderPages.length === 0 && !folder.collapsed && (
-                <div className="ml-8 mr-2 px-2 py-1 text-[10px] text-gray-400 dark:text-zinc-600 italic">将页面移动到文件夹</div>
+                <div className="ml-8 mr-2 px-2 py-1 text-[11px] text-[#8f959e] dark:text-[#6b7280] italic">将页面移动到文件夹</div>
               )}
             </div>
           );
@@ -311,10 +311,10 @@ function PageItem({
   return (
     <div
       data-page-id={page.id}
-      className={`group relative mx-2 ml-6 rounded-md flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer transition-colors ${
+      className={`group relative mx-2 ml-5 rounded-md flex items-center gap-2 px-2.5 py-1.5 text-xs cursor-pointer transition-colors ${
         isActive
-          ? 'bg-gray-200 dark:bg-zinc-700 text-gray-900 dark:text-zinc-100'
-          : 'text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-zinc-100'
+          ? 'bg-[#eff4ff] dark:bg-blue-500/15 text-[#3370ff] dark:text-[#4b85ff] font-medium'
+          : 'text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff0f2]/70 dark:hover:bg-[#282a30]/70'
       }`}
       onClick={onSelect}
     >
@@ -322,7 +322,7 @@ function PageItem({
       {editingId === page.id ? (
         <input
           autoFocus
-          className="flex-1 bg-transparent outline-none text-gray-900 dark:text-zinc-100 min-w-0 text-xs"
+          className="flex-1 bg-white dark:bg-[#1f2125] border border-[#3370ff] rounded px-1.5 py-0.5 outline-none text-[#1f2329] dark:text-[#f2f3f5] min-w-0 text-xs"
           value={editTitle}
           onChange={(e) => onEditChange(e.target.value)}
           onBlur={onSaveEdit}
@@ -335,48 +335,48 @@ function PageItem({
 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          className="p-0.5 rounded hover:bg-gray-300 dark:hover:bg-zinc-600 text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200"
+          className="p-1 rounded hover:bg-[#eff0f2] dark:hover:bg-[#282a30] text-[#8f959e] dark:text-[#6b7280] hover:text-[#1f2329] dark:hover:text-[#f2f3f5]"
           onClick={(e) => {
             e.stopPropagation();
             onMenuToggle();
           }}
         >
-          <MoreHorizontal className="w-3 h-3" />
+          <MoreHorizontal className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {menuOpenId === page.id && typeof document !== 'undefined' && createPortal(
         <>
           <div className="fixed inset-0 z-[180]" onClick={() => { setShowFolderPicker(false); onMenuToggle(); }} />
-          <div className="fixed z-[190] bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md shadow-lg py-1 w-36"
+          <div className="fixed z-[190] bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-card-hover py-1 w-36 animate-in fade-in zoom-in-95 duration-100"
             style={{ top: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().bottom ?? 0) + 4 : 0), left: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().right ?? 0) - 144 : 0) }}
           >
             <button
-              className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
+              className="w-full px-3 py-1.5 text-left text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 hover:text-[#3370ff] dark:hover:text-[#4b85ff] flex items-center gap-2 transition-colors"
               onClick={(e) => { e.stopPropagation(); onStartEdit(); onMenuToggle(); }}
             >
-              <FileText className="w-3 h-3" />
+              <FileText className="w-3.5 h-3.5 text-[#8f959e]" />
               重命名
             </button>
             <div className="relative">
               <button
-                className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
+                className="w-full px-3 py-1.5 text-left text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 hover:text-[#3370ff] dark:hover:text-[#4b85ff] flex items-center gap-2 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowFolderPicker(!showFolderPicker);
                 }}
               >
-                <Folder className="w-3 h-3" />
+                <Folder className="w-3.5 h-3.5 text-[#8f959e]" />
                 移动到...
               </button>
               {showFolderPicker && typeof document !== 'undefined' && createPortal(
                 <>
                   <div className="fixed inset-0 z-[200]" onClick={() => setShowFolderPicker(false)} />
-                  <div className="fixed z-[210] bg-white dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md shadow-lg py-1 w-32"
+                  <div className="fixed z-[210] bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-card-hover py-1 w-32 animate-in fade-in zoom-in-95 duration-100"
                     style={{ top: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().bottom ?? 0) + 4 : 0), left: (typeof window !== 'undefined' ? (document.querySelector(`[data-page-id="${page.id}"]`)?.getBoundingClientRect().right ?? 0) - 144 + 144 + 4 : 0) }}
                   >
                     <button
-                      className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600"
+                      className="w-full px-3 py-1.5 text-left text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors"
                       onClick={(e) => { e.stopPropagation(); onMoveToFolder(undefined); setShowFolderPicker(false); onMenuToggle(); }}
                     >
                       无文件夹
@@ -384,7 +384,7 @@ function PageItem({
                     {folders.map((f) => (
                       <button
                         key={f.id}
-                        className="w-full px-3 py-1.5 text-left text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-600"
+                        className="w-full px-3 py-1.5 text-left text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors"
                         onClick={(e) => { e.stopPropagation(); onMoveToFolder(f.id); setShowFolderPicker(false); onMenuToggle(); }}
                       >
                         {f.name}
@@ -397,10 +397,10 @@ function PageItem({
             </div>
             {hasMultiplePages && (
               <button
-                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-gray-100 dark:hover:bg-zinc-600 flex items-center gap-2"
+                className="w-full px-3 py-1.5 text-left text-xs text-[#d64b42] dark:text-rose-400 hover:bg-[#fff5f4] dark:hover:bg-rose-950/20 flex items-center gap-2 transition-colors"
                 onClick={(e) => { e.stopPropagation(); onDelete(); onMenuToggle(); }}
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3.5 h-3.5" />
                 删除
               </button>
             )}

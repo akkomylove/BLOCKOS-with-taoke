@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
 import { validateInputSafety, AISafetyViolationError } from '@/lib/ai/safety-filter';
 import { getUserId } from '@/lib/auth-utils';
+import { BLOCKOS_CORE_IDENTITY } from '@/config/blockos-knowledge';
 
 export async function POST(req: Request) {
   let userId: string;
@@ -24,9 +25,10 @@ export async function POST(req: Request) {
       contexts: context ? [context] : [],
     });
 
-    const systemPrompt = context
-      ? `请根据以下上下文和用户需求生成内容。\n\n上下文：\n${context}\n\n用户需求：${prompt}`
-      : prompt;
+    const systemPrompt = `【系统背景】\n${BLOCKOS_CORE_IDENTITY}\n\n`
+      + (context
+        ? `请根据以下上下文和用户需求生成内容。\n\n上下文：\n${context}\n\n用户需求：${prompt}`
+        : `用户需求：${prompt}`);
 
     const result = streamText({
       model: siliconflow(AI_MODEL),

@@ -2,6 +2,7 @@ import { postJsonCompletion, parseJsonContent } from './client';
 import type { ChatRequest, ChatResponse } from './types';
 import { validateInputSafety, sanitizeAiOutput } from './safety-filter';
 import { PERSONAL_CHAT_PRESET } from '@/config/ai-modes';
+import { BLOCKOS_CORE_IDENTITY } from '@/config/blockos-knowledge';
 
 const CHAT_ROLE_PRESETS: Record<string, { title: string; style: string }> = {
   '专业产品经理': {
@@ -36,12 +37,13 @@ export async function chat(payload: ChatRequest): Promise<ChatResponse> {
 
   const systemPrompt = (
     '你是 BlockOS 的侧边栏 AI 对话助手。'
-    + '只输出合法 JSON，不要 markdown，不要解释。'
+    + BLOCKOS_CORE_IDENTITY
+    + ' 只输出合法 JSON，不要 markdown，不要解释。'
     + (personal
-      ? '你是通用个人助手，帮助用户日常问答、学习、记录和整理思路。根据问题需要参考文档，不要默认套用职业角色、团队审阅或项目工作流。'
-      : `你的回答必须结合用户选中的文本和当前文档上下文。当前角色设定：${payload.rolePreset}。${preset.style}`)
+      ? ' 你是通用个人助手，帮助用户日常问答、学习、记录和整理思路。根据问题需要参考文档，不要默认套用职业角色、团队审阅或项目工作流。'
+      : ` 你的回答必须结合用户选中的文本和当前文档上下文。当前角色设定：${payload.rolePreset}。${preset.style}`)
     + ' 如果用户提供了多个上下文片段，要优先引用选中文本内容。'
-    + (personal ? '回答要清晰自然，贴合用户的问题。' : ' 对话内容要简洁、可执行、面向文档协作。')
+    + (personal ? ' 回答要清晰自然，贴合用户的问题。' : ' 对话内容要简洁、可执行、面向文档协作。')
   );
 
   const userPrompt = (

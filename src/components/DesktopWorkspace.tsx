@@ -86,7 +86,7 @@ export default function DesktopWorkspace() {
 
   return (
     <ThemeProvider>
-      <div className="h-screen flex bg-white text-gray-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <div className="h-screen flex bg-[#f7f8fa] text-[#1f2329] dark:bg-[#141517] dark:text-[#f2f3f5] overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} />
         <div className="flex-1 flex flex-col min-w-0">
           <Toolbar
@@ -109,7 +109,13 @@ export default function DesktopWorkspace() {
             onToggleFoldPlan={() => { if (enterprise) setShowFoldPlan(true); }}
             onToggleDocRelations={() => { if (enterprise) setShowDocRelations(true); }}
           />
-          <div role="status" className="text-sm text-red-500">{workspaceError}</div>
+          {workspaceError ? (
+            <div role="status" className="px-4 py-1.5 text-xs text-[#d64b42] bg-[#fff5f4] dark:bg-rose-950/30 border-b border-[#ffd9d5] dark:border-rose-900/40">
+              {workspaceError}
+            </div>
+          ) : (
+            <div role="status" className="sr-only" />
+          )}
           {enterprise && showLogs && <AgentLogPanel isOpen onClose={() => setShowLogs(false)} />}
           <BlockEditor
             commandPaletteOpen={showAIAssistant}

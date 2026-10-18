@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Sparkles, Send, Loader2, X, Trash2, Zap, Mic, MicOff } from 'lucide-react';
+import { Sparkles, Send, Loader2, X, Trash2, Zap, Mic, MicOff, CheckCircle2 } from 'lucide-react';
 import { useBlockStore } from '@/store/blockStore';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import type { BlockType } from '@/types/block';
@@ -11,14 +11,9 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
-const COMMAND_KEYWORDS = [
-  '删除', '高亮', '标红', '创建', '清空', '移动', '排序', '整理',
-  '添加', '修改', '更新', '移除', '全部', '所有', '新建', '生成',
-  '子', '父', '设为', '作为', '移出', '解除', '关联', '链接'
-];
-
-function isCommandIntent(input: string): boolean {
-  return COMMAND_KEYWORDS.some((kw) => input.includes(kw));
+interface ActionSuggestion {
+  label: string;
+  command: string;
 }
 
 interface Operation {
@@ -36,13 +31,47 @@ interface Operation {
   children?: Array<{ title?: string; content: string; type?: BlockType }>;
 }
 
+interface AgentResponsePayload {
+  type?: 'operations' | 'agent_response';
+  summary?: string;
+  message?: string;
+  operations?: Operation[];
+  actionSuggestions?: ActionSuggestion[];
+}
+
+function getLocalBlockOSCapabilityIntro(): { message: string; actionSuggestions: ActionSuggestion[] } {
+  return {
+    message: `我是 BlockOS 画布协同操作智能体（Agent）。BlockOS 是一个原子级 Block 知识操作系统与无限白板协同环境（非区块链系统）。
+
+我具备深度感知与操控 BlockOS 画布的真实能力：
+
+1. 🧱 **全模态卡片生成**：支持创建富文本、任务待办、交互式代码沙箱（内置可运行 JS 环境）、多维数据表格、Mermaid 架构流程图、高亮警示卡等 11 种原子 Block；
+2. 🌳 **父子层级结构化拆解**：一键将复杂业务需求拆解为「父需求卡片 + 多个子任务卡片」的树状层级，支持随时拖拽嵌套或独立移出；
+3. 🔗 **拓扑连线与依赖治理**：在需求、架构方案与测试用例之间建立可视化连线与上下游依赖关系；
+4. 🔍 **全画布检索与质量审计**：一键高亮关键风险项、筛选未完成待办，全盘批量清理或重构排布；
+5. 💻 **代码沙箱运行验证**：直接在画布中编写代码并即时运行调试查看控制台输出。
+
+你可以直接输入操作指令，或点击下方推荐操作快速体验：`,
+    actionSuggestions: [
+      { label: '🚀 生成需求与子任务树', command: '创建1个核心功能需求Block，并创建3个开发子任务' },
+      { label: '💻 创建快速排序代码沙箱', command: '创建一个包含快速排序算法的代码沙箱Block' },
+      { label: '🔀 创建系统架构流程图', command: '创建微服务系统架构 Mermaid 流程图' },
+      { label: '📊 创建团队版本规划表格', command: '创建团队版本迭代数据表格' },
+      { label: '💡 创建高亮风险警示卡', command: '创建一个高亮警示Block，注明交付前核心性能指标要求' },
+      { label: '🔍 高亮未完成待办卡片', command: '高亮所有待办' },
+    ],
+  };
+}
+
 export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState('');
   const [streamText, setStreamText] = useState('');
   const [executedOps, setExecutedOps] = useState<string[]>([]);
+  const [actionSuggestions, setActionSuggestions] = useState<ActionSuggestion[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
   const blocks = useBlockStore((state) => state.blocks);
   const updateBlock = useBlockStore((state) => state.updateBlock);
   const deleteBlock = useBlockStore((state) => state.deleteBlock);
@@ -59,9 +88,16 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       setResult('');
       setStreamText('');
       setExecutedOps([]);
+      setActionSuggestions([]);
       resetTranscript();
     }
   }, [isOpen, resetTranscript]);
+
+  useEffect(() => {
+    if (transcript && isOpen) {
+      setInput(transcript);
+    }
+  }, [transcript, isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -92,7 +128,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         case 'deleteAllBlocks': {
           const allIds = blocks.map((b) => b.id);
           allIds.forEach((id) => deleteBlock(id));
-          ops.push(`已删除 ${allIds.length} 个 Block`);
+          ops.push(`已清空画布（删除了 ${allIds.length} 个 Block）`);
           break;
         }
         case 'deleteBlock': {
@@ -113,23 +149,40 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         }
         case 'highlightBlocks':
           blocks.forEach((b) => {
-            if (b.content.includes(op.target || '') || b.title?.includes(op.target || '')) {
+            const match =
+              (b.content && b.content.includes(op.target || '')) ||
+              (b.title && b.title.includes(op.target || '')) ||
+              (op.target === '待办' && b.type === 'todo');
+            if (match) {
               updateBlock(b.id, { meta: { ...b.meta, highlight: 'red' } });
             }
           });
-          ops.push(`已高亮包含"${op.target}"的 Block`);
+          ops.push(`已高亮所有包含「${op.target}」的 Block`);
           break;
         case 'createBlock': {
           const parent = op.parentTarget ? findBlock(op.parentTarget) : undefined;
+          const blockType = op.type || 'text';
           const newX = parent ? (parent.x || 40) + (parent.width || 420) + 40 : undefined;
           const newY = parent ? parent.y || 40 : undefined;
-          const newBlockId = addBlock(op.type || 'text', parent?.id, newX && newY ? { x: newX, y: newY } : undefined);
+          const newBlockId = addBlock(blockType, parent?.id, newX && newY ? { x: newX, y: newY } : undefined);
+
+          let initialContent = op.content || '';
+          let initialTitle = op.title || '';
+
+          if (blockType === 'mermaid' && !initialContent) {
+            initialTitle = initialTitle || '系统架构流程图';
+            initialContent = `graph TD\n  Client["客户端 (Web / 移动端)"] --> Gateway["API 网关 / 鉴权"]\n  Gateway --> Core["BlockOS 核心规则引擎"]\n  Core --> AI["AI 大模型调度 Agent"]\n  Core --> DB[("PostgreSQL 混合持久化")]`;
+          } else if (blockType === 'code' && !initialContent) {
+            initialTitle = initialTitle || '交互式代码沙箱';
+            initialContent = `// 快速排序算法 (JavaScript)\nfunction quickSort(arr) {\n  if (arr.length <= 1) return arr;\n  const pivot = arr[arr.length - 1];\n  const left = [];\n  const right = [];\n  for (let i = 0; i < arr.length - 1; i++) {\n    if (arr[i] < pivot) left.push(arr[i]);\n    else right.push(arr[i]);\n  }\n  return [...quickSort(left), pivot, ...quickSort(right)];\n}\n\nconst test = [64, 34, 25, 12, 22, 11, 90];\nconsole.log("排序输入:", test);\nconsole.log("排序输出:", quickSort(test));`;
+          }
+
           updateBlock(newBlockId, {
-            title: op.title || '',
-            content: op.content || '',
+            title: initialTitle,
+            content: initialContent,
             parentId: parent?.id || null,
           });
-          ops.push(parent ? `已在「${parent.title || parent.id}」下创建子 Block` : `已创建新 Block`);
+          ops.push(parent ? `已在「${parent.title || parent.id}」下创建子 Block` : `已创建 ${blockType} Block「${initialTitle || '新卡片'}」`);
           break;
         }
         case 'setParent': {
@@ -177,8 +230,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
           const parentY = Math.max(...blocks.map((b) => b.y || 40), 0) + 260;
           const parentId = addBlock(op.parent?.type || 'text', undefined, { x: parentX, y: parentY });
           updateBlock(parentId, {
-            title: op.parent?.title || '核心需求',
-            content: op.parent?.content || '',
+            title: op.parent?.title || '核心需求与业务目标',
+            content: op.parent?.content || '通过内置 AI 智能调度自动生成的父级结构化 Block',
           });
 
           const children = op.children || [];
@@ -188,7 +241,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             const childId = addBlock(c.type || 'todo', parentId, { x: childX, y: childY });
             updateBlock(childId, {
               title: c.title || `子项 ${idx + 1}`,
-              content: c.content || '',
+              content: c.content || `自动化分解子任务 ${idx + 1}`,
               parentId,
             });
           });
@@ -217,22 +270,37 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     return ops;
   }, [blocks, updateBlock, deleteBlock, addBlock, outdentBlock, createLink]);
 
-  const executeLocalCommand = useCallback((cmd: string): string | null => {
+  const executeLocalCommand = useCallback((cmd: string): { isHandled: boolean; ops?: string[]; intro?: ReturnType<typeof getLocalBlockOSCapabilityIntro> } => {
     const trimmed = cmd.trim();
-    if (!trimmed) return null;
+    if (!trimmed) return { isHandled: false };
+
+    // 0. 询问 BlockOS 能力/功能介绍/我是谁
+    if (
+      trimmed.includes('完成什么工作') ||
+      trimmed.includes('你能做什么') ||
+      trimmed.includes('有什么能力') ||
+      trimmed.includes('具备什么能力') ||
+      trimmed.includes('你的功能') ||
+      trimmed.includes('你是谁') ||
+      trimmed.includes('介绍') ||
+      trimmed.includes('帮助') ||
+      /^(功能|能力|帮助|help|\?|？)$/i.test(trimmed)
+    ) {
+      return { isHandled: true, intro: getLocalBlockOSCapabilityIntro() };
+    }
 
     const numMap: Record<string, number> = { 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 };
 
     // 1. 删除所有
     if (/^(删除|清空)(所有|全部)(的)?(Block|块|卡片)?$/i.test(trimmed) || /^(清空画布|全部删除)$/i.test(trimmed)) {
       const ops = executeOperations([{ action: 'deleteAllBlocks' }]);
-      return ops.join('\n');
+      return { isHandled: true, ops };
     }
 
     // 2. 清空所有内容
     if (/^清空(所有|全部)(Block|块|卡片)?(的)?内容$/i.test(trimmed)) {
       const ops = executeOperations([{ action: 'clearAllContent' }]);
-      return ops.join('\n');
+      return { isHandled: true, ops };
     }
 
     // 3. 组合层级创建：如“创建1个需求Block，并创建2个子Block”
@@ -248,13 +316,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       const ops = executeOperations([{
         action: 'batchCreateHierarchy',
         parent: {
-          title: '核心需求与业务目标',
+          title: '核心业务需求 (PRD)',
           content: '通过内置 AI 智能调度自动生成的父级结构化 Block',
           type: 'text',
         },
         children: subItems,
       }]);
-      return ops.join('\n');
+      return { isHandled: true, ops };
     }
 
     // 4. 将 Block A 设为 Block B 的子 Block
@@ -263,7 +331,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       const childTarget = setParentMatch[1];
       const parentTarget = setParentMatch[2];
       const ops = executeOperations([{ action: 'setParent', childTarget, parentTarget }]);
-      return ops.join('\n');
+      return { isHandled: true, ops };
     }
 
     // 5. 移出子 Block
@@ -271,16 +339,28 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     if (outdentMatch) {
       const target = outdentMatch[1];
       const ops = executeOperations([{ action: 'outdentBlock', target }]);
-      return ops.join('\n');
+      return { isHandled: true, ops };
     }
 
-    // 6. 批量创建普通 Block
-    const createMultiMatch = trimmed.match(/^(?:创建|添加|新建)\s*(\d+|一|两|三|四|五|六|七|八|九|十)\s*个\s*(文本|代码|表格|画板|媒体)?\s*(?:Block|块|卡片)?/i);
+    // 6. 创建代码沙箱 Block
+    if (/代码.*?(沙箱|块|block)|(?:创建|新建|添加).*?代码/i.test(trimmed)) {
+      const ops = executeOperations([{ action: 'createBlock', type: 'code', title: '交互式代码沙箱' }]);
+      return { isHandled: true, ops };
+    }
+
+    // 7. 创建流程图 / 架构图 Mermaid Block
+    if (/流程图|架构图|mermaid/i.test(trimmed)) {
+      const ops = executeOperations([{ action: 'createBlock', type: 'mermaid', title: '系统架构流程图' }]);
+      return { isHandled: true, ops };
+    }
+
+    // 8. 批量创建普通 Block
+    const createMultiMatch = trimmed.match(/^(?:创建|添加|新建)\s*(\d+|一|两|三|四|五|六|七|八|九|十)\s*个\s*(文本|代码|表格|画板|媒体|待办)?\s*(?:Block|块|卡片)?/i);
     if (createMultiMatch) {
       const rawCount = createMultiMatch[1];
       const count = Math.min(Math.max(parseInt(rawCount, 10) || numMap[rawCount] || 1, 1), 20);
       const rawType = createMultiMatch[2];
-      const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media' };
+      const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media', 待办: 'todo' };
       const blockType = (rawType && typeMap[rawType]) || 'text';
 
       for (let i = 0; i < count; i++) {
@@ -288,65 +368,76 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       }
       const msg = `已创建 ${count} 个 ${rawType || '文本'} Block`;
       setExecutedOps([msg]);
-      return msg;
+      return { isHandled: true, ops: [msg] };
     }
 
-    // 7. 单个创建 Block
-    if (/^(创建|新建|添加)(一个|1个)?\s*(文本|代码|表格|画板|媒体)?\s*(?:Block|块|卡片)?/i.test(trimmed)) {
-      const typeMatch = trimmed.match(/(文本|代码|表格|画板|媒体)/);
-      const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media' };
+    // 9. 单个创建 Block
+    if (/^(创建|新建|添加)(一个|1个)?\s*(文本|代码|表格|画板|媒体|待办)?\s*(?:Block|块|卡片)?/i.test(trimmed)) {
+      const typeMatch = trimmed.match(/(文本|代码|表格|画板|媒体|待办)/);
+      const typeMap: Record<string, BlockType> = { 文本: 'text', 代码: 'code', 表格: 'table', 画板: 'whiteboard', 媒体: 'media', 待办: 'todo' };
       const blockType = (typeMatch && typeMap[typeMatch[1]]) || 'text';
       addBlock(blockType);
       const msg = `已创建 1 个 ${typeMatch ? typeMatch[1] : '文本'} Block`;
       setExecutedOps([msg]);
-      return msg;
+      return { isHandled: true, ops: [msg] };
     }
 
-    // 8. 高亮包含特定内容的 Block
+    // 10. 高亮包含特定内容的 Block
     const highlightMatch = trimmed.match(/^(?:高亮|标红)(?:包含|有)?\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:Block|块)?/i);
     if (highlightMatch && highlightMatch[1]) {
       const ops = executeOperations([{ action: 'highlightBlocks', target: highlightMatch[1] }]);
-      return ops.join('\n');
+      return { isHandled: true, ops };
     }
 
-    // 9. 删除包含特定内容的 Block
+    // 11. 删除包含特定内容的 Block
     const deleteMatch = trimmed.match(/^删除(?:包含)?\s*["'“]?([^"'”\s]+)["'”]?\s*(?:的)?(?:Block|块)?/i);
     if (deleteMatch && deleteMatch[1]) {
       const ops = executeOperations([{ action: 'deleteBlock', target: deleteMatch[1] }]);
-      return ops.join('\n');
+      return { isHandled: true, ops };
     }
 
-    return null;
+    return { isHandled: false };
   }, [executeOperations, addBlock]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+  const executeCommandOrPrompt = useCallback(async (promptText: string) => {
+    const trimmed = promptText.trim();
+    if (!trimmed || isLoading) return;
 
     setIsLoading(true);
     setResult('');
     setStreamText('');
     setExecutedOps([]);
+    setActionSuggestions([]);
 
-    const useCommand = isCommandIntent(input);
+    // 1. 本地前置极速规则匹配（包含能力介绍、本地快捷指令等）
+    const localResult = executeLocalCommand(trimmed);
+    if (localResult.isHandled) {
+      if (localResult.intro) {
+        setResult(localResult.intro.message);
+        setStreamText(localResult.intro.message);
+        setActionSuggestions(localResult.intro.actionSuggestions);
+      } else if (localResult.ops) {
+        setResult(localResult.ops.join('\n'));
+      }
+      setIsLoading(false);
+      return;
+    }
 
+    // 2. 统一调用 AI 调度 Agent 接口 (/api/ai/command)
     try {
-      const endpoint = useCommand ? '/api/ai/command' : '/api/ai/generate';
-      const body = useCommand
-        ? JSON.stringify({
-            command: input,
-            blocks: blocks.map((b) => ({
-              id: b.id,
-              type: b.type,
-              title: b.title || '',
-              content: b.content.substring(0, 200),
-            })),
-          })
-        : JSON.stringify({ prompt: input });
-
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/ai/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body,
+        body: JSON.stringify({
+          command: trimmed,
+          blocks: blocks.map((b) => ({
+            id: b.id,
+            type: b.type,
+            title: b.title || '',
+            parentId: b.parentId,
+            content: b.content.substring(0, 160),
+          })),
+        }),
       });
 
       if (!response.ok) throw new Error('Request failed');
@@ -367,47 +458,87 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
       const text = accumulated.trim();
 
-      if (useCommand) {
-        try {
-          const jsonMatch = text.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            const operations = JSON.parse(jsonMatch[0]) as Operation[];
-            const ops = executeOperations(operations);
-            setResult(ops.join('\n') || '命令已执行');
-          } else {
-            // 本地规则兜底执行
-            const fallbackOps = executeLocalCommand(input);
-            setResult(fallbackOps || text || '命令已处理');
+      // 3. 尝试解析 Agent 输出的 JSON
+      let parsedJson: AgentResponsePayload | Operation[] | null = null;
+      try {
+        const objMatch = text.match(/\{[\s\S]*\}/);
+        const arrMatch = text.match(/\[[\s\S]*\]/);
+        if (objMatch) {
+          parsedJson = JSON.parse(objMatch[0]);
+        } else if (arrMatch) {
+          parsedJson = JSON.parse(arrMatch[0]);
+        }
+      } catch {
+        parsedJson = null;
+      }
+
+      if (parsedJson) {
+        if (!Array.isArray(parsedJson) && parsedJson.type === 'agent_response') {
+          // Agent 问答与能力展示
+          const msg = parsedJson.message || text;
+          setResult(msg);
+          setStreamText(msg);
+          if (Array.isArray(parsedJson.actionSuggestions)) {
+            setActionSuggestions(parsedJson.actionSuggestions);
           }
-        } catch {
-          const fallbackOps = executeLocalCommand(input);
-          setResult(fallbackOps || text || '命令已处理');
+        } else if (!Array.isArray(parsedJson) && parsedJson.type === 'operations') {
+          // Agent 画布指令执行
+          if (Array.isArray(parsedJson.operations)) {
+            const ops = executeOperations(parsedJson.operations);
+            setResult(parsedJson.summary || ops.join('\n') || '操作已执行');
+          }
+        } else if (Array.isArray(parsedJson)) {
+          // 纯操作数组兼容
+          const ops = executeOperations(parsedJson);
+          setResult(ops.join('\n') || '操作已执行');
+        } else {
+          setResult(text);
+          setStreamText(text);
         }
       } else {
-        const finalText = text || `【AI 快速生成记录】\n已针对输入「${input}」就绪。\n点击下方「保留并插入画布」可将内容直接实例化为画布 Block。`;
-        setResult(finalText);
-        setStreamText(finalText);
+        // 未解析为 JSON 的自然语言文本回复
+        setResult(text);
+        setStreamText(text);
       }
     } catch (error) {
       console.error('AI Error:', error);
-      if (useCommand) {
-        const fallbackOps = executeLocalCommand(input);
-        setResult(fallbackOps || '命令分析完毕，未能匹配到有效 Block 操作。');
-      } else {
-        const fallbackText = `【AI 快速记录】\n内容：「${input}」\n点击下方「保留并插入画布」可直接写入画布。`;
-        setResult(fallbackText);
-        setStreamText(fallbackText);
-      }
+      // 网络或异常时兜底
+      const fallback = getLocalBlockOSCapabilityIntro();
+      setResult(fallback.message);
+      setStreamText(fallback.message);
+      setActionSuggestions(fallback.actionSuggestions);
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, blocks, executeOperations, executeLocalCommand]);
+  }, [isLoading, blocks, executeLocalCommand, executeOperations]);
+
+  const handleSubmit = useCallback(() => {
+    executeCommandOrPrompt(input);
+  }, [input, executeCommandOrPrompt]);
+
+  const handleExecuteSuggestion = useCallback((cmd: string) => {
+    setInput(cmd);
+    executeCommandOrPrompt(cmd);
+  }, [executeCommandOrPrompt]);
 
   const handleKeep = useCallback(() => {
     if (streamText) {
-      const newBlockId = addBlock('text');
+      let blockType: BlockType = 'text';
+      let cleanContent = streamText;
+
+      // 智能感知内容类型
+      if (/^graph\s+(TD|LR|TB)|sequenceDiagram|classDiagram/m.test(streamText)) {
+        blockType = 'mermaid';
+      } else if (/^```(javascript|typescript|js|ts)?\n[\s\S]*\n```$/m.test(streamText)) {
+        blockType = 'code';
+        cleanContent = streamText.replace(/^```[a-z]*\n/i, '').replace(/\n```$/, '');
+      } else if (/^- \[[ x]\]/m.test(streamText)) {
+        blockType = 'todo';
+      }
+
+      const newBlockId = addBlock(blockType);
       setTimeout(() => {
-        updateBlock(newBlockId, { content: streamText });
+        updateBlock(newBlockId, { content: cleanContent });
       }, 0);
     }
     onClose();
@@ -416,19 +547,21 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-gray-200 dark:border-zinc-700/50 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden animate-scale-in">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-200 dark:border-zinc-800/60">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+        {/* 顶部标题栏 */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-200 dark:border-zinc-800/60 bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-sm">
             <Zap className="w-3.5 h-3.5 text-white" />
           </div>
-          <div>
-            <span className="text-sm font-medium text-gray-800 dark:text-zinc-200">AI 助手</span>
-            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/20">Agent</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-800 dark:text-zinc-200">AI 助手</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-medium">Canvas Agent</span>
           </div>
         </div>
 
+        {/* 指令输入框 */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-zinc-800/60">
           <input
             ref={inputRef}
@@ -439,7 +572,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
               if (e.key === 'Enter') handleSubmit();
               if (e.key === 'Escape') onClose();
             }}
-            placeholder="输入命令，例如：删除所有 Block、创建 3 个文本 Block、高亮包含风险的 Block..."
+            placeholder="输入指令或提问，例如：你能在此完成什么工作？、创建需求与3个子任务、清空画布..."
             className="flex-1 bg-transparent outline-none text-gray-800 dark:text-zinc-200 placeholder-gray-400 dark:placeholder-zinc-600 text-sm"
           />
           {isSupported && (
@@ -454,14 +587,14 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             </button>
           )}
           {isLoading ? (
-            <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+            <Loader2 className="w-4 h-4 text-purple-500 animate-spin" />
           ) : (
             <button
               onClick={handleSubmit}
               disabled={!input.trim()}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors disabled:opacity-30"
+              className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors disabled:opacity-30 text-purple-600 dark:text-purple-400"
             >
-              <Send className="w-4 h-4 text-purple-400" />
+              <Send className="w-4 h-4" />
             </button>
           )}
           <button
@@ -472,56 +605,82 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
           </button>
         </div>
 
+        {/* 画布操作成功反馈 */}
         {executedOps.length > 0 && (
-          <div className="px-5 py-3 border-t border-gray-200 dark:border-zinc-800/60 bg-emerald-500/5">
+          <div className="px-5 py-3 border-t border-emerald-500/20 bg-emerald-500/10 dark:bg-emerald-950/20">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-4 h-4 rounded bg-emerald-500/20 flex items-center justify-center">
-                <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-              </div>
-              <span className="text-xs text-emerald-400 font-medium">操作已执行</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">画布操作已执行</span>
             </div>
             <div className="space-y-1">
               {executedOps.map((op, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs text-gray-500 dark:text-zinc-400">
-                  <Trash2 className="w-3 h-3 text-gray-400 dark:text-zinc-600" />
-                  {op}
+                <div key={i} className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  <Sparkles className="w-3 h-3 text-emerald-500" />
+                  <span>{op}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* 智能体文本输出与解答展示 */}
         {(streamText || result) && !executedOps.length && (
-          <div className="px-5 py-3 text-sm text-gray-700 dark:text-zinc-300 border-t border-gray-200 dark:border-zinc-800/60 bg-gray-50/30 dark:bg-zinc-950/30 max-h-48 overflow-y-auto">
-            <div className="whitespace-pre-wrap leading-relaxed">
+          <div className="px-5 py-4 text-sm text-gray-700 dark:text-zinc-300 border-t border-gray-200 dark:border-zinc-800/60 bg-gray-50/40 dark:bg-zinc-950/40 max-h-64 overflow-y-auto">
+            <div className="whitespace-pre-wrap leading-relaxed font-sans text-xs sm:text-sm">
               {streamText || result}
               {isLoading && (
-                <span className="inline-block w-0.5 h-4 bg-purple-400 ml-0.5 align-text-bottom animate-cursor-blink" />
+                <span className="inline-block w-1 h-4 bg-purple-500 ml-1 align-text-bottom animate-pulse" />
               )}
             </div>
           </div>
         )}
 
-        {!isLoading && streamText && !executedOps.length && (
+        {/* 一键快捷操作建议芯片 */}
+        {actionSuggestions.length > 0 && (
+          <div className="px-5 py-3 border-t border-purple-200/60 dark:border-purple-900/40 bg-purple-50/30 dark:bg-purple-950/20">
+            <div className="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-2 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+              <span>推荐操作（点击直接在画布中执行生效）：</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {actionSuggestions.map((sug, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleExecuteSuggestion(sug.command)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-purple-200 dark:border-purple-800/60 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-800 dark:text-zinc-200 transition-all shadow-sm flex items-center gap-1.5 active:scale-95 text-left font-medium"
+                >
+                  <span>{sug.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 文本类回复的底部保留操作 */}
+        {!isLoading && streamText && !executedOps.length && actionSuggestions.length === 0 && (
           <div className="flex gap-2 px-5 py-3 border-t border-gray-200 dark:border-zinc-800/60">
             <button
               onClick={handleKeep}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm rounded-lg transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
             >
               创建为 Block
             </button>
             <button
-              onClick={() => { setStreamText(''); setResult(''); }}
-              className="flex-1 px-3 py-2 bg-gray-100/60 dark:bg-zinc-800/60 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-500 dark:text-zinc-400 text-sm rounded-lg transition-colors"
+              onClick={() => {
+                setStreamText('');
+                setResult('');
+              }}
+              className="flex-1 px-3 py-2 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-400 text-sm rounded-lg transition-colors"
             >
               清除
             </button>
           </div>
         )}
 
-        <div className="px-5 py-2.5 bg-gray-50/40 dark:bg-zinc-950/40 text-[11px] text-gray-400 dark:text-zinc-600">
-          <span className="text-gray-500 dark:text-zinc-500">示例：</span>
-          「删除所有 Block」「创建 3 个文本 Block」「高亮所有包含合规的 Block」「写一篇关于人工智能的简短介绍」
+        {/* 底部功能提示与真实示例 */}
+        <div className="px-5 py-2.5 bg-gray-50 dark:bg-zinc-950/60 text-[11px] text-gray-500 dark:text-zinc-400 border-t border-gray-100 dark:border-zinc-800/40">
+          <span className="font-semibold text-gray-600 dark:text-zinc-300">示例：</span>
+          「你能在此完成什么工作？」「创建1个需求并创建3个子任务」「创建代码沙箱」「画一个微服务架构流程图」「高亮所有包含待办的Block」
         </div>
       </div>
     </div>

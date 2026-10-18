@@ -926,32 +926,32 @@ export default function BlockEditor({
         <div className="h-full flex-1 flex flex-col min-h-0 w-full relative">
           {dropTargetId === block.id && (
             <div className="absolute inset-x-2 -top-3.5 z-30 flex items-center justify-center pointer-events-none">
-              <span className="px-2.5 py-1 text-[11px] font-semibold bg-blue-600 text-white rounded-full shadow-lg border border-blue-400 flex items-center gap-1.5 animate-bounce">
+              <span className="px-2.5 py-1 text-[11px] font-semibold bg-[#3370ff] text-white rounded-full shadow-lg border border-blue-400 flex items-center gap-1.5 animate-bounce">
                 <span>📥 松开鼠标：快捷归属为子 Block</span>
               </span>
             </div>
           )}
           <div
-            className={`h-full flex-1 flex flex-col min-h-0 rounded-lg border transition-all ${
+            className={`h-full flex-1 flex flex-col min-h-0 rounded-xl border transition-all ${
               dropTargetId === block.id
-                ? 'border-blue-500 ring-4 ring-blue-500/35 bg-blue-50/40 dark:bg-blue-950/20 shadow-xl shadow-blue-500/20'
+                ? 'border-[#3370ff] ring-4 ring-[#3370ff]/30 bg-[#eff4ff]/60 dark:bg-blue-950/20 shadow-xl shadow-blue-500/20'
                 : selectedIds.includes(block.id)
-                  ? 'border-blue-500 ring-2 ring-blue-500/25 shadow-lg shadow-blue-500/10'
+                  ? 'border-[#3370ff] ring-2 ring-[#3370ff]/20 shadow-card-hover'
                   : isChild
-                    ? 'border-blue-300/60 dark:border-zinc-700/80 bg-gray-50/95 dark:bg-zinc-900/95 shadow-xs'
-                    : 'border-gray-300/60 dark:border-zinc-700/60 hover:border-gray-400/60 dark:hover:border-zinc-600/60 bg-white dark:bg-zinc-900'
+                    ? 'border-[#c2d6ff]/70 dark:border-[#33363e] bg-[#f9fbff]/95 dark:bg-[#1a1c20]/95 shadow-xs'
+                    : 'border-[#dee0e3] dark:border-[#33363e] hover:border-[#a6b0c3] dark:hover:border-[#4e535f] bg-white dark:bg-[#1f2125] shadow-card hover:shadow-card-hover'
             } backdrop-blur-sm`}
           >
             <div
               className={`shrink-0 flex items-center gap-1.5 h-8 px-2.5 cursor-grab active:cursor-grabbing border-b ${
-                isChild ? 'border-blue-200/60 bg-blue-50/60 dark:border-zinc-800 dark:bg-zinc-800/80' : 'border-gray-200/40 dark:border-zinc-700/40'
+                isChild ? 'border-[#dee0e3]/60 bg-[#eff4ff]/40 dark:border-[#2e3037] dark:bg-[#23252a]' : 'border-[#eff0f2] dark:border-[#2e3037]'
               }`}
               onMouseDown={(e) => startDragBlock(block.id, e)}
             >
               {depth === 0 ? (
-                <Move className="w-3 h-3 text-gray-500 dark:text-zinc-400" />
+                <Move className="w-3 h-3 text-[#8f959e] dark:text-[#6b7280]" />
               ) : (
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-400/20">
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#eff4ff] text-[#3370ff] dark:bg-blue-500/15 dark:text-[#4b85ff] border border-[#c2d6ff]">
                   子 Block
                 </span>
               )}
@@ -1051,17 +1051,17 @@ export default function BlockEditor({
             )}
 
             {!block.collapsed && children.length > 0 && (
-              <div className="shrink-0 px-3 pb-3 pt-2 border-t border-gray-100 dark:border-zinc-800/80 bg-gray-50/60 dark:bg-zinc-950/40 rounded-b-lg">
-                <div className="flex items-center justify-between py-1 mb-1.5 text-[11px] font-medium text-blue-600 dark:text-blue-400">
+              <div className="shrink-0 px-3 pb-3 pt-2 border-t border-[#eff0f2] dark:border-[#2e3037] bg-[#f7f8fa]/80 dark:bg-[#141517]/80 rounded-b-xl">
+                <div className="flex items-center justify-between py-1 mb-1.5 text-[11px] font-medium text-[#3370ff] dark:text-[#4b85ff]">
                   <div className="flex items-center gap-1.5">
                     <ArrowDownToLine className="w-3 h-3" />
                     <span>包含的子 Block ({children.length})</span>
                   </div>
-                  <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-normal">
+                  <span className="text-[10px] text-[#8f959e] dark:text-[#6b7280] font-normal">
                     支持在内部折叠或移出到画布
                   </span>
                 </div>
-                <div className="space-y-2 border-l-2 border-blue-400/40 dark:border-blue-500/30 pl-2.5 my-1">
+                <div className="space-y-2 border-l-2 border-[#3370ff]/40 dark:border-[#4b85ff]/40 pl-2.5 my-1">
                   {children.map((child) => renderBlockTree(child, depth + 1))}
                 </div>
               </div>
@@ -1098,9 +1098,9 @@ export default function BlockEditor({
   return (
     <div
       ref={canvasRef}
-      className="flex-1 overflow-hidden relative cursor-crosshair bg-gray-50 dark:bg-zinc-950"
+      className="flex-1 overflow-hidden relative cursor-crosshair bg-[#f7f8fa] dark:bg-[#141517]"
       style={{
-        backgroundImage: 'radial-gradient(circle, rgba(161,161,170,0.2) 1px, transparent 1px)',
+        backgroundImage: 'radial-gradient(circle, rgba(143,149,158,0.22) 1px, transparent 1px)',
         backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
         backgroundPosition: `${pan.x}px ${pan.y}px`,
       }}
@@ -1112,7 +1112,7 @@ export default function BlockEditor({
     >
       {selectionBox && (
         <div
-          className="fixed pointer-events-none z-50 border border-blue-400/50 bg-blue-400/10"
+          className="fixed pointer-events-none z-50 border border-[#3370ff] bg-[#3370ff]/10 rounded-xs"
           style={{
             left: Math.min(selectionBox.startX, selectionBox.currentX),
             top: Math.min(selectionBox.startY, selectionBox.currentY),
@@ -1238,40 +1238,40 @@ export default function BlockEditor({
         containerRef={canvasRef}
       />
 
-      <div data-ui-control className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-3 py-1.5 z-20">
+      <div data-ui-control className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-white/95 dark:bg-[#1f2125]/95 backdrop-blur-md border border-[#dee0e3] dark:border-[#33363e] rounded-xl px-2.5 py-1.5 z-20 shadow-card">
         <button
           onClick={() => setZoom((z) => Math.max(0.3, Number((z - 0.1).toFixed(1))))}
-          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
+          className="text-xs text-[#646a73] dark:text-[#9ca3af] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] hover:bg-[#eff0f2] dark:hover:bg-[#282a30] w-6 h-6 rounded-md flex items-center justify-center transition-colors"
           title="缩小"
         >
           −
         </button>
-        <span className="text-xs text-gray-500 dark:text-zinc-400 font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
+        <span className="text-xs text-[#646a73] dark:text-[#9ca3af] font-medium w-10 text-center">{Math.round(zoom * 100)}%</span>
         <button
           onClick={() => setZoom((z) => Math.min(2, Number((z + 0.1).toFixed(1))))}
-          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
+          className="text-xs text-[#646a73] dark:text-[#9ca3af] hover:text-[#1f2329] dark:hover:text-[#f2f3f5] hover:bg-[#eff0f2] dark:hover:bg-[#282a30] w-6 h-6 rounded-md flex items-center justify-center transition-colors"
           title="放大"
         >
           +
         </button>
-        <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+        <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e] mx-0.5" />
         <button
           onClick={() => {
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
-          className="text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 px-1"
+          className="text-xs text-[#646a73] dark:text-[#9ca3af] hover:text-[#3370ff] dark:hover:text-[#4b85ff] hover:bg-[#eff0f2] dark:hover:bg-[#282a30] px-1.5 py-0.5 rounded-md transition-colors font-medium"
           title="重置为 100% 原始比例与原点"
         >
-          Reset
+          重置
         </button>
       </div>
 
-      <div data-ui-control className="absolute bottom-4 left-4 text-xs text-gray-400 dark:text-zinc-500 z-20">
+      <div data-ui-control className="absolute bottom-4 left-4 text-[11px] text-[#8f959e] dark:text-[#6b7280] z-20">
         右键空白处添加 Block · 滚轮上下平移 · Ctrl+滚轮缩放
       </div>
 
-      <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-xl border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1 z-20 max-w-[calc(100vw-32px)] overflow-x-auto shadow-sm">
+      <div data-ui-control className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/95 dark:bg-[#1f2125]/95 backdrop-blur-md border border-[#dee0e3] dark:border-[#33363e] rounded-xl px-2 py-1 z-20 max-w-[calc(100vw-32px)] overflow-x-auto shadow-card">
         {([
           { type: 'text' as BlockType, label: '正文' },
           { type: 'todo' as BlockType, label: '待办' },
@@ -1281,20 +1281,20 @@ export default function BlockEditor({
           <button
             key={type}
             onClick={() => addBlockAtCenter(type)}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded transition-colors whitespace-nowrap"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:text-[#3370ff] dark:hover:text-[#4b85ff] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 rounded-md transition-colors whitespace-nowrap font-medium"
             title={`添加 ${label}`}
           >
             <Plus className="w-3.5 h-3.5" />
             {label}
           </button>
         ))}
-        <div className="w-px h-3.5 bg-gray-300 dark:bg-zinc-600 mx-1 shrink-0" />
+        <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e] mx-1 shrink-0" />
         <button
           onClick={openCommandMenuCentered}
-          className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 rounded transition-colors whitespace-nowrap"
+          className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#eff4ff] text-[#3370ff] dark:bg-blue-500/15 dark:text-[#4b85ff] hover:bg-[#e0ebff] dark:hover:bg-blue-500/25 rounded-md transition-colors whitespace-nowrap"
           title="打开多维组件库与分类搜索"
         >
-          <Sparkles className="w-3 h-3" />
+          <Sparkles className="w-3.5 h-3.5" />
           更多组件
         </button>
       </div>
@@ -1302,11 +1302,11 @@ export default function BlockEditor({
       {contextMenu && createPortal(
         <div
           data-ui-control
-          className="fixed z-[100] bg-white/95 dark:bg-zinc-800/95 backdrop-blur-xl border border-gray-200/90 dark:border-zinc-700/90 rounded-xl shadow-2xl py-1.5 min-w-[190px] max-h-[75vh] overflow-y-auto"
+          className="fixed z-[100] bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-popover py-1.5 min-w-[190px] max-h-[75vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="px-3 py-1 text-[11px] font-semibold text-gray-400 dark:text-zinc-500 flex items-center justify-between border-b border-gray-100 dark:border-zinc-700/70 mb-1">
+          <div className="px-3 py-1 text-[11px] font-semibold text-[#8f959e] dark:text-[#6b7280] flex items-center justify-between border-b border-[#eff0f2] dark:border-[#2e3037] mb-1">
             <span>添加 Block</span>
             <button
               onMouseDown={(e) => {
@@ -1437,20 +1437,20 @@ export default function BlockEditor({
       />
 
       {selectedIds.length > 0 && !linkMode && (
-        <div data-ui-control className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-2.5 bg-white/95 dark:bg-zinc-800/95 backdrop-blur-xl border border-gray-300/60 dark:border-zinc-600/60 rounded-full shadow-2xl shadow-black/50 z-40 animate-slide-up">
-          <span className="text-xs text-gray-700 dark:text-zinc-300 font-mono">{selectedIds.length} selected</span>
-          <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+        <div data-ui-control className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2.5 px-4 py-2 bg-white/95 dark:bg-[#1f2125]/95 backdrop-blur-md border border-[#dee0e3] dark:border-[#33363e] rounded-full shadow-popover z-40 animate-slide-up text-[#1f2329] dark:text-[#f2f3f5]">
+          <span className="text-xs text-[#646a73] dark:text-[#9ca3af] font-medium px-1">已选 {selectedIds.length} 项</span>
+          <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e]" />
           <button
             onClick={() => {
               selectedIds.forEach((id) => duplicateBlock(id));
               clearSelection();
             }}
-            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-zinc-200 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded-full transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#eff0f2] dark:bg-[#282a30] text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#dee0e3] dark:hover:bg-[#33363e] rounded-full transition-colors font-medium"
           >
-            <CopyPlus className="w-3 h-3" />
+            <CopyPlus className="w-3 h-3 text-[#646a73]" />
             复制
           </button>
-          <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+          <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e]" />
           {selectedIds.length >= 2 && (
             <>
               <button
@@ -1458,12 +1458,12 @@ export default function BlockEditor({
                   groupBlocks(selectedIds);
                   clearSelection();
                 }}
-                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 rounded-full transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#f7f4ff] text-[#8a73df] hover:bg-[#eeebff] dark:bg-purple-950/30 dark:hover:bg-purple-900/40 rounded-full transition-colors font-medium"
               >
                 <Group className="w-3 h-3" />
                 组合
               </button>
-              <div className="w-px h-4 bg-zinc-600" />
+              <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e]" />
             </>
           )}
           {selectedIds.length === 1 && (() => {
@@ -1477,12 +1477,12 @@ export default function BlockEditor({
                   ungroupBlocks(selectedBlock.groupId!);
                   clearSelection();
                 }}
-                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 rounded-full transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#f7f4ff] text-[#8a73df] hover:bg-[#eeebff] dark:bg-purple-950/30 dark:hover:bg-purple-900/40 rounded-full transition-colors font-medium"
               >
                 <Ungroup className="w-3 h-3" />
                 取消组合 ({groupMembers.length})
               </button>
-                  <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+                  <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e]" />
                 </>
               );
             }
@@ -1490,18 +1490,18 @@ export default function BlockEditor({
           })()}
           <button
               onClick={handleStartLink}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 rounded-full transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#eff4ff] text-[#3370ff] hover:bg-[#e0ebff] dark:bg-blue-500/15 dark:hover:bg-blue-500/25 rounded-full transition-colors font-medium"
             >
               <Link2 className="w-3 h-3" />
               创建链接
             </button>
-            <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+            <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e]" />
             {selectedIds.some((id) => blocks.find((b) => b.id === id)?.parentId) ? (
               <button
                 onClick={() => {
                   selectedIds.forEach((id) => outdentBlock(id));
                 }}
-                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 rounded-full transition-colors font-medium"
+                className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#fef3e6] text-[#e37318] hover:bg-[#fde8cf] dark:bg-amber-950/30 dark:hover:bg-amber-900/40 rounded-full transition-colors font-medium"
                 title="移出子 Block（提升为画布独立 Block）"
               >
                 <ArrowUpFromLine className="w-3 h-3" />
@@ -1511,27 +1511,27 @@ export default function BlockEditor({
               <div className="relative">
                 <button
                   onClick={() => setShowParentPicker(!showParentPicker)}
-                  className="flex items-center gap-1.5 px-3 py-1 text-xs bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-zinc-200 hover:bg-gray-300 dark:hover:bg-zinc-600 rounded-full transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#eff0f2] dark:bg-[#282a30] text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#dee0e3] dark:hover:bg-[#33363e] rounded-full transition-colors font-medium"
                 >
-                  <ArrowDownToLine className="w-3 h-3" />
+                  <ArrowDownToLine className="w-3 h-3 text-[#646a73]" />
                   设为子 Block
                 </button>
                 {showParentPicker && (
-                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg shadow-xl py-1">
-                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 dark:border-zinc-700">
-                      <span className="text-[11px] text-gray-500 dark:text-zinc-400">选择父 Block</span>
-                      <button onClick={() => setShowParentPicker(false)} className="text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300">
+                  <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 max-h-48 overflow-y-auto bg-white dark:bg-[#1f2125] border border-[#dee0e3] dark:border-[#33363e] rounded-xl shadow-popover py-1">
+                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#eff0f2] dark:border-[#2e3037]">
+                      <span className="text-[11px] text-[#8f959e] dark:text-[#6b7280]">选择父 Block</span>
+                      <button onClick={() => setShowParentPicker(false)} className="text-[#8f959e] hover:text-[#1f2329] dark:hover:text-[#f2f3f5]">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
                     {selectableParents.length === 0 ? (
-                      <div className="px-3 py-2 text-xs text-gray-400 dark:text-zinc-500">没有可选的 Block</div>
+                      <div className="px-3 py-2 text-xs text-[#8f959e] dark:text-[#6b7280]">没有可选的 Block</div>
                     ) : (
                       selectableParents.map((b) => (
                         <button
                           key={b.id}
                           onClick={() => handleSetAsChild(b.id)}
-                          className="w-full text-left px-3 py-1.5 text-xs text-gray-800 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors truncate"
+                          className="w-full text-left px-3 py-1.5 text-xs text-[#1f2329] dark:text-[#f2f3f5] hover:bg-[#eff4ff] dark:hover:bg-blue-500/10 hover:text-[#3370ff] dark:hover:text-[#4b85ff] transition-colors truncate font-medium"
                         >
                           {b.title || '未命名 Block'}
                         </button>
@@ -1541,13 +1541,13 @@ export default function BlockEditor({
                 )}
               </div>
             )}
-            <div className="w-px h-4 bg-gray-300 dark:bg-zinc-600" />
+            <div className="w-px h-3.5 bg-[#dee0e3] dark:bg-[#33363e]" />
             <button
               onClick={() => {
                 selectedIds.forEach((id) => deleteBlock(id));
                 clearSelection();
               }}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-500/25 rounded-full transition-colors font-medium"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs bg-[#fff5f4] text-[#d64b42] hover:bg-[#ffeceb] dark:bg-rose-950/30 dark:hover:bg-rose-900/40 rounded-full transition-colors font-medium"
               title="删除选中的 Block (快捷键 Delete / Backspace)"
             >
               <Trash2 className="w-3 h-3" />

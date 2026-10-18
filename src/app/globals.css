@@ -3,15 +3,90 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8f8f9;
-  --foreground: #18181b;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --background: #f7f8fa;
+  --foreground: #1f2329;
+  
+  /* BlockOS Design System Tokens (Feishu / Lark Inspired) */
+  --color-brand: #3370ff;
+  --color-brand-hover: #215fe9;
+  --color-brand-active: #1850d6;
+  --color-brand-light: #eff4ff;
+  --color-brand-light-hover: #e0ebff;
+  
+  --color-bg-page: #f7f8fa;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f2f3f5;
+  --color-bg-hover: #f0f2f5;
+  
+  --color-text-primary: #1f2329;
+  --color-text-secondary: #646a73;
+  --color-text-tertiary: #8f959e;
+  --color-text-disabled: #bbbfc4;
+  
+  --color-border: #dee0e3;
+  --color-border-hover: #a6b0c3;
+  --color-divider: #eff0f2;
+  
+  /* Semantic & AI Accents */
+  --color-ai-purple: #8a73df;
+  --color-ai-purple-light: #f7f4ff;
+  --color-ai-purple-border: #e8e4ff;
+  
+  --color-success: #2ba471;
+  --color-success-light: #e8f8f0;
+  --color-warning: #e37318;
+  --color-warning-light: #fef3e6;
+  --color-danger: #d64b42;
+  --color-danger-light: #fff5f4;
+
+  --shadow-card: 0 4px 16px -2px rgba(31, 35, 41, 0.05), 0 1px 3px rgba(31, 35, 41, 0.04);
+  --shadow-card-hover: 0 8px 24px -4px rgba(31, 35, 41, 0.08), 0 2px 6px rgba(31, 35, 41, 0.04);
+  --shadow-popover: 0 12px 32px -4px rgba(31, 35, 41, 0.12), 0 4px 12px rgba(31, 35, 41, 0.06);
+  --shadow-modal: 0 20px 48px -8px rgba(31, 35, 41, 0.18), 0 8px 20px rgba(31, 35, 41, 0.08);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
+  --background: #141517;
+  --foreground: #f2f3f5;
+  
+  --color-brand: #4b85ff;
+  --color-brand-hover: #3370ff;
+  --color-brand-active: #215fe9;
+  --color-brand-light: rgba(75, 133, 255, 0.15);
+  --color-brand-light-hover: rgba(75, 133, 255, 0.22);
+  
+  --color-bg-page: #141517;
+  --color-bg-surface: #1f2125;
+  --color-bg-subtle: #26282e;
+  --color-bg-hover: #2c2f36;
+  
+  --color-text-primary: #f2f3f5;
+  --color-text-secondary: #9ca3af;
+  --color-text-tertiary: #6b7280;
+  --color-text-disabled: #4b515a;
+  
+  --color-border: #33363e;
+  --color-border-hover: #4e535f;
+  --color-divider: #282a30;
+  
+  --color-ai-purple: #a78bfa;
+  --color-ai-purple-light: rgba(138, 115, 223, 0.15);
+  --color-ai-purple-border: rgba(138, 115, 223, 0.25);
+  
+  --color-success: #34d399;
+  --color-success-light: rgba(43, 164, 113, 0.15);
+  --color-warning: #fb923c;
+  --color-warning-light: rgba(227, 115, 24, 0.15);
+  --color-danger: #f87171;
+  --color-danger-light: rgba(214, 75, 66, 0.15);
+
+  --shadow-card: 0 4px 16px -2px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-popover: 0 12px 32px -4px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 20px 48px -8px rgba(0, 0, 0, 0.7);
 }
 
 body {
@@ -46,7 +121,8 @@ body::before {
   }
 
   ::selection {
-    background-color: rgba(59, 130, 246, 0.3);
+    background-color: rgba(51, 112, 255, 0.18);
+    color: inherit;
   }
 
   ::-webkit-scrollbar {
@@ -59,18 +135,35 @@ body::before {
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(113, 113, 122, 0.3);
-    border-radius: 3px;
+    background: #dee0e3;
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(113, 113, 122, 0.5);
+    background: #bbbfc4;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: #33363e;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #4e535f;
   }
 
   :focus-visible {
-    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline: 2px solid rgba(51, 112, 255, 0.45);
     outline-offset: 2px;
-    border-radius: 4px;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
