@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
@@ -111,7 +112,7 @@ const MCP_TOOLS: { name: string; description: string; inputSchema: InputSchema }
   },
 ];
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   let userId: string;
   let permissions: string[] = ['read', 'write'];
   try {
@@ -469,3 +470,5 @@ function handleMcpToolCall(name: string, args: Record<string, unknown>, userId: 
       return { isError: true, error: `不支持的 MCP 工具名: ${name}` };
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

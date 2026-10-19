@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AccountMode, AccountUser } from '@/types/account';
 import { useCollaborationStore } from './collaborationStore';
+import { useBlockStore } from './blockStore';
 
 let pending: Promise<void> | null = null;
 function clearCollaboration() {
@@ -43,6 +44,8 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     set({ user: data.user });
   },
   logout: async () => {
+    useBlockStore.getState().saveHistory('编辑');
+    await useBlockStore.getState().flushActivity();
     const res = await fetch('/api/auth/logout', { method: 'POST' });
     if (!res.ok) throw new Error('退出失败，请重试');
     clearCollaboration();

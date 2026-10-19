@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
@@ -19,7 +20,7 @@ export interface CanvasBlockNode {
   children?: CanvasBlockNode[];
 }
 
-export async function GET(req: NextRequest) {
+async function GETDatabaseHandler(req: NextRequest) {
   let userId: string;
   try {
     userId = await getUserId(req);
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   let userId: string;
   try {
     userId = await getUserId(req);
@@ -156,3 +157,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

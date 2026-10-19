@@ -13,7 +13,7 @@ describe('Account workspace startup', () => {
     expect(await initializeWorkspace('returning-user', 'personal', new AbortController().signal)).toBe(false);
     expect(useBlockStore.getState().pages.map(page => page.id)).toEqual(['custom-prd']);
     expect(useBlockStore.getState().blocks).toEqual([]);
-    expect(fetcher.mock.calls.map(call => call[0])).toEqual(['/api/pages', '/api/pages/custom-prd/blocks']);
+    expect(fetcher.mock.calls.map(call => call[0])).toEqual(['/api/pages', '/api/pages/custom-prd/blocks', '/api/workspace/activity', '/api/workspace/activity']);
   });
 
   it('creates a personal guide only for a new account with namespaced block ids', async () => {
@@ -28,6 +28,6 @@ describe('Account workspace startup', () => {
     expect(blocks.length).toBeGreaterThan(0);
     expect(blocks.every(block => block.id.endsWith('-new-account'))).toBe(true);
     expect(blocks.find(block => block.meta.tourId === 'guide-block-welcome')?.title).toContain('个人工作区');
-    expect(calls.map(call => call.options?.method || 'GET')).toEqual(['GET', 'POST', 'PUT']);
+    expect(calls.map(call => call.options?.method || 'GET')).toEqual(['GET', 'POST', 'PUT', 'GET', 'PUT']);
   });
 });

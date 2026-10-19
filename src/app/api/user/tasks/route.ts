@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { withEnterprise } from '@/lib/enterprise-access';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query } from '@/lib/db';
@@ -65,4 +66,4 @@ async function GETHandler() {
     return NextResponse.json({ error: 'Internal Server Error', summaries: [] }, { status: 500 });
   }
 }
-export const GET = withEnterprise(GETHandler);
+export const GET = withDatabaseRequest(withEnterprise(GETHandler));

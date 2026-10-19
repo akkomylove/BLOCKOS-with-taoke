@@ -1,8 +1,9 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { chromium, type Browser } from 'playwright';
 import { getUserId } from '@/lib/auth-utils';
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   try { await getUserId(req); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
   let browser: Browser | undefined;
   try {
@@ -91,3 +92,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'PDF 导出暂时失败，请使用浏览器打印另存为 PDF' }, { status: 500 });
   } finally { await browser?.close(); }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

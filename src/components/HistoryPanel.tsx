@@ -42,6 +42,7 @@ const ACTION_META: Record<string, { icon: React.ReactNode; color: string; bg: st
 
 export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
   const history = useBlockStore((state) => state.history);
+  const activityStatus = useBlockStore(state => state.activityStatus);
   const historyIndex = useBlockStore((state) => state.historyIndex);
   const undo = useBlockStore((state) => state.undo);
   const redo = useBlockStore((state) => state.redo);
@@ -167,9 +168,8 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
             const meta = ACTION_META[entry.action] || ACTION_META['编辑'];
 
             return (
-              <button
-                key={entry.timestamp}
-                onClick={() => handleRestore(entry.index)}
+              <div
+                key={entry.id || `${entry.timestamp}-${entry.index}`}
                 className={`w-full text-left rounded-xl border transition-all duration-150 group p-4 ${
                   isCurrent
                     ? 'border-brand/50 dark:border-blue-700 bg-brand-light/70 dark:bg-blue-950/30 shadow-xs'
@@ -203,20 +203,20 @@ export default function HistoryPanel({ isOpen, onClose }: HistoryPanelProps) {
                   <div className="text-right flex-shrink-0">
                     <div className="text-xs text-content-secondary dark:text-zinc-400 font-medium">{formatTime(entry.timestamp)}</div>
                     {!isCurrent && (
-                      <div className="text-[11px] text-brand dark:text-blue-400 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                      <button type="button" onClick={() => handleRestore(entry.index)} aria-label={`恢复此版本：${formatTime(entry.timestamp)}，${entry.blockCount} 张卡片`} className="text-[11px] text-brand dark:text-blue-400 mt-0.5 font-medium rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-4">
                         恢复此版本
-                      </div>
+                      </button>
                     )}
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
 
         <div className="px-6 py-3 bg-[#f7f8fa] dark:bg-zinc-950/60 border-t border-line-subtle dark:border-zinc-800 text-xs text-content-tertiary flex justify-between">
           <span>共 {pageHistory.length} 条记录</span>
-          <span>系统最多保留 50 个快照版本</span>
+          <span>{activityStatus === 'error' ? <button onClick={() => void useBlockStore.getState().flushActivity().catch(() => {})}>同步失败，点击重试</button> : activityStatus === 'saving' ? '正在同步到账号…' : activityStatus === 'saved' ? '已同步到账号 · 最多 50 条' : '最多保留 50 个快照'}</span>
         </div>
       </div>
       {pendingRestore && <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/40 p-4">

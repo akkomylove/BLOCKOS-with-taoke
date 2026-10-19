@@ -1,7 +1,8 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { streamText } from 'ai';
 import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
 
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   try {
     const { imageBase64, prompt } = await req.json();
 
@@ -25,3 +26,5 @@ export async function POST(req: Request) {
     return new Response('图片分析失败', { status: 500 });
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

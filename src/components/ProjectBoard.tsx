@@ -39,6 +39,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
   const [addingToColumn, setAddingToColumn] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState<Record<string, number>>({});
   const [showImport, setShowImport] = useState(false);
+  const [importNotice, setImportNotice] = useState('');
   const isMountedRef = useRef(true);
 
   const handleFetchTasks = useCallback(() => {
@@ -145,6 +146,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
           </button>
         </div>
 
+        {importNotice && <p role="status" className="mb-4 text-sm text-brand">{importNotice}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {columns.map((column) => (
             <div key={column.id} className="flex flex-col">
@@ -238,6 +240,7 @@ export default function ProjectBoard({ projectId }: ProjectBoardProps) {
           isOpen={showImport}
           onClose={() => setShowImport(false)}
           projectId={projectId}
+          onImported={count => { setImportNotice(`已保存 ${count} 条任务，正在更新看板`); void fetchTasks(projectId).then(() => setImportNotice(`已导入 ${count} 条任务`)).catch(() => setImportNotice(`已保存 ${count} 条任务，请刷新看板查看`)); }}
         />
       )}
     </div>

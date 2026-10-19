@@ -10,6 +10,7 @@ interface AgentLogPanelProps {
 
 export default function AgentLogPanel({ isOpen, onClose }: AgentLogPanelProps) {
   const agentLogs = useBlockStore((state) => state.agentLogs);
+  const activityStatus = useBlockStore(state => state.activityStatus);
 
   if (!isOpen) return null;
 
@@ -61,11 +62,10 @@ export default function AgentLogPanel({ isOpen, onClose }: AgentLogPanelProps) {
       </div>
 
       <div className="px-4 py-2.5 border-t border-gray-200 dark:border-zinc-800/60 bg-gray-50/40 dark:bg-zinc-950/40 flex items-center justify-between">
-        <span className="text-[10px] text-gray-400 dark:text-zinc-600">共 {agentLogs.length} 条记录</span>
+        <span className="text-[10px] text-gray-400 dark:text-zinc-600">共 {agentLogs.length} 条记录 · {activityStatus === 'saved' ? '已同步到账号' : activityStatus === 'saving' ? '同步中…' : activityStatus === 'error' ? <button onClick={() => void useBlockStore.getState().flushActivity().catch(() => {})}>同步失败，点击重试</button> : '等待同步'}</span>
         <button
           onClick={() => {
-            const state = useBlockStore.getState() as unknown as Record<string, unknown>;
-            (state.clearAgentLogs as (() => void) | undefined)?.();
+            void useBlockStore.getState().clearAgentLogs().catch(() => useBlockStore.setState({ activityStatus: 'error' }));
           }}
           className="text-[10px] text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 transition-colors"
         >

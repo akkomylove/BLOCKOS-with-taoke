@@ -1,10 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { streamText } from 'ai';
 import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
 import { validateInputSafety, AISafetyViolationError } from '@/lib/ai/safety-filter';
 import { getUserId } from '@/lib/auth-utils';
 import { BLOCKOS_CORE_IDENTITY } from '@/config/blockos-knowledge';
 
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   let userId: string;
   try {
     userId = await getUserId();
@@ -46,3 +47,5 @@ export async function POST(req: Request) {
     return new Response('AI 生成失败', { status: 500 });
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

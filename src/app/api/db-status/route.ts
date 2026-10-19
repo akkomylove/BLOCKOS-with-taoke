@@ -1,7 +1,8 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 import { getDb, getDbStatus } from '@/lib/db';
 
-export async function GET() {
+async function GETDatabaseHandler() {
   try {
     await getDb();
     const status = await getDbStatus();
@@ -20,3 +21,5 @@ export async function GET() {
     );
   }
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);

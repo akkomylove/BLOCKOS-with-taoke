@@ -1,9 +1,10 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { runVizAssist } from '@/lib/ai';
 import type { VizAssistRequest } from '@/lib/ai';
 import { getUserId } from '@/lib/auth-utils';
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   let userId: string;
   try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -22,3 +23,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: message, code }, { status: statusCode });
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

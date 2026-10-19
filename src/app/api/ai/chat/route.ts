@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { chat } from '@/lib/ai/chat';
 import { AIServiceError } from '@/lib/ai/client';
@@ -5,7 +6,7 @@ import { getUserId } from '@/lib/auth-utils';
 import { getAssistantIdentity } from '@/lib/ai/assistant-identity';
 import { PERSONAL_CHAT_PRESET, ENTERPRISE_AUTO_CHAT_PRESET } from '@/config/ai-modes';
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   let userId: string;
   try { userId = await getUserId(req); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -37,3 +38,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Chat failed' }, { status: 500 });
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

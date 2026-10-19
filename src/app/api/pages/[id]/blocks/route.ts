@@ -1,10 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 import { getPresetDocumentBlocks } from '@/config/presetDocuments';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -221,10 +222,14 @@ async function handleSaveBlocks(req: NextRequest, { params }: { params: Promise<
   }
 }
 
-export async function POST(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+async function POSTDatabaseHandler(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return handleSaveBlocks(req, context);
 }
 
-export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+async function PUTDatabaseHandler(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return handleSaveBlocks(req, context);
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);
+export const POST = withDatabaseRequest(POSTDatabaseHandler);
+export const PUT = withDatabaseRequest(PUTDatabaseHandler);

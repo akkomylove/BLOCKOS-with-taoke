@@ -1,7 +1,8 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { streamText } from 'ai';
 import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
 
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   try {
     const { blocks } = await req.json();
 
@@ -30,3 +31,5 @@ ${blocksInfo}
 
 请将以上内容整合为一段连贯的摘要，提炼核心观点和关键信息。`;
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

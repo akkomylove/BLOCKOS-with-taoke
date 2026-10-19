@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest } from 'next/server';
 import { POST as runImpact } from '../../../ai-impact/route';
@@ -29,5 +30,5 @@ async function POSTHandler(
   return runImpact(dummyReq, { params: Promise.resolve({ id }) });
 }
 
-export const GET = withEnterprise(GETHandler);
-export const POST = withEnterprise(POSTHandler);
+export const GET = withDatabaseRequest(withEnterprise(GETHandler));
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));

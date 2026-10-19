@@ -1,8 +1,9 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { PRESET_REGISTRY, getPresetById } from '@/lib/presets';
 import { getUserId } from '@/lib/auth-utils';
 
-export async function GET(req: NextRequest) {
+async function GETDatabaseHandler(req: NextRequest) {
   let userId: string;
   try { userId = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
 
@@ -34,3 +35,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ presets: list });
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);

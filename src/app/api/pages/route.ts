@@ -1,10 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { nanoid } from 'nanoid';
 import { parseChapters, validateChapters } from '@/lib/document-outline';
 
-export async function GET(req: NextRequest) {
+async function GETDatabaseHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function PUT(req: NextRequest) {
+async function PUTDatabaseHandler(req: NextRequest) {
   try {
     let userId: string;
     try {
@@ -195,3 +196,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);
+export const POST = withDatabaseRequest(POSTDatabaseHandler);
+export const PUT = withDatabaseRequest(PUTDatabaseHandler);

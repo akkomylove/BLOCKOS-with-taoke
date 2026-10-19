@@ -1,9 +1,10 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ACCOUNT_COOKIE, digest } from '@/lib/account';
 import { getDb, run, saveDb } from '@/lib/db';
 
-export async function POST() {
+async function POSTDatabaseHandler() {
   const store = await cookies();
   const token = store.get(ACCOUNT_COOKIE)?.value;
   if (token) {
@@ -19,3 +20,5 @@ export async function POST() {
   for (const name of names) res.cookies.set(name, '', { path: '/', maxAge: 0, httpOnly: true, sameSite: 'lax', secure: name.startsWith('__Secure-') || process.env.NODE_ENV === 'production' });
   return res;
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

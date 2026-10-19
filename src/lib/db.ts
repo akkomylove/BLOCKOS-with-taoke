@@ -4,6 +4,15 @@ import path from 'path';
 import { tmpdir } from 'os';
 import { DEMO_USERS } from './demo-users';
 import { neon } from '@neondatabase/serverless';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { createHash } from 'node:crypto';
+
+interface RequestDatabase { database: Database | null; revision: number | null; dirty: boolean; loading?: Promise<Database>; }
+const requestDatabase = new AsyncLocalStorage<RequestDatabase>();
+let sqlReady: Promise<SqlJsStatic> | null = null;
+let remoteSchemaReady: Promise<void> | null = null;
+const activeDb = () => requestDatabase.getStore()?.database || db;
+export class DatabaseConflict extends Error {}
 
 let db: Database | null = null;
 let SQL: SqlJsStatic | null = null;
@@ -28,24 +37,37 @@ function getPostgresClient() {
   try {
     return neon(conn);
   } catch (err) {
-    console.error('Failed to initialize Neon Postgres client:', err);
-    return null;
+    throw new Error('云端数据库配置无效', { cause: err });
   }
 }
 
 export async function getDb() {
+  const scope = requestDatabase.getStore();
+  const pg = getPostgresClient();
+  if (scope && pg) {
+    if (scope.database) return scope.database;
+    if (scope.loading) return scope.loading;
+    scope.loading = (async () => {
+      [SQL] = await Promise.all([loadSql(), ensureRemoteSchema(pg)]);
+      const rows = await pg`SELECT payload, revision FROM blockos_db_sync WHERE id = 'main' LIMIT 1`;
+      scope.revision = rows.length ? Number(rows[0].revision) : null;
+      const data = rows.length ? Buffer.from(String(rows[0].payload), 'base64') : undefined;
+      scope.database = new SQL.Database(data);
+      initSchema(scope.database);
+      seedDemoUsers(scope.database);
+      const fingerprint = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
+      scope.dirty = !data || fingerprint(data) !== fingerprint(scope.database.export());
+      return scope.database;
+    })();
+    return scope.loading;
+  }
+  if (pg) throw new Error('云端数据库操作必须在请求事务中执行');
   if (db) return db;
   if (dbInitError) throw dbInitError;
 
   try {
-    if (!SQL) {
-      const publicWasm = path.join(process.cwd(), 'public', 'sql-wasm.wasm');
-      const nodeModulesWasm = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
-      const wasmPath = fs.existsSync(publicWasm) ? publicWasm : nodeModulesWasm;
-      SQL = await initSqlJs({
-        locateFile: () => wasmPath,
-      });
-    }
+    SQL = await loadSql();
+    if (db) return db;
 
     const dbDir = path.dirname(DB_PATH);
     if (!fs.existsSync(dbDir)) {
@@ -53,27 +75,6 @@ export async function getDb() {
     }
 
     let data: Buffer | null = null;
-    const pg = getPostgresClient();
-    if (pg) {
-      try {
-        await pg`
-          CREATE TABLE IF NOT EXISTS blockos_db_sync (
-            id VARCHAR(32) PRIMARY KEY,
-            payload TEXT NOT NULL,
-            updated_at BIGINT NOT NULL
-          );
-        `;
-        const rows = await pg`
-          SELECT payload, updated_at FROM blockos_db_sync WHERE id = 'main' LIMIT 1;
-        `;
-        if (rows && rows.length > 0 && typeof rows[0].payload === 'string') {
-          data = Buffer.from(rows[0].payload, 'base64');
-          console.log('[Neon Postgres] Loaded database snapshot from remote, size:', data.length);
-        }
-      } catch (pgErr) {
-        console.warn('[Neon Postgres] Could not fetch remote snapshot, falling back to local seed:', pgErr);
-      }
-    }
 
     if (!data) {
       const seedDbPath = path.join(process.cwd(), 'data', 'blockos.db');
@@ -96,6 +97,47 @@ export async function getDb() {
   }
 }
 
+function loadSql(): Promise<SqlJsStatic> {
+  if (!sqlReady) {
+    const publicWasm = path.join(process.cwd(), 'public', 'sql-wasm.wasm');
+    const wasmPath = fs.existsSync(publicWasm) ? publicWasm : path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+    sqlReady = initSqlJs({ locateFile: () => wasmPath }).catch(error => { sqlReady = null; throw error; });
+  }
+  return sqlReady;
+}
+
+function ensureRemoteSchema(pg: NonNullable<ReturnType<typeof getPostgresClient>>): Promise<void> {
+  if (!remoteSchemaReady) remoteSchemaReady = (async () => {
+    await pg`CREATE TABLE IF NOT EXISTS blockos_db_sync (id VARCHAR(32) PRIMARY KEY, payload TEXT NOT NULL, updated_at BIGINT NOT NULL, revision BIGINT NOT NULL DEFAULT 0)`;
+    await pg`ALTER TABLE blockos_db_sync ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 0`;
+  })().catch(error => { remoteSchemaReady = null; throw error; });
+  return remoteSchemaReady;
+}
+
+// Each cloud request reads the latest snapshot into its own isolated database.
+// Conditional writes prevent a stale instance from replacing newer committed data.
+export async function databaseRequest<T extends Response>(handler: () => Promise<T>): Promise<T> {
+  if (requestDatabase.getStore()) return handler();
+  // Local transactions and disk writes are synchronous; no request-wide lock
+  // should block reads while another handler waits on a model or file conversion.
+  if (!getPostgresClient()) return handler();
+  const scope: RequestDatabase = { database: null, revision: null, dirty: false };
+  return requestDatabase.run(scope, async () => {
+    try {
+      const response = await handler();
+      if (response.status < 500 && scope.dirty && scope.database) {
+        const pg = getPostgresClient()!;
+        const payload = Buffer.from(scope.database.export()).toString('base64');
+        const rows = scope.revision === null
+          ? await pg`INSERT INTO blockos_db_sync (id, payload, updated_at, revision) VALUES ('main', ${payload}, ${Date.now()}, 1) ON CONFLICT (id) DO NOTHING RETURNING revision`
+          : await pg`UPDATE blockos_db_sync SET payload = ${payload}, updated_at = ${Date.now()}, revision = revision + 1 WHERE id = 'main' AND revision = ${scope.revision} RETURNING revision`;
+        if (!rows.length) throw new DatabaseConflict('数据已被其他操作更新，请重试；本次没有覆盖云端数据');
+      }
+      return response;
+    } finally { scope.database?.close(); }
+  });
+}
+
 function initSchema(database: Database) {
   database.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -106,6 +148,21 @@ function initSchema(database: Database) {
       provider TEXT NOT NULL,
       provider_id TEXT NOT NULL,
       created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS plan_imports (
+      project_id TEXT NOT NULL, user_id TEXT NOT NULL, request_id TEXT NOT NULL,
+      payload_hash TEXT NOT NULL, result TEXT NOT NULL, created_at INTEGER NOT NULL,
+      PRIMARY KEY (project_id, user_id, request_id)
+    );
+    CREATE TABLE IF NOT EXISTS workspace_activity (
+      user_id TEXT NOT NULL, id TEXT NOT NULL, kind TEXT NOT NULL,
+      page_id TEXT, payload TEXT NOT NULL, created_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, kind, id)
+    );
+    CREATE TABLE IF NOT EXISTS workspace_cursors (
+      user_id TEXT NOT NULL, page_id TEXT NOT NULL, snapshot_id TEXT NOT NULL,
+      PRIMARY KEY (user_id, page_id)
     );
 
     CREATE TABLE IF NOT EXISTS folders (
@@ -517,31 +574,14 @@ function initSchema(database: Database) {
 }
 
 export function saveDb() {
+  const scope = requestDatabase.getStore();
+  if (scope) { scope.dirty = true; return; }
+  if (getPostgresClient()) throw new Error('云端保存必须在请求事务中执行');
   if (!db || !SQL) return;
-  try {
-    const data = db.export();
-    const dir = path.dirname(DB_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(DB_PATH, Buffer.from(data));
-
-    // 异步推送到 Neon Postgres 云端存储，保障跨容器重启不丢数据
-    const pg = getPostgresClient();
-    if (pg) {
-      const base64 = Buffer.from(data).toString('base64');
-      const now = Date.now();
-      pg`
-        INSERT INTO blockos_db_sync (id, payload, updated_at)
-        VALUES ('main', ${base64}, ${now})
-        ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at;
-      `.catch((err) => {
-        console.error('[Neon Postgres] Async snapshot push error:', err);
-      });
-    }
-  } catch (err) {
-    console.error('Failed to save database:', err);
-  }
+  const data = db.export();
+  const dir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(DB_PATH, Buffer.from(data));
 }
 
 export async function getDbStatus() {
@@ -569,6 +609,7 @@ export async function getDbStatus() {
 }
 
 export function query(sql: string, params: (string | number | null)[] = []) {
+  const db = activeDb();
   if (!db) throw new Error('Database not initialized');
   const stmt = db.prepare(sql);
   stmt.bind(params);
@@ -584,6 +625,7 @@ export function query(sql: string, params: (string | number | null)[] = []) {
 }
 
 export function transaction(fn: () => void): void {
+  const db = activeDb();
   if (!db) throw new Error('Database not initialized');
   db.run('BEGIN TRANSACTION');
   try {
@@ -596,14 +638,17 @@ export function transaction(fn: () => void): void {
 }
 
 export function run(sql: string, params: (string | number | null)[] = []) {
+  const db = activeDb();
   if (!db) throw new Error('Database not initialized');
   db.run(sql, params);
   return db.getRowsModified();
 }
 
 function seedDemoUsers(database: Database) {
-  if (dbSeeded) return;
-  dbSeeded = true;
+  if (!requestDatabase.getStore()) {
+    if (dbSeeded) return;
+    dbSeeded = true;
+  }
 
   for (const user of DEMO_USERS) {
     const existing = database.exec(`SELECT id FROM users WHERE id = '${user.id}'`);
@@ -626,11 +671,7 @@ function seedDemoUsers(database: Database) {
   } catch (err) {
     console.error('[DB-SEED] seedDemoData error:', err);
   }
-  try {
-    saveDb();
-  } catch (err) {
-    console.error('[DB-SEED] saveDb error:', err);
-  }
+  if (!requestDatabase.getStore()) saveDb();
 }
 
 function seedDemoData(database: Database) {

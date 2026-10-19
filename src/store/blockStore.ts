@@ -8,6 +8,7 @@ import { PRESET_DOCUMENTS, getPresetDocumentBlocks } from '@/config/presetDocume
 import { escapeHtml, sanitizeHtml } from '@/lib/sanitize';
 
 interface HistoryEntry {
+  id?: string;
   pageId: string;
   blocks: Block[];
   timestamp: number;
@@ -16,6 +17,10 @@ interface HistoryEntry {
 }
 
 interface BlockStore {
+  activityStatus: 'idle' | 'saving' | 'saved' | 'error';
+  historyCursors: Record<string, string>;
+  loadActivity: () => Promise<void>;
+  flushActivity: () => Promise<void>;
   pages: Page[];
   folders: Folder[];
   groups: Array<{ id: string; name: string }>;
@@ -64,7 +69,7 @@ interface BlockStore {
   removeLink: (fromId: string, toId: string) => void;
   toggleAgent: () => void;
   addAgentLog: (log: Omit<AgentLog, 'id' | 'timestamp'>) => void;
-  clearAgentLogs: () => void;
+  clearAgentLogs: () => Promise<void>;
   hydrate: () => void;
 
   undo: () => void;
@@ -347,6 +352,10 @@ export function triggerDebouncedPagesSync() {
 export const useBlockStore = create<BlockStore>()(
   persist(
     immer((set, get) => ({
+      activityStatus: 'idle',
+      historyCursors: {},
+      loadActivity: () => loadAccountActivity(),
+      flushActivity: () => flushAccountActivity(),
       pages: presetData.pages,
       folders: [],
       groups: [],
@@ -484,7 +493,8 @@ export const useBlockStore = create<BlockStore>()(
           state.pageBlocks[state.currentPageId] = JSON.parse(JSON.stringify(state.blocks));
           state.currentPageId = id;
           state.blocks = state.pageBlocks[id] ? JSON.parse(JSON.stringify(state.pageBlocks[id])) : [];
-          state.historyIndex = state.history.map(entry => entry.pageId).lastIndexOf(id);
+          const cursorIndex = state.history.findIndex(entry => entry.pageId === id && entry.id === state.historyCursors[id]);
+          state.historyIndex = cursorIndex >= 0 ? cursorIndex : state.history.map(entry => entry.pageId).lastIndexOf(id);
           state.selectedIds = [];
         });
         if (!get().pageBlocks[id]) void get().loadFromServer(id);
@@ -804,11 +814,7 @@ export const useBlockStore = create<BlockStore>()(
         });
       },
 
-      clearAgentLogs: () => {
-        set((state) => {
-          state.agentLogs = [];
-        });
-      },
+      clearAgentLogs: () => clearAccountLogs(),
 
       hydrate: () => {
         set((state) => {
@@ -824,11 +830,12 @@ export const useBlockStore = create<BlockStore>()(
         set(state => {
           const pageId = state.currentPageId;
           state.history = state.history.slice(-48);
-          state.history.push({ pageId, blocks: backup, timestamp: Date.now(), action: '恢复前备份', blockCount: backup.length });
-          state.history.push({ pageId, blocks: target, timestamp: Date.now() + 1, action: '恢复历史版本', blockCount: target.length });
+          state.history.push({ id: nanoid(), pageId, blocks: backup, timestamp: Date.now(), action: '恢复前备份', blockCount: backup.length });
+          state.history.push({ id: nanoid(), pageId, blocks: target, timestamp: Date.now() + 1, action: '恢复历史版本', blockCount: target.length });
           state.blocks = target;
           state.pageBlocks[pageId] = target;
           state.historyIndex = state.history.length - 1;
+          state.historyCursors[pageId] = state.history[state.historyIndex].id!;
         });
         triggerDebouncedSave();
         return true;
@@ -841,6 +848,7 @@ export const useBlockStore = create<BlockStore>()(
           state.blocks = JSON.parse(JSON.stringify(entry.blocks));
           state.pageBlocks[state.currentPageId] = state.blocks;
           state.historyIndex = index;
+          if (entry.id) state.historyCursors[state.currentPageId] = entry.id;
         });
         triggerDebouncedSave();
       },
@@ -867,9 +875,11 @@ export const useBlockStore = create<BlockStore>()(
           const current = state.history[pageId === state.currentPageId ? state.historyIndex : state.history.map(entry => entry.pageId).lastIndexOf(pageId)];
           if (current?.pageId === pageId && JSON.stringify(current.blocks) === JSON.stringify(blocks)) return;
           if (pageId === state.currentPageId) state.history = state.history.filter((entry, index) => entry.pageId !== pageId || index <= state.historyIndex);
-          state.history.push({ pageId, blocks: JSON.parse(JSON.stringify(blocks)), timestamp: Date.now(), action, blockCount: blocks.length });
+          state.history.push({ id: nanoid(), pageId, blocks: JSON.parse(JSON.stringify(blocks)), timestamp: Date.now(), action, blockCount: blocks.length });
           if (state.history.length > 50) state.history = state.history.slice(-50);
           state.historyIndex = state.history.map(entry => entry.pageId).lastIndexOf(state.currentPageId);
+          const cursor = state.history[state.historyIndex];
+          if (cursor?.id) state.historyCursors[state.currentPageId] = cursor.id;
         });
       },
 
@@ -1208,10 +1218,17 @@ export const useBlockStore = create<BlockStore>()(
         if (prevId === userId) return;
         set((state) => {
           state.currentUserId = userId;
+          state.agentLogs = [];
+          state.history = [];
+          state.historyIndex = -1;
+          state.activityStatus = 'idle';
+          state.historyCursors = {};
         });
         if (typeof window !== 'undefined' && userId) {
           try {
             const userStoreKey = `block-os-storage-${userId}`;
+            const activity = JSON.parse(localStorage.getItem(`blockos-activity-${userId}`) || 'null');
+            if (activity) set(state => { state.agentLogs = activity.logs || []; state.history = activity.history || []; state.historyIndex = activity.historyIndex ?? -1; state.historyCursors = activity.cursors || {}; });
             const cached = localStorage.getItem(userStoreKey);
             if (cached) {
               const parsed = JSON.parse(cached);
@@ -1409,6 +1426,7 @@ export const useBlockStore = create<BlockStore>()(
           state.selectedIds = [];
           state.currentUserId = null;
           state.history = [];
+          state.agentLogs = [];
           state.historyIndex = -1;
           state.saveStatus = 'idle';
           state.saveError = null;
@@ -1451,6 +1469,90 @@ export const useBlockStore = create<BlockStore>()(
     }
   )
 );
+
+let activityTimer: ReturnType<typeof setTimeout> | undefined;
+let activityUser: string | null = null;
+let knownHistoryIds = new Set<string>();
+let knownCursors: Record<string, string> = {};
+let activityQueue = Promise.resolve();
+
+async function activityRequest(method: string, body?: unknown) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const response = await fetch('/api/workspace/activity', { method, headers: { 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+    const data = await response.json();
+    if (response.status === 409 && data.code === 'DATABASE_CONFLICT') continue;
+    if (!response.ok) throw new Error(data.error || '操作记录同步失败');
+    return data;
+  }
+  throw new Error('操作记录同步冲突，请重试');
+}
+
+async function loadAccountActivity() {
+  const userId = useBlockStore.getState().currentUserId;
+  if (!userId) return;
+  useBlockStore.setState({ activityStatus: 'saving' });
+  try {
+    const data = await activityRequest('GET');
+    if (useBlockStore.getState().currentUserId !== userId) return;
+    const state = useBlockStore.getState();
+    const local = state.history.map(entry => ({ ...entry, id: entry.id || nanoid() }));
+    const remote: HistoryEntry[] = Array.isArray(data.history) ? data.history : [];
+    const history = Array.from(new Map([...remote, ...local].map(entry => [entry.id, entry])).values()).sort((a, b) => a.timestamp - b.timestamp).slice(-50);
+    const clearedLogs = new Set(data.clearedLogIds || []);
+    const logs = Array.from(new Map([...(Array.isArray(data.logs) ? data.logs : []), ...state.agentLogs].map((log: AgentLog) => [log.id, log])).values()).filter(log => !clearedLogs.has(log.id)).sort((a, b) => b.timestamp - a.timestamp).slice(0, 100);
+    const cursorId = data.cursors?.[state.currentPageId] || local[state.historyIndex]?.id;
+    const index = history.findIndex(entry => entry.id === cursorId);
+    knownHistoryIds = new Set(remote.map(entry => entry.id!));
+    activityUser = userId;
+    knownCursors = data.cursors || {};
+    useBlockStore.setState({ history, agentLogs: logs, historyCursors: { ...knownCursors, ...state.historyCursors }, historyIndex: index >= 0 ? index : history.map(entry => entry.pageId).lastIndexOf(state.currentPageId), activityStatus: 'saved' });
+    await flushAccountActivity(); // Migrate this account's existing browser records.
+  } catch (error) {
+    if (useBlockStore.getState().currentUserId === userId) useBlockStore.setState({ activityStatus: 'error' });
+    throw error;
+  }
+}
+
+async function flushAccountActivity() {
+  clearTimeout(activityTimer);
+  const userId = useBlockStore.getState().currentUserId;
+  if (!userId) return;
+  if (activityUser !== userId) return loadAccountActivity();
+  const persist = async () => {
+    const state = useBlockStore.getState();
+    if (state.currentUserId !== userId) return;
+    const history = JSON.parse(JSON.stringify(state.history)) as HistoryEntry[];
+    const ids = new Set(history.map(entry => entry.id!));
+    const cursors = Object.fromEntries(Object.entries(state.historyCursors).filter(([pageId, id]) => knownCursors[pageId] !== id));
+    const payload = { logs: state.agentLogs, history, cursorId: history[state.historyIndex]?.id, cursors, removedHistoryIds: [...knownHistoryIds].filter(id => !ids.has(id)) };
+    useBlockStore.setState({ activityStatus: 'saving' });
+    try {
+      await activityRequest('PUT', payload);
+      if (useBlockStore.getState().currentUserId !== userId) return;
+      knownHistoryIds = ids;
+      knownCursors = { ...knownCursors, ...cursors };
+      useBlockStore.setState({ activityStatus: 'saved' });
+    } catch (error) { if (useBlockStore.getState().currentUserId === userId) useBlockStore.setState({ activityStatus: 'error' }); throw error; }
+  };
+  const pending = activityQueue.catch(() => {}).then(persist);
+  activityQueue = pending.catch(() => {});
+  return pending;
+}
+
+async function clearAccountLogs() {
+  await flushAccountActivity();
+  await activityRequest('DELETE');
+  useBlockStore.setState({ agentLogs: [], activityStatus: 'saved' });
+}
+
+useBlockStore.subscribe((state, previous) => {
+  if (state.currentUserId !== previous.currentUserId) { clearTimeout(activityTimer); activityUser = null; knownHistoryIds = new Set(); knownCursors = {}; return; }
+  if (!state.currentUserId || (state.history === previous.history && state.historyIndex === previous.historyIndex && state.agentLogs === previous.agentLogs)) return;
+  try { localStorage.setItem(`blockos-activity-${state.currentUserId}`, JSON.stringify({ history: state.history, historyIndex: state.historyIndex, logs: state.agentLogs, cursors: state.historyCursors })); } catch {}
+  if (activityUser !== state.currentUserId) return;
+  clearTimeout(activityTimer);
+  activityTimer = setTimeout(() => { void flushAccountActivity().catch(() => {}); }, 500);
+});
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {

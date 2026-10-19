@@ -1,10 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 import { compare, hash } from 'bcryptjs';
 import { getUserId } from '@/lib/auth-utils';
 import { createAccountSession, passwordError, setAccountCookie } from '@/lib/account';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用登录会话管理账号' }, { status: 403 });
   let id: string;
   try { id = await getUserId(req); } catch { return NextResponse.json({ error: '请先登录' }, { status: 401 }); }
@@ -28,3 +29,5 @@ export async function POST(req: Request) {
   await setAccountCookie(res, token);
   return res;
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeDocument } from '@/lib/ai';
 import type { AnalyzeRequest } from '@/lib/ai';
@@ -20,4 +21,4 @@ async function POSTHandler(req: NextRequest) {
   }
 }
 
-export const POST = withEnterprise(POSTHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));

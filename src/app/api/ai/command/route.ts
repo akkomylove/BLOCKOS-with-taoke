@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { streamText } from 'ai';
 import { NextResponse } from 'next/server';
 import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
@@ -6,7 +7,7 @@ import { assistantIdentityPrompt, getAssistantIdentity, type AssistantIdentity }
 import { BLOCKOS_CORE_IDENTITY, BLOCKOS_BLOCK_TYPES_INFO, BLOCKOS_CANVAS_CAPABILITIES } from '@/config/blockos-knowledge';
 import { explicitTextCardCreation } from '@/lib/assistant-intent';
 
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   let userId: string;
   try { userId = await getUserId(req); }
   catch { return NextResponse.json({ error: '请先登录后使用 AI 助手' }, { status: 401 }); }
@@ -126,3 +127,5 @@ actionSuggestions 最多 3 条，必须与当前回复有关，可为空数组�
 回复中的岗位视角不会赋予团队或项目权限；本接口只操作用户当前画布，不执行团队成员或项目管理变更。
 请输出 JSON：`;
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

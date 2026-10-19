@@ -1,9 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { withEnterprise } from '@/lib/enterprise-access';
 import { getUserId, checkProjectPermission } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { isValidNanoid } from '@/lib/validation';
+import { createHash } from 'node:crypto';
 
 async function POSTHandler(
   request: Request,
@@ -28,7 +30,19 @@ async function POSTHandler(
       return NextResponse.json({ error: perm.error || 'Forbidden' }, { status: 403 });
     }
 
-    const { tasks = [], workflow = [], requirementId, skipDuplicates = false } = await request.json();
+    const { tasks = [], workflow = [], requirementId, skipDuplicates = false, requestId } = await request.json();
+    if (!Array.isArray(tasks) || !tasks.length || tasks.length > 100 || tasks.some(task => !task || typeof task.title !== 'string' || !task.title.trim()) || !Array.isArray(workflow) || workflow.length > 100) {
+      return NextResponse.json({ error: '请提供 1–100 条有效任务' }, { status: 400 });
+    }
+    if (requestId !== undefined && (typeof requestId !== 'string' || !/^[\w-]{8,100}$/.test(requestId))) return NextResponse.json({ error: '导入批次编号无效' }, { status: 400 });
+    const payloadHash = createHash('sha256').update(JSON.stringify({ tasks, workflow, requirementId, skipDuplicates })).digest('hex');
+    // Legacy clients also receive deduplication for identical plan content.
+    const batchId = requestId || payloadHash;
+    const previous = query('SELECT payload_hash, result FROM plan_imports WHERE project_id = ? AND user_id = ? AND request_id = ?', [projectId, userId, batchId])[0];
+    if (previous) {
+      if (previous.payload_hash !== payloadHash) return NextResponse.json({ error: '同一导入批次不能修改内容，请重新分析' }, { status: 409 });
+      return NextResponse.json({ ...JSON.parse(String(previous.result)), replayed: true });
+    }
     const now = Date.now();
 
     // 确保仅允许指派给当前项目的真实成员
@@ -48,6 +62,7 @@ async function POSTHandler(
 
     const createdTaskIds: string[] = [];
     let skippedCount = 0;
+    let result: Record<string, unknown>;
 
     transaction(() => {
       for (let i = 0; i < tasks.length; i++) {
@@ -134,19 +149,26 @@ async function POSTHandler(
           );
         }
       }
+      result = { success: true, requestId: batchId, importedCount: createdTaskIds.length, skippedCount, milestoneCount: workflow.length, taskIds: createdTaskIds };
+      run('INSERT INTO plan_imports (project_id, user_id, request_id, payload_hash, result, created_at) VALUES (?, ?, ?, ?, ?, ?)', [projectId, userId, batchId, payloadHash, JSON.stringify(result), now]);
     });
 
     saveDb();
 
-    return NextResponse.json({
-      success: true,
-      importedCount: createdTaskIds.length,
-      skippedCount,
-      milestoneCount: workflow?.length || 0,
-    });
+    return NextResponse.json(result!);
   } catch (err) {
     console.error('POST /api/projects/[id]/ai-import error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-export const POST = withEnterprise(POSTHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));
+export const GET = withDatabaseRequest(withEnterprise(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const userId = await getUserId();
+  const { id: projectId } = await params;
+  await getDb();
+  const permission = checkProjectPermission(userId, projectId, 'create_task');
+  if (!permission.allowed) return NextResponse.json({ error: permission.error || 'Forbidden' }, { status: 403 });
+  const requestId = new URL(request.url).searchParams.get('requestId') || '';
+  const receipt = query('SELECT result FROM plan_imports WHERE project_id = ? AND user_id = ? AND request_id = ?', [projectId, userId, requestId])[0];
+  return NextResponse.json(receipt ? { found: true, ...JSON.parse(String(receipt.result)) } : { found: false });
+}));

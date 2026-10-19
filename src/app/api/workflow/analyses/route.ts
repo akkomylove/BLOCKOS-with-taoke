@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, query, run, saveDb } from '@/lib/db';
@@ -68,5 +69,5 @@ async function GETHandler(req: NextRequest) {
   }
 }
 
-export const POST = withEnterprise(POSTHandler);
-export const GET = withEnterprise(GETHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));
+export const GET = withDatabaseRequest(withEnterprise(GETHandler));

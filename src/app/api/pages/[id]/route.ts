@@ -1,10 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
 import { parseChapters, validateChapters } from '@/lib/document-outline';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function PUTDatabaseHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -124,7 +125,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function DELETEDatabaseHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     let userId: string;
     try {
@@ -168,3 +169,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);
+export const PUT = withDatabaseRequest(PUTDatabaseHandler);
+export const DELETE = withDatabaseRequest(DELETEDatabaseHandler);

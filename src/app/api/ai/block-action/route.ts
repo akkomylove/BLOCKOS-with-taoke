@@ -1,7 +1,8 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { streamText } from 'ai';
 import { siliconflow, AI_MODEL } from '@/lib/ai-provider';
 
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   try {
     const { blockType, content, action } = await req.json();
 
@@ -56,3 +57,5 @@ function buildPrompt(blockType: string, content: string, action: string): string
       return `${basePrompt}Block 类型：${blockType}\n内容：\n${content}\n\n请对以上内容进行智能处理。`;
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

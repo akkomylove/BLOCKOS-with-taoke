@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
@@ -150,6 +151,6 @@ async function DELETEHandler(req: NextRequest, { params }: { params: Promise<{ i
   }
 }
 
-export const POST = withEnterprise(POSTHandler);
-export const PATCH = withEnterprise(PATCHHandler);
-export const DELETE = withEnterprise(DELETEHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));
+export const PATCH = withDatabaseRequest(withEnterprise(PATCHHandler));
+export const DELETE = withDatabaseRequest(withEnterprise(DELETEHandler));

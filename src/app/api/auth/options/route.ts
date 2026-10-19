@@ -1,6 +1,7 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+async function GETDatabaseHandler() {
   return NextResponse.json({
     demo: process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_LOGIN === 'true',
     providers: [
@@ -9,3 +10,5 @@ export async function GET() {
     ],
   });
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);

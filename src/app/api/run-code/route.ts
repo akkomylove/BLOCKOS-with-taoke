@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -29,7 +30,7 @@ function getIsolatedEnv(): NodeJS.ProcessEnv {
   };
 }
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   try {
     // 基础调用者鉴权检查
     const userId = await getAuthUserId();
@@ -137,3 +138,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '执行沙箱服务异常' }, { status: 500 });
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

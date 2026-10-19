@@ -205,6 +205,29 @@ describe('AI Impact, Smart Task Import, Invites, and Comments API', () => {
     expect(inserted[0].assignee_id).toBeNull();
   });
 
+  it('keeps multiple plan batches and replays a duplicate receipt without creating duplicate tasks or milestones', async () => {
+    vi.spyOn(authUtils, 'getUserId').mockResolvedValue(ownerId);
+    const batch = nanoid();
+    const send = (requestId: string, title: string) => runAiImport(new NextRequest('http://localhost/import', { method: 'POST', body: JSON.stringify({ requestId, tasks: [{ title }], workflow: [{ phase: title }] }) }), { params: Promise.resolve({ id: projectId }) });
+    const [first, duplicate] = await Promise.all([send(batch, 'receipt-A'), send(batch, 'receipt-A')]);
+    expect(first.status).toBe(200);
+    expect(duplicate.status).toBe(200);
+    expect((await duplicate.json()).replayed).toBe(true);
+    expect((await send(nanoid(), 'receipt-B')).status).toBe(200);
+    expect(query("SELECT id FROM tasks WHERE project_id = ? AND title IN ('receipt-A', 'receipt-B')", [projectId])).toHaveLength(2);
+    expect(query("SELECT id FROM milestones WHERE project_id = ? AND name = 'receipt-A'", [projectId])).toHaveLength(1);
+    expect((await send(batch, 'different-content')).status).toBe(409);
+  });
+
+  it('rolls back the entire batch and receipt if a later task fails', async () => {
+    vi.spyOn(authUtils, 'getUserId').mockResolvedValue(ownerId);
+    const requestId = nanoid();
+    const response = await runAiImport(new NextRequest('http://localhost/import', { method: 'POST', body: JSON.stringify({ requestId, tasks: [{ title: 'must-rollback' }, { title: 'bad-subtask', subtasks: [null] }] }) }), { params: Promise.resolve({ id: projectId }) });
+    expect(response.status).toBe(500);
+    expect(query("SELECT id FROM tasks WHERE project_id = ? AND title = 'must-rollback'", [projectId])).toHaveLength(0);
+    expect(query('SELECT request_id FROM plan_imports WHERE request_id = ?', [requestId])).toHaveLength(0);
+  });
+
   it('should support task status flow, review metadata, and audit records', async () => {
     vi.spyOn(authUtils, 'getUserId').mockResolvedValue(ownerId);
     const taskId = 'task-flow-' + nanoid(6);

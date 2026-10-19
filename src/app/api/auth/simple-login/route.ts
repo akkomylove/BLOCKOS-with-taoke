@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { DEMO_USERS } from '@/lib/demo-users';
@@ -5,7 +6,7 @@ import { createSignedSessionToken } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { clearLoginCookies } from '@/lib/account';
 
-export async function POST(request: Request) {
+async function POSTDatabaseHandler(request: Request) {
   try {
     if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEMO_LOGIN !== 'true') {
       return NextResponse.json({ error: '演示登录未开放，请注册或登录正式账号' }, { status: 403 });
@@ -73,3 +74,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { postJsonCompletion, parseJsonContent, safeText, safeList } from '@/lib/ai/client';
 import { withEnterprise } from '@/lib/enterprise-access';
@@ -43,4 +44,4 @@ async function POSTHandler(req: NextRequest) {
   }
 }
 
-export const POST = withEnterprise(POSTHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));

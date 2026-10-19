@@ -1,10 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 import { hash } from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { createAccountSession, getAccountUser, isAccountMode, passwordError, setAccountCookie } from '@/lib/account';
 
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '请输入有效的注册信息' }, { status: 400 });
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -32,3 +33,5 @@ export async function POST(req: Request) {
   await setAccountCookie(res, token);
   return res;
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);

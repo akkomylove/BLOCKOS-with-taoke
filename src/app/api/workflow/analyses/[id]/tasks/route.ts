@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { withEnterprise } from '@/lib/enterprise-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, query, run, saveDb } from '@/lib/db';
@@ -75,4 +76,4 @@ async function POSTHandler(req: NextRequest, { params }: { params: Promise<{ id:
   }
 }
 
-export const POST = withEnterprise(POSTHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));

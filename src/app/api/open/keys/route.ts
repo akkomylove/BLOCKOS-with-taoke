@@ -1,8 +1,9 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { generateApiKey, listApiKeys, revokeApiKey } from '@/lib/api-keys';
 
-export async function GET(req: NextRequest) {
+async function GETDatabaseHandler(req: NextRequest) {
   if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话管理 API Key' }, { status: 403 });
   let userId: string;
   try {
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function POSTDatabaseHandler(req: NextRequest) {
   if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话管理 API Key' }, { status: 403 });
   let userId: string;
   try {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function DELETE(req: NextRequest) {
+async function DELETEDatabaseHandler(req: NextRequest) {
   if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话管理 API Key' }, { status: 403 });
   let userId: string;
   try {
@@ -66,3 +67,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to revoke API key' }, { status: 500 });
   }
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);
+export const POST = withDatabaseRequest(POSTDatabaseHandler);
+export const DELETE = withDatabaseRequest(DELETEDatabaseHandler);

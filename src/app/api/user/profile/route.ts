@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { getUserId } from '@/lib/auth-utils';
 import { getAccountUser } from '@/lib/account';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
@@ -13,13 +14,13 @@ async function profile(id: string) {
   return { userId: id, displayName: String(row?.display_name ?? user?.name ?? ''), title: String(row?.title ?? demo?.title ?? ''),
     functions, bio: String(row?.bio ?? ''), role: user?.role, isAdmin: user?.isAdmin, updatedAt: Number(row?.updated_at || 0) };
 }
-export async function GET() {
+async function GETDatabaseHandler() {
   let id: string;
   try { id = await getUserId(); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
   await getDb();
   return NextResponse.json(await profile(id));
 }
-export async function PATCH(req: Request) {
+async function PATCHDatabaseHandler(req: Request) {
   if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用账号登录会话修改个人资料' }, { status: 403 });
   let id: string;
   try { id = await getUserId(req); } catch { return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }); }
@@ -42,3 +43,6 @@ export async function PATCH(req: Request) {
   saveDb();
   return NextResponse.json({ success: true, profile: await profile(id) });
 }
+
+export const GET = withDatabaseRequest(GETDatabaseHandler);
+export const PATCH = withDatabaseRequest(PATCHDatabaseHandler);

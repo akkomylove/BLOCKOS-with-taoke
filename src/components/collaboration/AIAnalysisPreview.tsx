@@ -183,6 +183,7 @@ export function AIAnalysisPreview({ analysis, onConfirm, onCancel, loading }: Pr
       <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700">
         <button
           onClick={onCancel}
+          disabled={loading}
           className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 rounded-lg transition-colors"
         >
           取消

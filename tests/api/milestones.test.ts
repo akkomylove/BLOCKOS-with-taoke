@@ -11,6 +11,8 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 vi.mock('@/lib/db', () => ({
+  databaseRequest: vi.fn(async handler => handler()),
+  DatabaseConflict: class extends Error {},
   getDb: vi.fn(),
   query: vi.fn(),
   run: vi.fn(),

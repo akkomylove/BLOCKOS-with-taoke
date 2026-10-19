@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextRequest, NextResponse } from 'next/server';
 import { docRelations } from '@/lib/ai/doc-relations';
 import { withEnterprise } from '@/lib/enterprise-access';
@@ -13,4 +14,4 @@ async function POSTHandler(req: NextRequest) {
   }
 }
 
-export const POST = withEnterprise(POSTHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));

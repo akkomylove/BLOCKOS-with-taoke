@@ -1,3 +1,4 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { withEnterprise } from '@/lib/enterprise-access';
 import { getUserId, checkProjectPermission } from '@/lib/auth-utils';
 import { getDb, query } from '@/lib/db';
@@ -337,4 +338,4 @@ ${content.slice(0, 8000)}
   }
 }
 
-export const POST = withEnterprise(POSTHandler);
+export const POST = withDatabaseRequest(withEnterprise(POSTHandler));

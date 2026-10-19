@@ -1,9 +1,10 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getAccountUser, isAccountMode } from '@/lib/account';
 import { getDb, run, saveDb } from '@/lib/db';
 
-export async function PATCH(req: Request) {
+async function PATCHDatabaseHandler(req: Request) {
   if (req.headers.has('authorization')) return NextResponse.json({ error: '请使用登录会话管理账号' }, { status: 403 });
   let id: string;
   try { id = await getUserId(req); } catch { return NextResponse.json({ error: '请先登录' }, { status: 401 }); }
@@ -15,3 +16,5 @@ export async function PATCH(req: Request) {
   saveDb();
   return NextResponse.json({ user: await getAccountUser(id) });
 }
+
+export const PATCH = withDatabaseRequest(PATCHDatabaseHandler);

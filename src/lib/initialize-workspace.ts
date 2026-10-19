@@ -32,6 +32,7 @@ export async function initializeWorkspace(userId: string, mode: AccountMode, sig
       blocks: finalBlocks,
       pageBlocks: { ...state.pageBlocks, [id]: finalBlocks },
     }));
+    await useBlockStore.getState().loadActivity().catch(() => {});
     return false;
   }
   const blocks = getAccountGuide(mode).map(block => ({ ...block, id: `${block.id}-${userId}`,
@@ -48,5 +49,6 @@ export async function initializeWorkspace(userId: string, mode: AccountMode, sig
   if (!saved.ok) throw new Error('入门文档保存失败，请刷新重试');
   if (signal.aborted) return false;
   useBlockStore.setState({ pages: [page], folders, currentPageId: page.id, blocks, pageBlocks: { [page.id]: blocks } });
+  await useBlockStore.getState().loadActivity().catch(() => {});
   return true;
 }

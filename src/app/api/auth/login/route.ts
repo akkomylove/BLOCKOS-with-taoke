@@ -1,10 +1,11 @@
+import { withDatabaseRequest } from '@/lib/database-request';
 import { NextResponse } from 'next/server';
 import { compare, hashSync } from 'bcryptjs';
 import { getDb, query, run, saveDb } from '@/lib/db';
 import { createAccountSession, digest, getAccountUser, loginBlocked, recordLoginFailure, setAccountCookie } from '@/lib/account';
 
 const DUMMY_HASH = hashSync('unavailable-account-password', 12);
-export async function POST(req: Request) {
+async function POSTDatabaseHandler(req: Request) {
   const body = await req.json().catch(() => null);
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
   const password = body?.password;
@@ -24,3 +25,5 @@ export async function POST(req: Request) {
   await setAccountCookie(res, token);
   return res;
 }
+
+export const POST = withDatabaseRequest(POSTDatabaseHandler);
