@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const publicRoute = pathname === '/' || pathname === '/login' || pathname.startsWith('/api/auth/')
-    || pathname.startsWith('/api/open/') || pathname === '/api/db-status';
+    || pathname.startsWith('/api/open/') || pathname === '/api/db-status' || pathname.startsWith('/assets/');
   if (publicRoute) return NextResponse.next();
   const hasSession = req.cookies.getAll().some(cookie => !!cookie.value && (
     ['blockos-session', 'demo-session', 'authjs.session-token', '__Secure-authjs.session-token'].includes(cookie.name)
@@ -16,4 +16,4 @@ export function middleware(req: NextRequest) {
   return NextResponse.redirect(login);
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)'] };
+export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|assets/|.*\\.(?:png|svg|ico|jpg|jpeg|webp)$).*)'] };
