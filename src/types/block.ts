@@ -84,13 +84,14 @@ export interface Block {
   content: string;
   meta: BlockMeta;
   parentId: string | null;
-  groupId?: string;
+  groupId?: string | null;
   order: number;
   x: number;
   y: number;
   width: number;
   height?: number;
   collapsed: boolean;
+  version?: number;
   createdAt: number;
   updatedAt: number;
 }

@@ -6,6 +6,7 @@ import type { Block, BlockType, BlockMeta, AgentRule, AgentLog, BlockTemplate } 
 import type { Page, Folder } from '@/types/page';
 import { PRESET_DOCUMENTS, getPresetDocumentBlocks } from '@/config/presetDocuments';
 import { escapeHtml, sanitizeHtml } from '@/lib/sanitize';
+import { workspaceStorage, onWorkspaceStorageError } from '@/lib/workspace-storage';
 
 interface HistoryEntry {
   id?: string;
@@ -96,9 +97,10 @@ interface BlockStore {
 
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   saveError: string | null;
+  localCacheError: string | null;
   lastSavedAt: number | null;
   currentUserId: string | null;
-  setCurrentUserId: (userId: string | null) => void;
+  setCurrentUserId: (userId: string | null) => Promise<void>;
   retrySave: () => Promise<void>;
   syncToServer: (pageId?: string) => Promise<void>;
   loadFromServer: (pageId: string) => Promise<void>;
@@ -208,42 +210,49 @@ export const BLOCK_TEMPLATES: BlockTemplate[] = [
     name: '👋 新手快速入门指南',
     icon: '👋',
     description: '3 分钟掌握 BlockOS：二维无界画布、单 Block 专属 AI、父子嵌套结构与代码沙箱',
-    blocks: PRESET_DOCUMENTS[0]?.blocks || [],
+    blocks: PRESET_DOCUMENTS.find(d => d.id === 'doc-guide')?.blocks || [],
+  },
+  {
+    id: 'template-producers',
+    name: '📓 Block OS 团队制作人文档',
+    icon: '📓',
+    description: '展示 Block OS 团队共创过程、架构分工、使用记录与协作设计',
+    blocks: PRESET_DOCUMENTS.find(d => d.id === 'doc-producers')?.blocks || [],
   },
   {
     id: 'template-prd',
     name: '📋 产品需求文档（PRD）',
     icon: '📋',
     description: 'CircleLight 电商平台完整产品需求与验收标准样板',
-    blocks: PRESET_DOCUMENTS[1]?.blocks || [],
+    blocks: PRESET_DOCUMENTS.find(d => d.id === 'doc-prd')?.blocks || [],
   },
   {
     id: 'template-tech',
     name: '💻 技术方案文档',
     icon: '💻',
     description: '微服务架构、API 接口及数据库设计样板',
-    blocks: PRESET_DOCUMENTS[2]?.blocks || [],
+    blocks: PRESET_DOCUMENTS.find(d => d.id === 'doc-tech')?.blocks || [],
   },
   {
     id: 'template-ui',
     name: '🎨 UI 设计规范',
     icon: '🎨',
     description: '色彩系统、组件规范与页面响应式布局样板',
-    blocks: PRESET_DOCUMENTS[3]?.blocks || [],
+    blocks: PRESET_DOCUMENTS.find(d => d.id === 'doc-ui')?.blocks || [],
   },
   {
     id: 'template-data',
     name: '📊 数据分析报告',
     icon: '📊',
     description: '电商经营数据概览、转化漏斗与用户分层洞察样板',
-    blocks: PRESET_DOCUMENTS[4]?.blocks || [],
+    blocks: PRESET_DOCUMENTS.find(d => d.id === 'doc-data')?.blocks || [],
   },
   {
     id: 'template-test',
     name: '🧪 测试计划与用例',
     icon: '🧪',
     description: '敏捷测试策略、核心功能测试用例与里程碑样板',
-    blocks: PRESET_DOCUMENTS[5]?.blocks || [],
+    blocks: PRESET_DOCUMENTS.find(d => d.id === 'doc-test')?.blocks || [],
   },
   {
     id: 'meeting',
@@ -297,8 +306,8 @@ function createPresetPages(): { pages: Page[]; pageBlocks: Record<string, Block[
   const pages: Page[] = [];
   const pageBlocks: Record<string, Block[]> = {};
 
-  // 默认仅初始化首篇欢迎入门指南文档，其余作为样板库按需实例化
-  const guideDoc = PRESET_DOCUMENTS[0];
+  // 默认初始化欢迎入门指南文档与团队制作人文档
+  const guideDoc = PRESET_DOCUMENTS.find(d => d.id === 'doc-guide') || PRESET_DOCUMENTS[0];
   const guidePageId = 'doc-guide';
   pages.push({
     id: guidePageId,
@@ -309,6 +318,20 @@ function createPresetPages(): { pages: Page[]; pageBlocks: Record<string, Block[
   });
   pageBlocks[guidePageId] = getPresetDocumentBlocks(guideDoc.id);
 
+  const producerDoc = PRESET_DOCUMENTS.find(d => d.id === 'doc-producers');
+  if (producerDoc) {
+    const producerPageId = 'doc-producers';
+    pages.push({
+      id: producerPageId,
+      title: producerDoc.title,
+      icon: producerDoc.icon,
+      chapters: producerDoc.chapters,
+      createdAt: now + 1,
+      updatedAt: now + 1,
+    });
+    pageBlocks[producerPageId] = getPresetDocumentBlocks(producerDoc.id);
+  }
+
   return { pages, pageBlocks };
 }
 
@@ -318,6 +341,7 @@ const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const pageCreates = new Map<string, Promise<boolean>>();
 const pageWrites = new Map<string, Promise<void>>();
 let pagesSyncTimer: ReturnType<typeof setTimeout> | null = null;
+let accountCacheLoad: { userId: string | null; promise: Promise<void> } | null = null;
 
 export function triggerDebouncedSave() {
   const { currentPageId: pageId, currentUserId: userId } = useBlockStore.getState();
@@ -372,6 +396,7 @@ export const useBlockStore = create<BlockStore>()(
       historyIndex: -1,
       saveStatus: 'idle',
       saveError: null,
+      localCacheError: null,
       lastSavedAt: null,
       currentUserId: null,
 
@@ -461,7 +486,7 @@ export const useBlockStore = create<BlockStore>()(
         const { currentUserId, pages, folders, groups, currentPageId, pageBlocks } = get();
         if (typeof window !== 'undefined' && currentUserId) {
           try {
-            localStorage.setItem(
+            void workspaceStorage.setItem(
               `block-os-storage-${currentUserId}`,
               JSON.stringify({
                 state: {
@@ -1215,52 +1240,75 @@ export const useBlockStore = create<BlockStore>()(
 
       setCurrentUserId: (userId) => {
         const prevId = get().currentUserId;
-        if (prevId === userId) return;
-        set((state) => {
-          state.currentUserId = userId;
-          state.agentLogs = [];
-          state.history = [];
-          state.historyIndex = -1;
-          state.activityStatus = 'idle';
-          state.historyCursors = {};
-        });
-        if (typeof window !== 'undefined' && userId) {
-          try {
-            const userStoreKey = `block-os-storage-${userId}`;
-            const activity = JSON.parse(localStorage.getItem(`blockos-activity-${userId}`) || 'null');
-            if (activity) set(state => { state.agentLogs = activity.logs || []; state.history = activity.history || []; state.historyIndex = activity.historyIndex ?? -1; state.historyCursors = activity.cursors || {}; });
-            const cached = localStorage.getItem(userStoreKey);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              if (parsed?.state?.pages && Array.isArray(parsed.state.pages) && parsed.state.pages.length > 0) {
-                set((state) => {
-                  state.pages = parsed.state.pages || [];
-                  state.folders = parsed.state.folders || [];
-                  state.groups = parsed.state.groups || [];
-                  state.currentPageId = parsed.state.currentPageId || state.currentPageId;
-                  state.pageBlocks = parsed.state.pageBlocks || {};
-                  state.blocks = parsed.state.pageBlocks?.[state.currentPageId] || [];
-                });
-                return;
+        if (prevId === userId) return accountCacheLoad?.userId === userId ? accountCacheLoad.promise : Promise.resolve();
+        const request = { userId, promise: Promise.resolve() };
+        accountCacheLoad = request;
+        request.promise = (async () => {
+          set((state) => {
+            state.currentUserId = userId;
+            state.agentLogs = [];
+            state.history = [];
+            state.historyIndex = -1;
+            state.activityStatus = 'idle';
+            state.historyCursors = {};
+          });
+          if (typeof window !== 'undefined' && userId) {
+            try {
+              const userStoreKey = `block-os-storage-${userId}`;
+              const activity = JSON.parse(await workspaceStorage.getItem(`blockos-activity-${userId}`) || 'null');
+              if (get().currentUserId !== userId || accountCacheLoad !== request) return;
+              if (activity) set(state => { state.agentLogs = activity.logs || []; state.history = activity.history || []; state.historyIndex = activity.historyIndex ?? -1; state.historyCursors = activity.cursors || {}; });
+              const cached = await workspaceStorage.getItem(userStoreKey);
+              if (get().currentUserId !== userId || accountCacheLoad !== request) return;
+              if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed?.state?.pages && Array.isArray(parsed.state.pages) && parsed.state.pages.length > 0) {
+                  const cachedPages: Page[] = parsed.state.pages || [];
+                  const cachedPageBlocks = parsed.state.pageBlocks || {};
+                  const hasProducer = cachedPages.some(p => p.id === 'doc-producers' || (typeof p.id === 'string' && p.id.startsWith('doc-producers-')) || (typeof p.title === 'string' && p.title.includes('团队制作人文档')));
+                  if (!hasProducer) {
+                    const producerDoc = PRESET_DOCUMENTS.find(d => d.id === 'doc-producers');
+                    if (producerDoc) {
+                      cachedPages.push({
+                        id: 'doc-producers',
+                        title: producerDoc.title,
+                        icon: producerDoc.icon,
+                        chapters: producerDoc.chapters,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                      });
+                      cachedPageBlocks['doc-producers'] = getPresetDocumentBlocks(producerDoc.id);
+                    }
+                  }
+                  set((state) => {
+                    state.pages = cachedPages;
+                    state.folders = parsed.state.folders || [];
+                    state.groups = parsed.state.groups || [];
+                    state.currentPageId = parsed.state.currentPageId || state.currentPageId;
+                    state.pageBlocks = cachedPageBlocks;
+                    state.blocks = cachedPageBlocks[state.currentPageId] || [];
+                  });
+                  return;
+                }
               }
+              const { pages, pageBlocks } = createPresetPages();
+              const firstPage = pages[0];
+              const guidePageId = firstPage ? firstPage.id : 'doc-guide';
+              set((state) => {
+                state.pages = pages;
+                state.folders = [];
+                state.groups = [];
+                state.currentPageId = guidePageId;
+                state.pageBlocks = pageBlocks;
+                state.blocks = pageBlocks[guidePageId] || [];
+                state.selectedIds = [];
+              });
+            } catch (e) {
+              console.warn('Failed to load user-isolated storage:', e);
             }
-            // 新账号首次登录且本地无对应命名空间缓存时，重置为该用户的干净官方指南，杜绝继承上一个账号的脏页面
-            const { pages, pageBlocks } = createPresetPages();
-            const firstPage = pages[0];
-            const guidePageId = firstPage ? firstPage.id : 'doc-guide';
-            set((state) => {
-              state.pages = pages;
-              state.folders = [];
-              state.groups = [];
-              state.currentPageId = guidePageId;
-              state.pageBlocks = pageBlocks;
-              state.blocks = pageBlocks[guidePageId] || [];
-              state.selectedIds = [];
-            });
-          } catch (e) {
-            console.warn('Failed to load user-isolated storage:', e);
           }
-        }
+        })();
+        return request.promise;
       },
 
       syncToServer: async (pageId) => {
@@ -1305,14 +1353,14 @@ export const useBlockStore = create<BlockStore>()(
           // 同步成功后清理离线队列
           if (typeof window !== 'undefined') {
             try {
-              localStorage.removeItem('block-os-offline-pending');
+              await workspaceStorage.removeItem('block-os-offline-pending');
             } catch {}
           }
 
           // 用户隔离本地镜像持久化
           if (typeof window !== 'undefined' && currentUserId) {
             try {
-              localStorage.setItem(
+              await workspaceStorage.setItem(
                 `block-os-storage-${currentUserId}`,
                 JSON.stringify({
                   state: {
@@ -1325,7 +1373,6 @@ export const useBlockStore = create<BlockStore>()(
                 })
               );
             } catch {
-              // Ignore localStorage quota errors
             }
           }
         } catch (err) {
@@ -1340,7 +1387,7 @@ export const useBlockStore = create<BlockStore>()(
           // 优雅降级：网络故障或服务端异常时，将待同步数据暂存至离线队列
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem(
+              await workspaceStorage.setItem(
                 'block-os-offline-pending',
                 JSON.stringify({
                   pageId: currentPageId,
@@ -1443,7 +1490,7 @@ export const useBlockStore = create<BlockStore>()(
     })),
     {
       name: 'block-os-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => workspaceStorage),
       partialize: (state) => ({
         pages: state.pages,
         folders: state.folders,
@@ -1471,6 +1518,9 @@ export const useBlockStore = create<BlockStore>()(
 );
 
 let activityTimer: ReturnType<typeof setTimeout> | undefined;
+onWorkspaceStorageError(message => {
+  if (useBlockStore.getState().localCacheError !== message) useBlockStore.setState({ localCacheError: message });
+});
 let activityUser: string | null = null;
 let knownHistoryIds = new Set<string>();
 let knownCursors: Record<string, string> = {};
@@ -1548,7 +1598,7 @@ async function clearAccountLogs() {
 useBlockStore.subscribe((state, previous) => {
   if (state.currentUserId !== previous.currentUserId) { clearTimeout(activityTimer); activityUser = null; knownHistoryIds = new Set(); knownCursors = {}; return; }
   if (!state.currentUserId || (state.history === previous.history && state.historyIndex === previous.historyIndex && state.agentLogs === previous.agentLogs)) return;
-  try { localStorage.setItem(`blockos-activity-${state.currentUserId}`, JSON.stringify({ history: state.history, historyIndex: state.historyIndex, logs: state.agentLogs, cursors: state.historyCursors })); } catch {}
+  void workspaceStorage.setItem(`blockos-activity-${state.currentUserId}`, JSON.stringify({ history: state.history, historyIndex: state.historyIndex, logs: state.agentLogs, cursors: state.historyCursors }));
   if (activityUser !== state.currentUserId) return;
   clearTimeout(activityTimer);
   activityTimer = setTimeout(() => { void flushAccountActivity().catch(() => {}); }, 500);

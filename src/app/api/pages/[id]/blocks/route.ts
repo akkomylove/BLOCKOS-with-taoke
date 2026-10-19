@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserId } from '@/lib/auth-utils';
 import { getDb, query, run, saveDb, transaction } from '@/lib/db';
 import { isValidNanoid } from '@/lib/validation';
-import { getPresetDocumentBlocks } from '@/config/presetDocuments';
+import { getPresetDocumentBlocks, PRESET_DOCUMENTS } from '@/config/presetDocuments';
 
 async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,18 +21,20 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
     await getDb();
 
     const isGuideRequest = id === 'doc-guide' || id === `doc-guide-${userId}` || id.includes('guide');
+    const isProducerRequest = id === 'doc-producers' || id === `doc-producers-${userId}` || id.includes('producer');
     let targetPageId = id;
 
     let pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
 
-    // 如果直接查找未找到且为指南请求，再查找该用户拥有的带用户后缀的指南页面
-    if (pages.length === 0 && isGuideRequest) {
-      const userGuidePages = query(
+    // 如果直接查找未找到且为指南或制作人文档请求，再查找该用户拥有的带用户后缀的页面
+    if (pages.length === 0 && (isGuideRequest || isProducerRequest)) {
+      const matchPrefix = isGuideRequest ? 'doc-guide' : 'doc-producers';
+      const userMatchedPages = query(
         'SELECT * FROM pages WHERE (id = ? OR id = ?) AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)',
-        ['doc-guide', `doc-guide-${userId}`, userId]
+        [matchPrefix, `${matchPrefix}-${userId}`, userId]
       );
-      if (userGuidePages.length > 0) {
-        pages = userGuidePages;
+      if (userMatchedPages.length > 0) {
+        pages = userMatchedPages;
         targetPageId = pages[0].id as string;
       }
     }
@@ -46,6 +48,17 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
         run(
           'INSERT INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           [targetPageId, userId, '👋 欢迎使用 BlockOS ｜ 新手快速入门指南', '👋', 0, 1, now, now]
+        );
+        pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [targetPageId, userId]);
+      } else if (isProducerRequest) {
+        const now = Date.now();
+        const producerDoc = PRESET_DOCUMENTS.find(d => d.id === 'doc-producers');
+        const docProducerTaken = query('SELECT user_id FROM pages WHERE id = ?', ['doc-producers']);
+        targetPageId = (docProducerTaken.length === 0 || docProducerTaken[0].user_id === userId) ? 'doc-producers' : `doc-producers-${userId}`;
+
+        run(
+          'INSERT INTO pages (id, user_id, title, icon, order_index, version, created_at, updated_at, chapters, kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [targetPageId, userId, producerDoc?.title || 'Block OS 团队制作人文档', producerDoc?.icon || '📓', 1, 1, now, now, JSON.stringify(producerDoc?.chapters || []), 'document']
         );
         pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [targetPageId, userId]);
       } else {
@@ -88,6 +101,55 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
               typeof b.x === 'number' ? b.x : 100,
               typeof b.y === 'number' ? b.y : 40,
               typeof b.width === 'number' ? b.width : 760,
+              typeof b.height === 'number' ? b.height : 200,
+              b.collapsed ? 1 : 0,
+              1,
+              now + i,
+              now + i,
+            ]
+          );
+        }
+      });
+      saveDb();
+      blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [targetPageId]);
+    }
+
+    if (isProducerRequest && blocks.length === 0) {
+      const presetBlocks = getPresetDocumentBlocks('doc-producers');
+      const now = Date.now();
+      transaction(() => {
+        for (let i = 0; i < presetBlocks.length; i++) {
+          const b = presetBlocks[i];
+          let blockId = b.id;
+          const blockTaken = query('SELECT page_id FROM blocks WHERE id = ?', [b.id]);
+          if (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId) {
+            blockId = `${b.id}-${userId}`;
+          }
+
+          const parentId = b.parentId ? (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId ? `${b.parentId}-${userId}` : b.parentId) : null;
+          const metaObj = { ...(b.meta || {}) };
+          if (metaObj.links && Array.isArray(metaObj.links)) {
+            metaObj.links = metaObj.links.map((linkId: string) => (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId ? `${linkId}-${userId}` : linkId));
+          }
+
+          run(
+            `INSERT INTO blocks (
+              id, page_id, type, title, content, meta, parent_id, group_id,
+              order_index, x, y, width, height, collapsed, version, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              blockId,
+              targetPageId,
+              b.type,
+              b.title || '',
+              b.content || '',
+              JSON.stringify(metaObj),
+              parentId,
+              b.groupId || null,
+              typeof b.order === 'number' ? b.order : i,
+              typeof b.x === 'number' ? b.x : 40,
+              typeof b.y === 'number' ? b.y : 40,
+              typeof b.width === 'number' ? b.width : 720,
               typeof b.height === 'number' ? b.height : 200,
               b.collapsed ? 1 : 0,
               1,

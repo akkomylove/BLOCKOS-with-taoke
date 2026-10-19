@@ -38,9 +38,10 @@ async function GETDatabaseHandler(req: NextRequest) {
       updatedAt: p.updated_at,
     }));
 
-    // 防御性去重：若历史数据中存在多个指南副本（如 doc-guide 与 doc-guide-userId），仅保留唯一有效的一份
+    // 防御性去重：若历史数据中存在多个指南或制作人文档副本（如 doc-guide 与 doc-guide-userId），仅保留唯一有效的一份
     const seenIds = new Set<string>();
     let hasGuide = false;
+    let hasProducer = false;
     const deduplicatedPages = mappedPages.filter((p) => {
       if (seenIds.has(p.id as string)) return false;
       seenIds.add(p.id as string);
@@ -53,6 +54,15 @@ async function GETDatabaseHandler(req: NextRequest) {
       if (isGuide) {
         if (hasGuide) return false;
         hasGuide = true;
+      }
+      const isProducer =
+        p.id === 'doc-producers' ||
+        (typeof p.id === 'string' && p.id.startsWith('doc-producers-')) ||
+        titleStr.includes('Block OS 团队制作人文档') ||
+        titleStr.includes('团队制作人文档');
+      if (isProducer) {
+        if (hasProducer) return false;
+        hasProducer = true;
       }
       return true;
     });

@@ -13,6 +13,7 @@ import Logo from '@/components/Logo';
 import { useAccountStore } from '@/store/accountStore';
 import { useBlockStore } from '@/store/blockStore';
 import { useTheme } from '@/components/ThemeProvider';
+import { workspaceStorage } from '@/lib/workspace-storage';
 
 
 interface ToolbarProps {
@@ -58,6 +59,7 @@ export default function Toolbar({
   const updateBlock = useBlockStore((state) => state.updateBlock);
   const saveStatus = useBlockStore((state) => state.saveStatus);
   const saveError = useBlockStore((state) => state.saveError);
+  const localCacheError = useBlockStore((state) => state.localCacheError);
   const retrySave = useBlockStore((state) => state.retrySave);
   const user = useAccountStore(state => state.user);
   const logout = useAccountStore(state => state.logout);
@@ -78,9 +80,9 @@ export default function Toolbar({
     if (typeof window === 'undefined') return;
     setIsOnline(navigator.onLine);
 
-    const handleOnline = () => {
+    const handleOnline = async () => {
       setIsOnline(true);
-      const pending = localStorage.getItem('block-os-offline-pending');
+      const pending = await workspaceStorage.getItem('block-os-offline-pending');
       if (pending) {
         retrySave();
       }
@@ -187,6 +189,12 @@ export default function Toolbar({
             <AlertCircle className="w-3 h-3" />
             <span>保存失败 (重试)</span>
           </button>
+        )}
+        {localCacheError && (
+          <span role="status" title={localCacheError} className="inline-flex items-center gap-1 text-[11px] text-amber-700 px-2 shrink-0">
+            <AlertCircle className="w-3 h-3" />
+            本地缓存不可用，请导出备份
+          </span>
         )}
         {!isOnline && (
           <span

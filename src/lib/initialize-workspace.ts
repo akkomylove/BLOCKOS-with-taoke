@@ -8,7 +8,8 @@ import type { Page } from '@/types/page';
 export async function initializeWorkspace(userId: string, mode: AccountMode, signal: AbortSignal) {
   await useBlockStore.persist.rehydrate();
   if (signal.aborted) return false;
-  useBlockStore.getState().setCurrentUserId(userId);
+  await useBlockStore.getState().setCurrentUserId(userId);
+  if (signal.aborted) return false;
   useBlockStore.getState().hydrate();
   useBlockStore.setState({ agentEnabled: false, agentRules: [] });
   const response = await fetch('/api/pages', { signal });

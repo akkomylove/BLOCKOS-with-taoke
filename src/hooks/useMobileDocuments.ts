@@ -43,9 +43,21 @@ export function useMobileDocuments() {
         await useAccountStore.getState().load();
         const accountState = useAccountStore.getState();
         if (accountState.status === 'guest') {
-          const blocks = getPresetDocumentBlocks('doc-guide');
-          const page: Page = { id: 'mobile-example', title: '欢迎使用 BlockOS', icon: '👋', createdAt: 0, updatedAt: 0 };
-          useBlockStore.setState({ pages: [page], folders: [], currentPageId: page.id, blocks, pageBlocks: { [page.id]: blocks }, currentUserId: null });
+          const guideBlocks = getPresetDocumentBlocks('doc-guide');
+          const producerBlocks = getPresetDocumentBlocks('doc-producers');
+          const guidePage: Page = { id: 'mobile-example', title: '欢迎使用 BlockOS', icon: '👋', createdAt: 0, updatedAt: 0 };
+          const producerPage: Page = { id: 'doc-producers', title: 'Block OS 团队制作人文档', icon: '📓', createdAt: 0, updatedAt: 0 };
+          useBlockStore.setState({
+            pages: [guidePage, producerPage],
+            folders: [],
+            currentPageId: guidePage.id,
+            blocks: guideBlocks,
+            pageBlocks: {
+              [guidePage.id]: guideBlocks,
+              [producerPage.id]: producerBlocks,
+            },
+            currentUserId: null,
+          });
           setSession('guest');
           return;
         }
@@ -53,7 +65,8 @@ export function useMobileDocuments() {
         const user = accountState.user;
         if (!user.id) throw new Error('登录已过期，请重新登录');
         userRef.current = user.id;
-        useBlockStore.getState().setCurrentUserId(user.id);
+        await useBlockStore.getState().setCurrentUserId(user.id);
+        if (controller.signal.aborted) return;
         const response = await fetch('/api/pages', { signal: controller.signal });
         if (!response.ok) throw new Error('无法加载云端文档，请检查网络后刷新');
         const data = await response.json();

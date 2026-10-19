@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AccountMode, AccountUser } from '@/types/account';
 import { useCollaborationStore } from './collaborationStore';
 import { useBlockStore } from './blockStore';
+import { workspaceStorage } from '@/lib/workspace-storage';
 
 let pending: Promise<void> | null = null;
 function clearCollaboration() {
@@ -51,7 +52,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     clearCollaboration();
     set({ user: null, status: 'guest' });
     // Keep per-account offline documents; remove only the shared browser mirror.
-    localStorage.removeItem('block-os-storage');
+    await workspaceStorage.removeItem('block-os-storage');
     localStorage.removeItem('blockos-collaboration-storage');
     window.location.assign('/login');
   },

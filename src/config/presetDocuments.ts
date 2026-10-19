@@ -1,11 +1,20 @@
 import type { Block } from '@/types/block';
+import type { DocumentChapter } from '@/types/page';
 import { nanoid } from 'nanoid';
+import {
+  PRODUCER_DOCUMENT_TITLE,
+  PRODUCER_DOCUMENT_ICON,
+  PRODUCER_DOCUMENT_DESCRIPTION,
+  PRODUCER_DOCUMENT_CHAPTERS,
+  PRODUCER_DOCUMENT_BLOCKS,
+} from './producerDocument';
 
-interface PresetDocument {
+export interface PresetDocument {
   id: string;
   title: string;
   icon: string;
   description: string;
+  chapters?: DocumentChapter[];
   blocks: (Omit<Block, 'id' | 'createdAt' | 'updatedAt'> & { id?: string })[];
 }
 
@@ -121,6 +130,14 @@ export const PRESET_DOCUMENTS: PresetDocument[] = [
     ],
   },
   {
+    id: 'doc-producers',
+    title: PRODUCER_DOCUMENT_TITLE,
+    icon: PRODUCER_DOCUMENT_ICON,
+    description: PRODUCER_DOCUMENT_DESCRIPTION,
+    chapters: PRODUCER_DOCUMENT_CHAPTERS,
+    blocks: PRODUCER_DOCUMENT_BLOCKS,
+  },
+  {
     id: 'doc-prd',
     title: '产品需求文档（PRD）',
     icon: '📋',
@@ -214,4 +231,8 @@ export function getPresetDocumentBlocks(docId: string): Block[] {
   const doc = PRESET_DOCUMENTS.find(d => d.id === docId);
   if (!doc) return [];
   return createBlocks(doc.blocks);
+}
+
+export function getPresetDocument(docId: string): PresetDocument | undefined {
+  return PRESET_DOCUMENTS.find(d => d.id === docId);
 }
