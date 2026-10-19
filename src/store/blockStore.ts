@@ -443,13 +443,29 @@ export const useBlockStore = create<BlockStore>()(
           state.selectedIds = [];
           if (template && template.blocks.length > 0) {
             const now = Date.now();
-            const newBlocks: Block[] = template.blocks.map((b, i) => ({
-              ...b,
-              id: nanoid(),
-              createdAt: now,
-              updatedAt: now,
-              order: i,
-            }));
+            const idMap = new Map<string, string>();
+            template.blocks.forEach((b) => {
+              const rawId = (b as { id?: string }).id;
+              if (rawId) idMap.set(rawId, nanoid());
+            });
+            const newBlocks: Block[] = template.blocks.map((b, i) => {
+              const rawId = (b as { id?: string }).id;
+              const newId = (rawId && idMap.get(rawId)) || nanoid();
+              const newParentId = b.parentId ? (idMap.get(b.parentId) || b.parentId) : null;
+              const metaObj = { ...(b.meta || {}) };
+              if (metaObj.links && Array.isArray(metaObj.links)) {
+                metaObj.links = metaObj.links.map((linkId: string) => idMap.get(linkId) || linkId);
+              }
+              return {
+                ...b,
+                id: newId,
+                parentId: newParentId,
+                meta: metaObj,
+                createdAt: now,
+                updatedAt: now,
+                order: i,
+              };
+            });
             state.pageBlocks[newPage.id] = newBlocks;
             state.blocks = newBlocks;
             createdBlocks = newBlocks;

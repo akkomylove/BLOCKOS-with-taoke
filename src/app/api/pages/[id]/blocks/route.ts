@@ -118,6 +118,7 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
       const presetBlocks = getPresetDocumentBlocks('doc-producers');
       const now = Date.now();
       transaction(() => {
+        const idMap = new Map<string, string>();
         for (let i = 0; i < presetBlocks.length; i++) {
           const b = presetBlocks[i];
           let blockId = b.id;
@@ -125,11 +126,16 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
           if (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId) {
             blockId = `${b.id}-${userId}`;
           }
+          idMap.set(b.id, blockId);
+        }
 
-          const parentId = b.parentId ? (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId ? `${b.parentId}-${userId}` : b.parentId) : null;
+        for (let i = 0; i < presetBlocks.length; i++) {
+          const b = presetBlocks[i];
+          const blockId = idMap.get(b.id) || b.id;
+          const parentId = b.parentId ? (idMap.get(b.parentId) || b.parentId) : null;
           const metaObj = { ...(b.meta || {}) };
           if (metaObj.links && Array.isArray(metaObj.links)) {
-            metaObj.links = metaObj.links.map((linkId: string) => (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId ? `${linkId}-${userId}` : linkId));
+            metaObj.links = metaObj.links.map((linkId: string) => idMap.get(linkId) || linkId);
           }
 
           run(
@@ -161,6 +167,41 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
       });
       saveDb();
       blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [targetPageId]);
+    } else if (isProducerRequest && blocks.length > 0) {
+      // Self-heal corrupted parent_id references or legacy Base64 contents in existing database
+      const blockIdSet = new Set(blocks.map((b) => b.id as string));
+      let needsHeal = false;
+      for (const b of blocks) {
+        if (b.parent_id && !blockIdSet.has(b.parent_id as string) && blockIdSet.has(`${b.parent_id}-${userId}`)) {
+          needsHeal = true;
+          break;
+        }
+        if (typeof b.content === 'string' && b.content.startsWith('data:image')) {
+          needsHeal = true;
+          break;
+        }
+      }
+      if (needsHeal) {
+        transaction(() => {
+          for (const b of blocks) {
+            const blockIdStr = String(b.id);
+            if (b.parent_id && !blockIdSet.has(b.parent_id as string) && blockIdSet.has(`${b.parent_id}-${userId}`)) {
+              run('UPDATE blocks SET parent_id = ? WHERE id = ? AND page_id = ?', [`${b.parent_id}-${userId}`, blockIdStr, targetPageId]);
+            }
+            if (typeof b.content === 'string' && b.content.startsWith('data:image')) {
+              if (blockIdStr.includes('blk_q9aavvabIn8PDj7Y')) {
+                run('UPDATE blocks SET content = ? WHERE id = ? AND page_id = ?', ['/assets/co-creation/blk_q9aavvabIn8PDj7Y.svg', blockIdStr, targetPageId]);
+              } else if (blockIdStr.includes('blk_7cGOKJIaJV6_Tt8P')) {
+                run('UPDATE blocks SET content = ? WHERE id = ? AND page_id = ?', ['/assets/co-creation/blk_7cGOKJIaJV6_Tt8P.svg', blockIdStr, targetPageId]);
+              } else if (blockIdStr.includes('blk_3XEHLfUDwW1YxXBu')) {
+                run('UPDATE blocks SET content = ? WHERE id = ? AND page_id = ?', ['/assets/co-creation/blk_3XEHLfUDwW1YxXBu.png', blockIdStr, targetPageId]);
+              }
+            }
+          }
+        });
+        saveDb();
+        blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [targetPageId]);
+      }
     }
 
     return NextResponse.json({
@@ -212,7 +253,23 @@ async function handleSaveBlocks(req: NextRequest, { params }: { params: Promise<
 
     await getDb();
 
-    const pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
+    const isGuideRequest = id === 'doc-guide' || id === `doc-guide-${userId}` || id.includes('guide');
+    const isProducerRequest = id === 'doc-producers' || id === `doc-producers-${userId}` || id.includes('producer');
+    let targetPageId = id;
+
+    let pages = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
+    if (pages.length === 0 && (isGuideRequest || isProducerRequest)) {
+      const matchPrefix = isGuideRequest ? 'doc-guide' : 'doc-producers';
+      const userMatchedPages = query(
+        'SELECT * FROM pages WHERE (id = ? OR id = ?) AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)',
+        [matchPrefix, `${matchPrefix}-${userId}`, userId]
+      );
+      if (userMatchedPages.length > 0) {
+        pages = userMatchedPages;
+        targetPageId = pages[0].id as string;
+      }
+    }
+
     if (pages.length === 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
@@ -229,21 +286,32 @@ async function handleSaveBlocks(req: NextRequest, { params }: { params: Promise<
     const nextPageVersion = currentPageVersion + 1;
 
     transaction(() => {
-      run('DELETE FROM blocks WHERE page_id = ?', [id]);
+      run('DELETE FROM blocks WHERE page_id = ?', [targetPageId]);
+
+      const idMap = new Map<string, string>();
+      for (const b of blocks) {
+        if (!b || !b.id) continue;
+        let blockId = b.id;
+        const blockTaken = query('SELECT page_id FROM blocks WHERE id = ?', [b.id]);
+        if (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId) {
+          blockId = `${b.id}-${userId}`;
+        }
+        idMap.set(b.id, blockId);
+      }
 
       for (let i = 0; i < blocks.length; i++) {
         const b = blocks[i];
         if (!b || !b.id) continue;
 
-        let blockId = b.id;
-        const blockTaken = query('SELECT page_id FROM blocks WHERE id = ?', [b.id]);
-        if (blockTaken.length > 0 && blockTaken[0].page_id !== id) {
-          blockId = `${b.id}-${userId}`;
-        }
+        const blockId = idMap.get(b.id) || b.id;
+        const parentId = b.parentId ? (idMap.get(b.parentId) || b.parentId) : null;
 
         const metaObj = { ...(b.meta || {}) };
         if (b.id.startsWith('guide-') && !metaObj.tourId) {
           metaObj.tourId = b.id;
+        }
+        if (metaObj.links && Array.isArray(metaObj.links)) {
+          metaObj.links = metaObj.links.map((linkId: string) => idMap.get(linkId) || linkId);
         }
 
         run(
@@ -253,12 +321,12 @@ async function handleSaveBlocks(req: NextRequest, { params }: { params: Promise<
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             blockId,
-            id,
+            targetPageId,
             b.type || 'text',
             b.title || '',
             b.content || '',
             JSON.stringify(metaObj),
-            b.parentId || null,
+            parentId,
             b.groupId || null,
             typeof b.order === 'number' ? b.order : i,
             typeof b.x === 'number' ? b.x : 0,
@@ -273,7 +341,7 @@ async function handleSaveBlocks(req: NextRequest, { params }: { params: Promise<
         );
       }
 
-      run('UPDATE pages SET version = ?, updated_at = ? WHERE id = ?', [nextPageVersion, now, id]);
+      run('UPDATE pages SET version = ?, updated_at = ? WHERE id = ?', [nextPageVersion, now, targetPageId]);
     });
 
     saveDb();

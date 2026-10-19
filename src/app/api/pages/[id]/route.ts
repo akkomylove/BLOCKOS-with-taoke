@@ -118,6 +118,7 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
       const presetBlocks = getPresetDocumentBlocks('doc-producers');
       const now = Date.now();
       transaction(() => {
+        const idMap = new Map<string, string>();
         for (let i = 0; i < presetBlocks.length; i++) {
           const b = presetBlocks[i];
           let blockId = b.id;
@@ -125,11 +126,16 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
           if (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId) {
             blockId = `${b.id}-${userId}`;
           }
+          idMap.set(b.id, blockId);
+        }
 
-          const parentId = b.parentId ? (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId ? `${b.parentId}-${userId}` : b.parentId) : null;
+        for (let i = 0; i < presetBlocks.length; i++) {
+          const b = presetBlocks[i];
+          const blockId = idMap.get(b.id) || b.id;
+          const parentId = b.parentId ? (idMap.get(b.parentId) || b.parentId) : null;
           const metaObj = { ...(b.meta || {}) };
           if (metaObj.links && Array.isArray(metaObj.links)) {
-            metaObj.links = metaObj.links.map((linkId: string) => (blockTaken.length > 0 && blockTaken[0].page_id !== targetPageId ? `${linkId}-${userId}` : linkId));
+            metaObj.links = metaObj.links.map((linkId: string) => idMap.get(linkId) || linkId);
           }
 
           run(
@@ -161,6 +167,41 @@ async function GETDatabaseHandler(req: NextRequest, { params }: { params: Promis
       });
       saveDb();
       blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [targetPageId]);
+    } else if (isProducerRequest && blocks.length > 0) {
+      // Self-heal corrupted parent_id references or legacy Base64 contents in existing database
+      const blockIdSet = new Set(blocks.map((b) => b.id as string));
+      let needsHeal = false;
+      for (const b of blocks) {
+        if (b.parent_id && !blockIdSet.has(b.parent_id as string) && blockIdSet.has(`${b.parent_id}-${userId}`)) {
+          needsHeal = true;
+          break;
+        }
+        if (typeof b.content === 'string' && b.content.startsWith('data:image')) {
+          needsHeal = true;
+          break;
+        }
+      }
+      if (needsHeal) {
+        transaction(() => {
+          for (const b of blocks) {
+            const blockIdStr = String(b.id);
+            if (b.parent_id && !blockIdSet.has(b.parent_id as string) && blockIdSet.has(`${b.parent_id}-${userId}`)) {
+              run('UPDATE blocks SET parent_id = ? WHERE id = ? AND page_id = ?', [`${b.parent_id}-${userId}`, blockIdStr, targetPageId]);
+            }
+            if (typeof b.content === 'string' && b.content.startsWith('data:image')) {
+              if (blockIdStr.includes('blk_q9aavvabIn8PDj7Y')) {
+                run('UPDATE blocks SET content = ? WHERE id = ? AND page_id = ?', ['/assets/co-creation/blk_q9aavvabIn8PDj7Y.svg', blockIdStr, targetPageId]);
+              } else if (blockIdStr.includes('blk_7cGOKJIaJV6_Tt8P')) {
+                run('UPDATE blocks SET content = ? WHERE id = ? AND page_id = ?', ['/assets/co-creation/blk_7cGOKJIaJV6_Tt8P.svg', blockIdStr, targetPageId]);
+              } else if (blockIdStr.includes('blk_3XEHLfUDwW1YxXBu')) {
+                run('UPDATE blocks SET content = ? WHERE id = ? AND page_id = ?', ['/assets/co-creation/blk_3XEHLfUDwW1YxXBu.png', blockIdStr, targetPageId]);
+              }
+            }
+          }
+        });
+        saveDb();
+        blocks = query('SELECT * FROM blocks WHERE page_id = ? ORDER BY order_index', [targetPageId]);
+      }
     }
 
     return NextResponse.json({
@@ -225,14 +266,30 @@ async function PUTDatabaseHandler(req: NextRequest, { params }: { params: Promis
     }
     await getDb();
 
-    const existing = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
+    const isGuideRequest = id === 'doc-guide' || id === `doc-guide-${userId}` || id.includes('guide');
+    const isProducerRequest = id === 'doc-producers' || id === `doc-producers-${userId}` || id.includes('producer');
+    let targetPageId = id;
+
+    let existing = query('SELECT * FROM pages WHERE id = ? AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)', [id, userId]);
+    if (existing.length === 0 && (isGuideRequest || isProducerRequest)) {
+      const matchPrefix = isGuideRequest ? 'doc-guide' : 'doc-producers';
+      const userMatchedPages = query(
+        'SELECT * FROM pages WHERE (id = ? OR id = ?) AND user_id = ? AND (deleted_at IS NULL OR deleted_at = 0)',
+        [matchPrefix, `${matchPrefix}-${userId}`, userId]
+      );
+      if (userMatchedPages.length > 0) {
+        existing = userMatchedPages;
+        targetPageId = existing[0].id as string;
+      }
+    }
+
     if (existing.length === 0) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
     const currentVersion = (existing[0].version as number) || 1;
     if (chapters !== undefined) {
-      const blockIds = new Set(query('SELECT id FROM blocks WHERE page_id = ?', [id]).map((block) => block.id));
+      const blockIds = new Set(query('SELECT id FROM blocks WHERE page_id = ?', [targetPageId]).map((block) => block.id));
       if (parseChapters(chapters).some((chapter) => chapter.blockIds.some((blockId) => !blockIds.has(blockId)))) {
         return NextResponse.json({ error: '章节只能包含当前文档中的内容，请先保存新内容' }, { status: 400 });
       }
@@ -249,9 +306,9 @@ async function PUTDatabaseHandler(req: NextRequest, { params }: { params: Promis
 
     run(
       'UPDATE pages SET title = ?, icon = ?, version = ?, updated_at = ? WHERE id = ? AND user_id = ?',
-      [title ?? existing[0].title, icon ?? existing[0].icon, nextVersion, now, id, userId]
+      [title ?? existing[0].title, icon ?? existing[0].icon, nextVersion, now, targetPageId, userId]
     );
-    if (chapters !== undefined) run('UPDATE pages SET chapters = ? WHERE id = ? AND user_id = ?', [JSON.stringify(chapters), id, userId]);
+    if (chapters !== undefined) run('UPDATE pages SET chapters = ? WHERE id = ? AND user_id = ?', [JSON.stringify(chapters), targetPageId, userId]);
     saveDb();
 
     return NextResponse.json({ success: true, version: nextVersion });
