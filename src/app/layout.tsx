@@ -5,7 +5,12 @@ export const metadata: Metadata = {
   title: 'BlockOS - AI 原生知识操作系统',
   description: '以 Block 为信息原子，以 AI 为原生操作系统的下一代文档环境',
   icons: {
-    icon: '/favicon.svg',
+    icon: [
+      { url: '/brand/blockos-icon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/brand/blockos-icon-192.png', type: 'image/png', sizes: '192x192' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: { url: '/brand/blockos-icon-180.png', sizes: '180x180', type: 'image/png' },
   },
 };
 

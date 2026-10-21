@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 import { useAccountStore } from '@/store/accountStore';
 const AccountPanel = dynamic(() => import('@/components/collaboration/ProfilePanel').then(module => module.ProfilePanel), { ssr: false });
 import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Cloud, Folder, Inbox, Loader2, LogIn, Moon, Plus, Search, Sun } from 'lucide-react';
@@ -122,7 +123,7 @@ function MobileWorkspaceContent() {
 
   return <div className="mobile-workspace" data-testid="mobile-workspace">
     <header className="mw-header">
-      {isLibrary || screen === 'inbox' ? <button className="mw-brand" onClick={() => { setScreen('library'); setFolderId(null); }}><span>B</span>BlockOS</button> : <button className="mw-icon-button" onClick={back} aria-label={isReading ? '返回章节目录' : '返回文档列表'}><ArrowLeft size={21} /></button>}
+      {isLibrary || screen === 'inbox' ? <button className="mw-brand" onClick={() => { setScreen('library'); setFolderId(null); }}><Logo size={32} />BlockOS</button> : <button className="mw-icon-button" onClick={back} aria-label={isReading ? '返回章节目录' : '返回文档列表'}><ArrowLeft size={21} /></button>}
       {!isLibrary && screen !== 'inbox' && <span className="mw-header-title">{isReading ? page?.title : screen === 'new' ? '新建文档' : screen === 'note' ? '收件箱' : '文档目录'}</span>}
       {isReading ? <button className="mw-text-button" disabled={!chapter.blocks.some(canEditBlock) || saving} onClick={() => {
         if (!editable) { signIn(); return; }

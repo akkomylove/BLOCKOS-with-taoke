@@ -173,7 +173,7 @@
 @media (max-width: 520px) {
   .header { height: 76px; padding: 0 23px; }
   .brand { gap: 7px; }
-  .brand > svg { width: 29px; height: 29px; }
+  .brand > img { width: 29px; height: 29px; }
   .brand > span:first-of-type { font-size: 20px; }
   .brandCaption { display: none; }
   .backLink { font-size: 11px; gap: 5px; }

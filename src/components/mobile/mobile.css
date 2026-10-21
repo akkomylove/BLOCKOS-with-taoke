@@ -14,7 +14,6 @@
 .mobile-workspace .mw-header-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: center; color: var(--mw-muted); }
 .mobile-workspace .mw-header-actions { display: flex; align-items: center; }
 .mobile-workspace .mw-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 0 8px; font-size: 16px; }
-.mobile-workspace .mw-brand > span { display: grid; place-items: center; color: white; width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(145deg,#4781ef,#8660e5); font-weight: 500; }
 .mobile-workspace .mw-icon-button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; flex-shrink: 0; }
 .mobile-workspace .mw-text-button { min-height: 44px; padding: 6px 10px; color: var(--mw-accent); font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .mobile-workspace .mw-main, .mobile-workspace .mw-editor-main, .mobile-workspace .mw-outline-main { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px 24px 28px; overflow-wrap: anywhere; }

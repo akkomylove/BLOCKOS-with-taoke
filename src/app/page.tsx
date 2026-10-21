@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
+import Logo from '@/components/Logo';
 
 const BlockOSApp = dynamic(() => import('@/components/BlockOSApp'), { ssr: false });
 
@@ -17,7 +18,7 @@ export default function Home() {
       <div className="h-screen flex items-center justify-center bg-[#f7f8fa] dark:bg-[#141517] text-[#1f2329] dark:text-[#f2f3f5]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-[#eff4ff] dark:bg-blue-500/15 border border-[#dee0e3] dark:border-blue-500/30 flex items-center justify-center shadow-sm">
-            <div className="w-5 h-5 rounded-md bg-[#3370ff] animate-pulse" />
+            <Logo size={40} className="animate-pulse" />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[#1f2329] dark:text-[#f2f3f5] text-sm font-medium tracking-tight">BlockOS</span>

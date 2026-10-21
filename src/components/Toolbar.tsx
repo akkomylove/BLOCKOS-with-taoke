@@ -147,7 +147,7 @@ export default function Toolbar({
       {/* Left: Logo + Page Title (自适应弹性缩短) */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">
         <div className="flex items-center gap-1.5 shrink-0">
-          <Logo size={16} />
+          <Logo size={24} />
           <span className="text-sm font-semibold text-[#1f2329] dark:text-[#f2f3f5] tracking-tight hidden sm:inline">BlockOS</span>
         </div>
         <div className="h-4 w-px bg-[#dee0e3] dark:bg-[#33363e] mx-0.5 sm:mx-1 shrink-0" />

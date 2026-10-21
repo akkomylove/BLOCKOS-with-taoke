@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlockStore } from '@/store/blockStore';
 import TemplatePicker from './TemplatePicker';
+import Logo from './Logo';
 import { FileText, Plus, Trash2, MoreHorizontal, FolderPlus, Folder, ChevronDown, ChevronRight, FolderOpen } from 'lucide-react';
 
 interface SidebarProps {
@@ -114,7 +115,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     <div className="w-64 h-full bg-[#f7f8fa] dark:bg-[#1a1c20] border-r border-[#dee0e3] dark:border-[#33363e] flex flex-col select-none">
       <div className="h-11 px-3.5 border-b border-[#dee0e3] dark:border-[#33363e] flex items-center justify-between">
         <div className="flex items-center gap-2 text-[#1f2329] dark:text-[#f2f3f5] font-semibold text-sm">
-          <div className="w-6 h-6 bg-[#3370ff] rounded-md flex items-center justify-center text-xs text-white shadow-xs font-bold">B</div>
+          <Logo size={30} />
           <span className="tracking-tight">BlockOS</span>
         </div>
         <button
